@@ -55,19 +55,18 @@ if GetAddOnEnableState(UnitName("player"), "InFlight") == 2 then
 	local gossipFlightData = {
 		[L["Nighthaven"]] = {
 			{find = L["NighthavenGossipA"], s = "Nighthaven", d = "Rut'theran Village"},
-			{find = L["NighthavenGossipH"], s = "Nighthaven", d = "Thunder Bluff"},
-			},
-		["Skyguard Outpost"] = {
-			{find = "Yes, I'd love a ride to Blackwind Landing.", s = "Skyguard Outpost", d = "Blackwind Landing"},
-			},
-		["Blackwind Landing"] = {
-			{find = "Absolutely!  Send me to the Skyguard Outpost.", s = "Blackwind Landing", d = "Skyguard Outpost"},
-			},
+			{find = L["NighthavenGossipH"], s = "Nighthaven", d = "Thunder Bluff"}
+		},
+		[L["Skyguard Outpost"]] = {
+			{find = L["BEM-Skettis"], s = "Skyguard Outpost", d = "Blackwind Landing"}
+		},
+		[L["Blackwind Landing"]] = {
+			{find = L["Skettis-BEM"], s = "Blackwind Landing", d = "Skyguard Outpost"}
+		}
 	}
 
 	-- Support flights that are started by gossip options properly so automation addons don't futz it.
 	do
-
 		local orig_SelectGossipOption = SelectGossipOption
 		function SelectGossipOption(option, ...)
 			local gossipText, gossipType = select(option, GetGossipOptions())
@@ -77,7 +76,7 @@ if GetAddOnEnableState(UnitName("player"), "InFlight") == 2 then
 					for index, gossipFlightOption in ipairs(gossipZoneData) do
 						if strfind(gossipText, gossipFlightOption.find, 1, true) then
 							if gossipFlightOption.s and gossipFlightOption.d and LoadInFlight() then
-								print("|cff00ff40In|cff00aaffFlight|r: Special Flight - ", gossipFlightOption.s, "->", gossipFlightOption.d)
+								--print("|cff00ff40In|cff00aaffFlight|r: Special Flight - ", gossipFlightOption.s, "->", gossipFlightOption.d)
 								self:StartMiscFlight(gossipFlightOption.s, gossipFlightOption.d)
 							end
 						end
@@ -86,7 +85,6 @@ if GetAddOnEnableState(UnitName("player"), "InFlight") == 2 then
 			end
 			orig_SelectGossipOption(option, ...)
 		end
-
 	end
 
 	---------------------------------
