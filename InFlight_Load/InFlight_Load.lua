@@ -50,12 +50,26 @@ if GetAddOnEnableState(UnitName("player"), "InFlight") == 2 then
 	local t
 	do
 	t = {
-		[L["Nighthaven"]]					= {{ find = L["NighthavenGossipA"],			s = "Nighthaven", 					d = "Rut'theran Village" },
-											   { find = L["NighthavenGossipH"],			s = "Nighthaven", 					d = "Thunder Bluff" }},
+		[L["Nighthaven"]] = {
+			{ find = L["NighthavenGossipA"], s = "Nighthaven", d = "Rut'theran Village" },
+			{ find = L["NighthavenGossipH"], s = "Nighthaven", d = "Thunder Bluff" }
+		},
+		["Skyguard Outpost"] = {
+			{ find = "Yes, I'd love a ride to Blackwind Landing.", s="Skyguard Outpost", d="Blackwind Landing"},
+		},
+		["Blackwind Landing"] = {
+			{ find = "Absolutely! Send me to the Skyguard Outpost.", s = "Blackwind Landing", d = "Skyguard Outpost" }
+		},
 	}
 	end
 
 	-- support for flightpaths that are started by gossip options
+	hooksecurefunc("SelectGossipOption", function(option)
+		for i = 1, GetNumGossipOptions(), 2 do
+			local title, gossipType = select(i, GetGossipOptions())
+			print(i, title, gossipType)
+		end
+	end)
 	hooksecurefunc("GossipTitleButton_OnClick", function(this, button)
 		if this.type ~= "Gossip" then
 			return
@@ -64,22 +78,23 @@ if GetAddOnEnableState(UnitName("player"), "InFlight") == 2 then
 		local subzone = GetMinimapZoneText()
 		local tsz = t[subzone]
 		if not tsz then
---			print("|cff00ff40In|cff00aaffFlight|r: zone - ", L[GetMinimapZoneText()], GetMinimapZoneText())
---			print("|cff00ff40In|cff00aaffFlight|r: gossip - ", this:GetText())
+			print("|cff00ff40In|cff00aaffFlight|r: zone - ", L[GetMinimapZoneText()], GetMinimapZoneText())
+			print("|cff00ff40In|cff00aaffFlight|r: gossip - ", this:GetText())
 			return
 		end
 
 		local text = this:GetText()
+		print("|cff00ff40In|cff00aaffFlight|r: gossip - ", text)
 		if not text or text == "" then
 			return
 		end
---		print("|cff00ff40In|cff00aaffFlight|r: gossip - ", text)
-
+		
 		local source, destination
 		for _, sz in ipairs(tsz) do
 			if strfind(text, sz.find, 1, true) then
 				source = sz.s
 				destination = sz.d
+				print("|cff00ff40In|cff00aaffFlight|r: Found Special Flight - ", source, "->", destination)
 				break
 			end
 		end
