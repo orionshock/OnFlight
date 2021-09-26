@@ -1,6 +1,11 @@
-local InFlight = CreateFrame("Frame", "InFlight")  -- no parent is intentional
+local InFlight = CreateFrame("Frame", "InFlight") -- no parent is intentional
 local self = InFlight
-InFlight:SetScript("OnEvent", function(this, event, ...) this[event](this, ...) end)
+InFlight:SetScript(
+	"OnEvent",
+	function(this, event, ...)
+		this[event](this, ...)
+	end
+)
 InFlight:RegisterEvent("ADDON_LOADED")
 
 -- LOCAL FUNCTIONS
@@ -14,7 +19,7 @@ end
 
 -----------------------------------------
 function InFlight:ADDON_LOADED(addonName)
------------------------------------------
+	-----------------------------------------
 	if addonName == "InFlight_Load" then
 		self:RegisterEvent("TAXIMAP_OPENED")
 		if self.SetupInFlight then
@@ -30,7 +35,7 @@ end
 
 -------------------------------------
 function InFlight:TAXIMAP_OPENED(...)
--------------------------------------
+	-------------------------------------
 	if LoadInFlight() then
 		local uiMapSystem = ...
 		local isTaxiMap = uiMapSystem == Enum.UIMapSystem.Taxi
@@ -47,66 +52,46 @@ if GetAddOnEnableState(UnitName("player"), "InFlight") == 2 then
 	local L = LibStub("AceLocale-3.0"):GetLocale("InFlight", true)
 	InFlight.L = L
 
-	local t
-	do
-	t = {
+	local gossipFlightData = {
 		[L["Nighthaven"]] = {
-			{ find = L["NighthavenGossipA"], s = "Nighthaven", d = "Rut'theran Village" },
-			{ find = L["NighthavenGossipH"], s = "Nighthaven", d = "Thunder Bluff" }
-		},
+			{find = L["NighthavenGossipA"], s = "Nighthaven", d = "Rut'theran Village"},
+			{find = L["NighthavenGossipH"], s = "Nighthaven", d = "Thunder Bluff"},
+			},
 		["Skyguard Outpost"] = {
-			{ find = "Yes, I'd love a ride to Blackwind Landing.", s="Skyguard Outpost", d="Blackwind Landing"},
-		},
+			{find = "Yes, I'd love a ride to Blackwind Landing.", s = "Skyguard Outpost", d = "Blackwind Landing"},
+			},
 		["Blackwind Landing"] = {
-			{ find = "Absolutely! Send me to the Skyguard Outpost.", s = "Blackwind Landing", d = "Skyguard Outpost" }
-		},
+			{find = "Absolutely!  Send me to the Skyguard Outpost.", s = "Blackwind Landing", d = "Skyguard Outpost"},
+			},
 	}
-	end
 
-	-- support for flightpaths that are started by gossip options
-	hooksecurefunc("SelectGossipOption", function(option)
-		for i = 1, GetNumGossipOptions(), 2 do
-			local title, gossipType = select(i, GetGossipOptions())
-			print(i, title, gossipType)
-		end
-	end)
-	hooksecurefunc("GossipTitleButton_OnClick", function(this, button)
-		if this.type ~= "Gossip" then
-			return
-		end
+	-- Support flights that are started by gossip options properly so automation addons don't futz it.
+	do
 
-		local subzone = GetMinimapZoneText()
-		local tsz = t[subzone]
-		if not tsz then
-			print("|cff00ff40In|cff00aaffFlight|r: zone - ", L[GetMinimapZoneText()], GetMinimapZoneText())
-			print("|cff00ff40In|cff00aaffFlight|r: gossip - ", this:GetText())
-			return
-		end
-
-		local text = this:GetText()
-		print("|cff00ff40In|cff00aaffFlight|r: gossip - ", text)
-		if not text or text == "" then
-			return
-		end
-		
-		local source, destination
-		for _, sz in ipairs(tsz) do
-			if strfind(text, sz.find, 1, true) then
-				source = sz.s
-				destination = sz.d
-				print("|cff00ff40In|cff00aaffFlight|r: Found Special Flight - ", source, "->", destination)
-				break
+		local orig_SelectGossipOption = SelectGossipOption
+		function SelectGossipOption(option, ...)
+			local gossipText, gossipType = select(option, GetGossipOptions())
+			if (gossipText and gossipText ~= "") and (gossipType == "gossip") then
+				local gossipZoneData = gossipFlightData[GetMinimapZoneText()]
+				if gossipZoneData then
+					for index, gossipFlightOption in ipairs(gossipZoneData) do
+						if strfind(gossipText, gossipFlightOption.find, 1, true) then
+							if gossipFlightOption.s and gossipFlightOption.d and LoadInFlight() then
+								print("|cff00ff40In|cff00aaffFlight|r: Special Flight - ", gossipFlightOption.s, "->", gossipFlightOption.d)
+								self:StartMiscFlight(gossipFlightOption.s, gossipFlightOption.d)
+							end
+						end
+					end
+				end
 			end
+			orig_SelectGossipOption(option, ...)
 		end
 
-		if source and destination and LoadInFlight() then
-			self:StartMiscFlight(source, destination)
-		end
-	end)
+	end
 
 	---------------------------------
 	function InFlight:SetupInFlight()
-	---------------------------------
+		---------------------------------
 		SlashCmdList.INFLIGHT = function()
 			if LoadInFlight() then
 				self:ShowOptions()
@@ -116,11 +101,14 @@ if GetAddOnEnableState(UnitName("player"), "InFlight") == 2 then
 
 		local panel = CreateFrame("Frame")
 		panel.name = "InFlight"
-		panel:SetScript("OnShow", function(this)
-			if LoadInFlight() and InFlight.SetLayout then
-				InFlight:SetLayout(this)
+		panel:SetScript(
+			"OnShow",
+			function(this)
+				if LoadInFlight() and InFlight.SetLayout then
+					InFlight:SetLayout(this)
+				end
 			end
-		end)
+		)
 		panel:Hide()
 		InterfaceOptions_AddCategory(panel)
 		InFlight.SetupInFlight = nil
