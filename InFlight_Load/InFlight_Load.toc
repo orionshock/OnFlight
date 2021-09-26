@@ -1,4 +1,4 @@
-## Interface: 11303
+## Interface: 20501
 ## Title: InFlight_Load
 ## Notes: Loader for InFlight
 ## Notes-deDE: Loader für InFlight
@@ -12,7 +12,7 @@
 ## Notes-zhCN: InFlight 的載入器
 ## Notes-zhTW: InFlight 的裝載機
 ## Author: TotalPackage
-## Version: 1.13.005
+## Version: 2.05.001
 
 ## X-Category: Interface Enhancements
 

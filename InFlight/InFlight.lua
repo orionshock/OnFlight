@@ -170,7 +170,7 @@ function InFlight:LoadBulk()  -- called from InFlight_Load
 	end
 
 	-- Check that this is the right version of the client
-	if select(4, GetBuildInfo()) > 20000 then
+	if select(4, GetBuildInfo()) > 30000 then
 		Print(L["AddonDisabled"])
 		DisableAddOn("InFlight")
 		return
@@ -424,7 +424,7 @@ do  -- timer bar
 	-----------------------------
 	function InFlight:CreateBar()
 	-----------------------------
-		sb = CreateFrame("StatusBar", "InFlightBar", UIParent)
+		sb = CreateFrame("StatusBar", "InFlightBar", UIParent, BackdropTemplateMixin and "BackdropTemplate")
 		sb:Hide()
 		sb:SetPoint(db.p, UIParent, db.rp, db.x, db.y)
 		sb:SetMovable(true)
@@ -467,7 +467,7 @@ do  -- timer bar
 		spark:SetWidth(16)
 		spark:SetBlendMode("ADD")
 
-		bord = CreateFrame("Frame", nil, sb)  -- border/background
+		bord = CreateFrame("Frame", nil, sb, BackdropTemplateMixin and "BackdropTemplate")  -- border/background
 		SetPoints(bord, "TOPLEFT", sb, "TOPLEFT", -5, 5, "BOTTOMRIGHT", sb, "BOTTOMRIGHT", 5, -5)
 		bord:SetFrameStrata("LOW")
 
@@ -692,7 +692,7 @@ function InFlight:SetLayout(this)  -- setups the options in the default interfac
 
 	t2:SetFormattedText("|cff00aaffAuthor:|r %s\n|cff00aaffVersion:|r %s\n\n%s|r", GetInfo("Author"), GetInfo("Version"), GetInfo("Notes"))
 
-	local b = CreateFrame("Button", nil, this, "UIPanelButtonTemplate")
+	local b = CreateFrame("Button", nil, this, "UIPanelButtonTemplate",BackdropTemplateMixin and "BackdropTemplate")
 	b:SetText(_G.GAMEOPTIONS_MENU)
 	b:SetWidth(max(120, b:GetTextWidth() + 20))
 	b:SetScript("OnClick", InFlight.ShowOptions)
@@ -711,7 +711,7 @@ local info = { }
 function InFlight.ShowOptions()
 -------------------------------
 	if not InFlightDD then
-		InFlightDD = CreateFrame("Frame", "InFlightDD", InFlight)
+		InFlightDD = CreateFrame("Frame", "InFlightDD", InFlight, BackdropTemplateMixin and "BackdropTemplate")
 		InFlightDD.displayMode = "MENU"
 
 		hooksecurefunc("ToggleDropDownMenu", function(...) lastb = select(8, ...) end)
