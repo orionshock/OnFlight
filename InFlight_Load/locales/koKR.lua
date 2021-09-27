@@ -1,5 +1,7 @@
 local L = LibStub("AceLocale-3.0"):NewLocale("InFlight", "koKR")
-if not L then return end
+if not L then
+    return
+end
 
 L["Nighthaven"] = "나이트헤이븐"
 L["NighthavenGossipA"] = "루테란 마을로 날아가고 싶어요"

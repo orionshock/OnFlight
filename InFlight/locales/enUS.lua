@@ -1,5 +1,7 @@
-local L  = LibStub("AceLocale-3.0"):NewLocale("InFlight", "enUS", true, true)
-if not L then return end
+local L = LibStub("AceLocale-3.0"):NewLocale("InFlight", "enUS", true, true)
+if not L then
+    return
+end
 
 L["AddonDisabled"] = "Wrong client version detected: disabling addon"
 L["BackgroundColor"] = "Background Color"
@@ -33,13 +35,15 @@ L["Texture"] = true
 L["TooltipOption1"] = "<Shift Left-Click> to move"
 L["TooltipOption2"] = "<Right-Click> for Options"
 L["TooltipOption3"] = "<Ctrl Left-Click> to force close"
-L["ToText"] = "\"To\" Text"
+L["ToText"] = '"To" Text'
 L["UnknownColor"] = "Unknown Color"
 L["Width"] = true
 
 -- Flight point localisations
 local FL = LibStub("AceLocale-3.0"):NewLocale("InFlightLoc", "enUS", true, true)
-if not FL then return end
+if not FL then
+    return
+end
 
 FL["Aerie Peak"] = true
 FL["Astranaar"] = true

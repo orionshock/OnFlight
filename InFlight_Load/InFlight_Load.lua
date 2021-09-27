@@ -17,9 +17,7 @@ local function LoadInFlight()
 	return GetAddOnEnableState(UnitName("player"), "InFlight") == 2 and InFlight.ShowOptions and true or nil
 end
 
------------------------------------------
 function InFlight:ADDON_LOADED(addonName)
-	-----------------------------------------
 	if addonName == "InFlight_Load" then
 		self:RegisterEvent("TAXIMAP_OPENED")
 		if self.SetupInFlight then
@@ -40,9 +38,7 @@ function InFlight:ADDON_LOADED(addonName)
 	end
 end
 
--------------------------------------
 function InFlight:TAXIMAP_OPENED(...)
-	-------------------------------------
 	if LoadInFlight() then
 		local uiMapSystem = ...
 		local isTaxiMap = uiMapSystem == Enum.UIMapSystem.Taxi
@@ -94,9 +90,7 @@ if GetAddOnEnableState(UnitName("player"), "InFlight") == 2 then
 		end
 	end
 
-	---------------------------------
 	function InFlight:SetupInFlight()
-		---------------------------------
 		SlashCmdList.INFLIGHT = function()
 			if LoadInFlight() then
 				self:ShowOptions()

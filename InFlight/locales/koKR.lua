@@ -1,5 +1,7 @@
 local L = LibStub("AceLocale-3.0"):NewLocale("InFlight", "koKR")
-if not L then return end
+if not L then
+    return
+end
 
 L["AddonDisabled"] = "클라이언트 버전이 잘못 감지되었습니다 : 애드온 비활성화"
 L["BackgroundColor"] = "배경 색상"
@@ -33,13 +35,15 @@ L["Texture"] = "바 텍스처"
 L["TooltipOption1"] = "<쉬프트+클릭> 하면 이동합니다"
 L["TooltipOption2"] = "<오른쪽-클릭> 하면 설정을 엽니다"
 L["TooltipOption3"] = "<Ctrl+클릭> 하면 강제로 닫습니다"
-L["ToText"] = "\"~\"숙어"
+L["ToText"] = '"~"숙어'
 L["UnknownColor"] = "모르는 경로 색상"
 L["Width"] = "길이"
 
 -- Flight point localisations
 local FL = LibStub("AceLocale-3.0"):NewLocale("InFlightLoc", "koKR")
-if not FL then return end
+if not FL then
+    return
+end
 
 FL["Aerie Peak"] = "맹금의 봉우리"
 FL["Astranaar"] = "아스트라나르"

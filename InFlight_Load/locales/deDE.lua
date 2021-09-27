@@ -1,5 +1,7 @@
 local L = LibStub("AceLocale-3.0"):NewLocale("InFlight", "deDE")
-if not L then return end
+if not L then
+    return
+end
 
 L["Nighthaven"] = true
 L["NighthavenGossipA"] = "Ich würde gerne nach Rut'theran fliegen"

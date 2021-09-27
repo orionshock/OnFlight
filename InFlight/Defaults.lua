@@ -11,20 +11,20 @@ InFlight.defaults = {
 		width = 230,
 		height = 14,
 		border = "Blizzard Dialog",
-		barcolor = { r = 0.5, g = 0.5, b = 0.8, a = 1.0, },
-		unknowncolor = { r = 0.2, g = 0.2, b = 0.4, a = 1.0, },
-		backcolor = { r = 0.1, g = 0.1, b = 0.1, a = 0.6, },
-		bordercolor = { r = 0.6, g = 0.6, b = 0.6, a = 0.8, },
+		barcolor = {r = 0.5, g = 0.5, b = 0.8, a = 1.0},
+		unknowncolor = {r = 0.2, g = 0.2, b = 0.4, a = 1.0},
+		backcolor = {r = 0.1, g = 0.1, b = 0.1, a = 0.6},
+		bordercolor = {r = 0.6, g = 0.6, b = 0.6, a = 0.8},
 		inline = false,
 		totext = "-->",
 		font = "2002 Bold",
 		fontsize = 12,
-		fontcolor = { r = 1.0, g = 1.0, b = 1.0, a = 1.0, },
+		fontcolor = {r = 1.0, g = 1.0, b = 1.0, a = 1.0},
 		outline = false,
 		outlinetime = false,
 		chatlog = true,
 		confirmflight = false,
-		perchar = false,
+		perchar = false
 	},
 	global = {
 		["Horde"] = {
@@ -45,7 +45,7 @@ InFlight.defaults = {
 				["Thunder Bluff"] = 182,
 				["Cenarion Hold"] = 382,
 				["Splintertree Post"] = 162,
-				["Camp Mojache"] = 252,
+				["Camp Mojache"] = 252
 			},
 			["Kargath"] = {
 				["Undercity"] = 497,
@@ -58,7 +58,7 @@ InFlight.defaults = {
 				["Booty Bay"] = 417,
 				["The Sepulcher"] = 477,
 				["Flame Crest"] = 87,
-				["Thorium Point"] = 56,
+				["Thorium Point"] = 56
 			},
 			["Bloodvenom Post"] = {
 				["Marshal's Refuge"] = 625,
@@ -77,7 +77,7 @@ InFlight.defaults = {
 				["Thunder Bluff"] = 423,
 				["Cenarion Hold"] = 623,
 				["Splintertree Post"] = 333,
-				["Camp Mojache"] = 493,
+				["Camp Mojache"] = 493
 			},
 			["Sun Rock Retreat"] = {
 				["Crossroads"] = 150,
@@ -95,7 +95,7 @@ InFlight.defaults = {
 				["Everlook"] = 447,
 				["Cenarion Hold"] = 469,
 				["Splintertree Post"] = 311,
-				["Orgrimmar"] = 290,
+				["Orgrimmar"] = 290
 			},
 			["Shadowprey Village"] = {
 				["Marshal's Refuge"] = 417,
@@ -115,7 +115,7 @@ InFlight.defaults = {
 				["Thunder Bluff"] = 178,
 				["Cenarion Hold"] = 326,
 				["Splintertree Post"] = 474,
-				["Camp Mojache"] = 196,
+				["Camp Mojache"] = 196
 			},
 			["Thorium Point"] = {
 				["Kargath"] = 70,
@@ -128,7 +128,7 @@ InFlight.defaults = {
 				["Booty Bay"] = 462,
 				["The Sepulcher"] = 545,
 				["Flame Crest"] = 77,
-				["Undercity"] = 566,
+				["Undercity"] = 566
 			},
 			["Ratchet"] = {
 				["Crossroads"] = 69,
@@ -146,7 +146,7 @@ InFlight.defaults = {
 				["Freewind Post"] = 252,
 				["Cenarion Hold"] = 450,
 				["Splintertree Post"] = 231,
-				["Camp Mojache"] = 320,
+				["Camp Mojache"] = 320
 			},
 			["Light's Hope Chapel"] = {
 				["Kargath"] = 492,
@@ -159,7 +159,7 @@ InFlight.defaults = {
 				["Booty Bay"] = 884,
 				["The Sepulcher"] = 294,
 				["Flame Crest"] = 578,
-				["Undercity"] = 262,
+				["Undercity"] = 262
 			},
 			["Brackenwall Village"] = {
 				["Marshal's Refuge"] = 329,
@@ -177,7 +177,7 @@ InFlight.defaults = {
 				["Freewind Post"] = 309,
 				["Cenarion Hold"] = 430,
 				["Splintertree Post"] = 306,
-				["Orgrimmar"] = 217,
+				["Orgrimmar"] = 217
 			},
 			["Revantusk Village"] = {
 				["Kargath"] = 351,
@@ -190,7 +190,7 @@ InFlight.defaults = {
 				["Booty Bay"] = 743,
 				["The Sepulcher"] = 257,
 				["Flame Crest"] = 437,
-				["Undercity"] = 284,
+				["Undercity"] = 284
 			},
 			["Hammerfall"] = {
 				["Kargath"] = 259,
@@ -203,7 +203,7 @@ InFlight.defaults = {
 				["Booty Bay"] = 651,
 				["The Sepulcher"] = 215,
 				["Flame Crest"] = 344,
-				["Undercity"] = 259,
+				["Undercity"] = 259
 			},
 			["Booty Bay"] = {
 				["Kargath"] = 406,
@@ -216,7 +216,7 @@ InFlight.defaults = {
 				["Undercity"] = 903,
 				["The Sepulcher"] = 882,
 				["Flame Crest"] = 464,
-				["Stonard"] = 267,
+				["Stonard"] = 267
 			},
 			["Freewind Post"] = {
 				["Crossroads"] = 194,
@@ -233,7 +233,7 @@ InFlight.defaults = {
 				["Thunder Bluff"] = 225,
 				["Cenarion Hold"] = 252,
 				["Splintertree Post"] = 356,
-				["Camp Mojache"] = 124,
+				["Camp Mojache"] = 124
 			},
 			["The Sepulcher"] = {
 				["Kargath"] = 471,
@@ -246,7 +246,7 @@ InFlight.defaults = {
 				["Booty Bay"] = 863,
 				["Thorium Point"] = 526,
 				["Flame Crest"] = 556,
-				["Undercity"] = 112,
+				["Undercity"] = 112
 			},
 			["Flame Crest"] = {
 				["Undercity"] = 597,
@@ -259,7 +259,7 @@ InFlight.defaults = {
 				["Booty Bay"] = 472,
 				["The Sepulcher"] = 576,
 				["Thorium Point"] = 72,
-				["Kargath"] = 99,
+				["Kargath"] = 99
 			},
 			["Orgrimmar"] = {
 				["Marshal's Refuge"] = 494,
@@ -279,7 +279,7 @@ InFlight.defaults = {
 				["Thunder Bluff"] = 224,
 				["Cenarion Hold"] = 492,
 				["Splintertree Post"] = 89,
-				["Camp Mojache"] = 361,
+				["Camp Mojache"] = 361
 			},
 			["Everlook"] = {
 				["Crossroads"] = 307,
@@ -298,7 +298,7 @@ InFlight.defaults = {
 				["Thunder Bluff"] = 392,
 				["Cenarion Hold"] = 688,
 				["Splintertree Post"] = 228,
-				["Camp Mojache"] = 558,
+				["Camp Mojache"] = 558
 			},
 			["Undercity"] = {
 				["Kargath"] = 488,
@@ -311,7 +311,7 @@ InFlight.defaults = {
 				["Booty Bay"] = 880,
 				["The Sepulcher"] = 106,
 				["Flame Crest"] = 573,
-				["Stonard"] = 768,
+				["Stonard"] = 768
 			},
 			["Gadgetzan"] = {
 				["Crossroads"] = 301,
@@ -331,7 +331,7 @@ InFlight.defaults = {
 				["Valormok"] = 448,
 				["Cenarion Hold"] = 233,
 				["Splintertree Post"] = 439,
-				["Camp Mojache"] = 200,
+				["Camp Mojache"] = 200
 			},
 			["Thunder Bluff"] = {
 				["Marshal's Refuge"] = 397,
@@ -351,7 +351,7 @@ InFlight.defaults = {
 				["Valormok"] = 269,
 				["Cenarion Hold"] = 381,
 				["Splintertree Post"] = 296,
-				["Camp Mojache"] = 252,
+				["Camp Mojache"] = 252
 			},
 			["Camp Taurajo"] = {
 				["Marshal's Refuge"] = 325,
@@ -366,10 +366,10 @@ InFlight.defaults = {
 				["Thunder Bluff"] = 114,
 				["Cenarion Hold"] = 378,
 				["Splintertree Post"] = 242,
-				["Orgrimmar"] = 221,
+				["Orgrimmar"] = 221
 			},
 			["Nighthaven"] = {
-				["Thunder Bluff"] = 543,
+				["Thunder Bluff"] = 543
 			},
 			["Tarren Mill"] = {
 				["Kargath"] = 376,
@@ -382,7 +382,7 @@ InFlight.defaults = {
 				["Booty Bay"] = 768,
 				["The Sepulcher"] = 99,
 				["Flame Crest"] = 462,
-				["Undercity"] = 139,
+				["Undercity"] = 139
 			},
 			["Grom'gol"] = {
 				["Kargath"] = 327,
@@ -395,7 +395,7 @@ InFlight.defaults = {
 				["Booty Bay"] = 81,
 				["The Sepulcher"] = 802,
 				["Flame Crest"] = 402,
-				["Thorium Point"] = 382,
+				["Thorium Point"] = 382
 			},
 			["Stonard"] = {
 				["Undercity"] = 782,
@@ -408,7 +408,7 @@ InFlight.defaults = {
 				["Booty Bay"] = 260,
 				["The Sepulcher"] = 761,
 				["Flame Crest"] = 197,
-				["Kargath"] = 285,
+				["Kargath"] = 285
 			},
 			["Zoram'gar Outpost"] = {
 				["Crossroads"] = 228,
@@ -424,7 +424,7 @@ InFlight.defaults = {
 				["Everlook"] = 384,
 				["Freewind Post"] = 412,
 				["Splintertree Post"] = 167,
-				["Orgrimmar"] = 256,
+				["Orgrimmar"] = 256
 			},
 			["Marshal's Refuge"] = {
 				["Crossroads"] = 392,
@@ -443,7 +443,7 @@ InFlight.defaults = {
 				["Valormok"] = 559,
 				["Cenarion Hold"] = 100,
 				["Splintertree Post"] = 551,
-				["Camp Mojache"] = 224,
+				["Camp Mojache"] = 224
 			},
 			["Moonglade"] = {
 				["Crossroads"] = 353,
@@ -463,7 +463,7 @@ InFlight.defaults = {
 				["Valormok"] = 275,
 				["Cenarion Hold"] = 734,
 				["Splintertree Post"] = 369,
-				["Camp Mojache"] = 604,
+				["Camp Mojache"] = 604
 			},
 			["Valormok"] = {
 				["Marshal's Refuge"] = 556,
@@ -482,7 +482,7 @@ InFlight.defaults = {
 				["Thunder Bluff"] = 257,
 				["Cenarion Hold"] = 553,
 				["Splintertree Post"] = 94,
-				["Camp Mojache"] = 423,
+				["Camp Mojache"] = 423
 			},
 			["Cenarion Hold"] = {
 				["Marshal's Refuge"] = 97,
@@ -497,7 +497,7 @@ InFlight.defaults = {
 				["Freewind Post"] = 236,
 				["Thunder Bluff"] = 389,
 				["Ratchet"] = 445,
-				["Orgrimmar"] = 535,
+				["Orgrimmar"] = 535
 			},
 			["Splintertree Post"] = {
 				["Marshal's Refuge"] = 544,
@@ -517,7 +517,7 @@ InFlight.defaults = {
 				["Thunder Bluff"] = 321,
 				["Cenarion Hold"] = 541,
 				["Sun Rock Retreat"] = 310,
-				["Camp Mojache"] = 412,
+				["Camp Mojache"] = 412
 			},
 			["Camp Mojache"] = {
 				["Crossroads"] = 263,
@@ -535,8 +535,8 @@ InFlight.defaults = {
 				["Freewind Post"] = 107,
 				["Cenarion Hold"] = 130,
 				["Splintertree Post"] = 426,
-				["Orgrimmar"] = 406,
-			},
+				["Orgrimmar"] = 406
+			}
 		},
 		["Alliance"] = {
 			["Marshal's Refuge"] = {
@@ -548,7 +548,7 @@ InFlight.defaults = {
 				["Astranaar"] = 856,
 				["Cenarion Hold"] = 94,
 				["Feathermoon"] = 258,
-				["Rut'theran Village"] = 809,
+				["Rut'theran Village"] = 809
 			},
 			["Light's Hope Chapel"] = {
 				["Morgan's Vigil"] = 503,
@@ -559,7 +559,7 @@ InFlight.defaults = {
 				["Ironforge"] = 369,
 				["Darkshire"] = 591,
 				["Chillwind Camp"] = 150,
-				["Southshore"] = 226,
+				["Southshore"] = 226
 			},
 			["Ratchet"] = {
 				["Marshal's Refuge"] = 366,
@@ -574,7 +574,7 @@ InFlight.defaults = {
 				["Astranaar"] = 284,
 				["Cenarion Hold"] = 459,
 				["Feathermoon"] = 446,
-				["Nijel's Point"] = 439,
+				["Nijel's Point"] = 439
 			},
 			["Talrendis Point"] = {
 				["Marshal's Refuge"] = 494,
@@ -585,7 +585,7 @@ InFlight.defaults = {
 				["Talonbranch Glade"] = 283,
 				["Cenarion Hold"] = 588,
 				["Astranaar"] = 153,
-				["Everlook"] = 178,
+				["Everlook"] = 178
 			},
 			["Chillwind Camp"] = {
 				["Refuge Pointe"] = 138,
@@ -598,7 +598,7 @@ InFlight.defaults = {
 				["Booty Bay"] = 662,
 				["Light's Hope Chapel"] = 147,
 				["Sentinel Hill"] = 495,
-				["Southshore"] = 85,
+				["Southshore"] = 85
 			},
 			["Nijel's Point"] = {
 				["Gadgetzan"] = 464,
@@ -609,7 +609,7 @@ InFlight.defaults = {
 				["Astranaar"] = 273,
 				["Auberdine"] = 282,
 				["Feathermoon"] = 232,
-				["Rut'theran Village"] = 367,
+				["Rut'theran Village"] = 367
 			},
 			["Gadgetzan"] = {
 				["Marshal's Refuge"] = 104,
@@ -624,7 +624,7 @@ InFlight.defaults = {
 				["Thalanaar"] = 177,
 				["Cenarion Hold"] = 197,
 				["Feathermoon"] = 354,
-				["Nijel's Point"] = 480,
+				["Nijel's Point"] = 480
 			},
 			["Thelsamar"] = {
 				["Refuge Pointe"] = 164,
@@ -638,7 +638,7 @@ InFlight.defaults = {
 				["Ironforge"] = 109,
 				["Booty Bay"] = 508,
 				["Chillwind Camp"] = 285,
-				["Southshore"] = 250,
+				["Southshore"] = 250
 			},
 			["Thalanaar"] = {
 				["Marshal's Refuge"] = 274,
@@ -647,7 +647,7 @@ InFlight.defaults = {
 				["Theramore"] = 159,
 				["Feathermoon"] = 179,
 				["Ratchet"] = 274,
-				["Rut'theran Village"] = 729,
+				["Rut'theran Village"] = 729
 			},
 			["Feathermoon"] = {
 				["Gadgetzan"] = 326,
@@ -659,7 +659,7 @@ InFlight.defaults = {
 				["Astranaar"] = 500,
 				["Thalanaar"] = 155,
 				["Theramore"] = 314,
-				["Nijel's Point"] = 227,
+				["Nijel's Point"] = 227
 			},
 			["Southshore"] = {
 				["Refuge Pointe"] = 74,
@@ -672,7 +672,7 @@ InFlight.defaults = {
 				["Ironforge"] = 206,
 				["Booty Bay"] = 597,
 				["Chillwind Camp"] = 81,
-				["Light's Hope Chapel"] = 219,
+				["Light's Hope Chapel"] = 219
 			},
 			["Refuge Pointe"] = {
 				["Light's Hope Chapel"] = 233,
@@ -684,7 +684,7 @@ InFlight.defaults = {
 				["Ironforge"] = 271,
 				["Thelsamar"] = 171,
 				["Chillwind Camp"] = 122,
-				["Southshore"] = 86,
+				["Southshore"] = 86
 			},
 			["Thorium Point"] = {
 				["Morgan's Vigil"] = 96,
@@ -693,7 +693,7 @@ InFlight.defaults = {
 				["Nethergarde Keep"] = 265,
 				["Ironforge"] = 94,
 				["Chillwind Camp"] = 342,
-				["Menethil Harbor"] = 178,
+				["Menethil Harbor"] = 178
 			},
 			["Theramore"] = {
 				["Marshal's Refuge"] = 261,
@@ -710,7 +710,7 @@ InFlight.defaults = {
 				["Thalanaar"] = 162,
 				["Cenarion Hold"] = 354,
 				["Feathermoon"] = 341,
-				["Rut'theran Village"] = 619,
+				["Rut'theran Village"] = 619
 			},
 			["Aerie Peak"] = {
 				["Refuge Pointe"] = 75,
@@ -724,7 +724,7 @@ InFlight.defaults = {
 				["Booty Bay"] = 658,
 				["Sentinel Hill"] = 492,
 				["Chillwind Camp"] = 54,
-				["Southshore"] = 68,
+				["Southshore"] = 68
 			},
 			["Lakeshire"] = {
 				["Morgan's Vigil"] = 61,
@@ -736,7 +736,7 @@ InFlight.defaults = {
 				["Booty Bay"] = 227,
 				["Ironforge"] = 357,
 				["Menethil Harbor"] = 441,
-				["Darkshire"] = 60,
+				["Darkshire"] = 60
 			},
 			["Menethil Harbor"] = {
 				["Light's Hope Chapel"] = 324,
@@ -753,7 +753,7 @@ InFlight.defaults = {
 				["Ironforge"] = 89,
 				["Stormwind"] = 261,
 				["Chillwind Camp"] = 186,
-				["Southshore"] = 107,
+				["Southshore"] = 107
 			},
 			["Everlook"] = {
 				["Gadgetzan"] = 564,
@@ -767,7 +767,7 @@ InFlight.defaults = {
 				["Talonbranch Glade"] = 122,
 				["Talrendis Point"] = 176,
 				["Feathermoon"] = 734,
-				["Nijel's Point"] = 553,
+				["Nijel's Point"] = 553
 			},
 			["Rut'theran Village"] = {
 				["Marshal's Refuge"] = 797,
@@ -784,7 +784,7 @@ InFlight.defaults = {
 				["Everlook"] = 365,
 				["Cenarion Hold"] = 714,
 				["Feathermoon"] = 557,
-				["Nijel's Point"] = 376,
+				["Nijel's Point"] = 376
 			},
 			["Ironforge"] = {
 				["Light's Hope Chapel"] = 349,
@@ -801,7 +801,7 @@ InFlight.defaults = {
 				["Booty Bay"] = 440,
 				["Darkshire"] = 260,
 				["Chillwind Camp"] = 294,
-				["Southshore"] = 265,
+				["Southshore"] = 265
 			},
 			["Darkshire"] = {
 				["Refuge Pointe"] = 524,
@@ -815,7 +815,7 @@ InFlight.defaults = {
 				["Ironforge"] = 333,
 				["Stormwind"] = 88,
 				["Menethil Harbor"] = 417,
-				["Southshore"] = 517,
+				["Southshore"] = 517
 			},
 			["Nethergarde Keep"] = {
 				["Darkshire"] = 91,
@@ -827,10 +827,10 @@ InFlight.defaults = {
 				["Booty Bay"] = 260,
 				["Morgan's Vigil"] = 207,
 				["Chillwind Camp"] = 631,
-				["Lakeshire"] = 150,
+				["Lakeshire"] = 150
 			},
 			["Nighthaven"] = {
-				["Rut'theran Village"] = 152,
+				["Rut'theran Village"] = 152
 			},
 			["Booty Bay"] = {
 				["Darkshire"] = 175,
@@ -844,7 +844,7 @@ InFlight.defaults = {
 				["Ironforge"] = 464,
 				["Stormwind"] = 220,
 				["Chillwind Camp"] = 712,
-				["Southshore"] = 649,
+				["Southshore"] = 649
 			},
 			["Astranaar"] = {
 				["Auberdine"] = 148,
@@ -855,7 +855,7 @@ InFlight.defaults = {
 				["Talrendis Point"] = 150,
 				["Theramore"] = 381,
 				["Feathermoon"] = 511,
-				["Nijel's Point"] = 279,
+				["Nijel's Point"] = 279
 			},
 			["Auberdine"] = {
 				["Gadgetzan"] = 689,
@@ -869,7 +869,7 @@ InFlight.defaults = {
 				["Talonbranch Glade"] = 190,
 				["Astranaar"] = 176,
 				["Feathermoon"] = 473,
-				["Nijel's Point"] = 291,
+				["Nijel's Point"] = 291
 			},
 			["Stormwind"] = {
 				["Thelsamar"] = 317,
@@ -886,14 +886,14 @@ InFlight.defaults = {
 				["Ironforge"] = 259,
 				["Morgan's Vigil"] = 157,
 				["Chillwind Camp"] = 506,
-				["Southshore"] = 443,
+				["Southshore"] = 443
 			},
 			["Stonetalon Peak"] = {
 				["Rut'theran Village"] = 261,
 				["Astranaar"] = 154,
 				["Theramore"] = 434,
 				["Auberdine"] = 177,
-				["Nijel's Point"] = 126,
+				["Nijel's Point"] = 126
 			},
 			["Sentinel Hill"] = {
 				["Thelsamar"] = 389,
@@ -904,7 +904,7 @@ InFlight.defaults = {
 				["Booty Bay"] = 185,
 				["Lakeshire"] = 130,
 				["Ironforge"] = 331,
-				["Darkshire"] = 97,
+				["Darkshire"] = 97
 			},
 			["Talonbranch Glade"] = {
 				["Marshal's Refuge"] = 776,
@@ -915,7 +915,7 @@ InFlight.defaults = {
 				["Everlook"] = 121,
 				["Talrendis Point"] = 282,
 				["Feathermoon"] = 660,
-				["Nijel's Point"] = 478,
+				["Nijel's Point"] = 478
 			},
 			["Cenarion Hold"] = {
 				["Marshal's Refuge"] = 92,
@@ -924,7 +924,7 @@ InFlight.defaults = {
 				["Talonbranch Glade"] = 831,
 				["Thalanaar"] = 329,
 				["Feathermoon"] = 175,
-				["Rut'theran Village"] = 726,
+				["Rut'theran Village"] = 726
 			},
 			["Moonglade"] = {
 				["Gadgetzan"] = 694,
@@ -937,7 +937,7 @@ InFlight.defaults = {
 				["Everlook"] = 131,
 				["Cenarion Hold"] = 771,
 				["Feathermoon"] = 614,
-				["Rut'theran Village"] = 226,
+				["Rut'theran Village"] = 226
 			},
 			["Morgan's Vigil"] = {
 				["Darkshire"] = 121,
@@ -953,8 +953,8 @@ InFlight.defaults = {
 				["Ironforge"] = 187,
 				["Menethil Harbor"] = 270,
 				["Chillwind Camp"] = 435,
-				["Light's Hope Chapel"] = 491,
-			},
-		},
-	},
+				["Light's Hope Chapel"] = 491
+			}
+		}
+	}
 }

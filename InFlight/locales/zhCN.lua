@@ -1,5 +1,7 @@
 local L = LibStub("AceLocale-3.0"):NewLocale("InFlight", "zhCN")
-if not L then return end
+if not L then
+    return
+end
 
 L["AddonDisabled"] = "检测到错误的客户端版本：禁用插件"
 L["BackgroundColor"] = "背景颜色"
@@ -33,13 +35,15 @@ L["Texture"] = "时间条纹理"
 L["TooltipOption1"] = "<Shift左键单击>移动"
 L["TooltipOption2"] = "<点击右键>的选项"
 L["TooltipOption3"] = "<Ctrl键左键单击>将强制关闭"
-L["ToText"] = "\"到\" 文字"
+L["ToText"] = '"到" 文字'
 L["UnknownColor"] = "未知的颜色"
 L["Width"] = "宽度"
 
 -- Flight point localisations
 local FL = LibStub("AceLocale-3.0"):NewLocale("InFlightLoc", "zhCN")
-if not FL then return end
+if not FL then
+    return
+end
 
 FL["Aerie Peak"] = "鹰巢山"
 FL["Astranaar"] = "阿斯特兰纳"

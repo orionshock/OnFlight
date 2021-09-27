@@ -1,5 +1,7 @@
 local L = LibStub("AceLocale-3.0"):NewLocale("InFlight", "ruRU")
-if not L then return end
+if not L then
+    return
+end
 
 L["AddonDisabled"] = "Обнаружена неверная версия клиента: отключение аддона"
 L["BackgroundColor"] = "Цвет фона"
@@ -33,13 +35,15 @@ L["Texture"] = "Текстура"
 L["TooltipOption1"] = "<Shift левый-клик> для перемещения"
 L["TooltipOption2"] = "<Правый-клик> для опций"
 L["TooltipOption3"] = "<Ctrl левый-клик> чтобы заставить близко"
-L["ToText"] = "\"в\" Текст"
+L["ToText"] = '"в" Текст'
 L["UnknownColor"] = "Неизвестный цвет"
 L["Width"] = "Ширина"
 
 -- Flight point localisations
 local FL = LibStub("AceLocale-3.0"):NewLocale("InFlightLoc", "ruRU")
-if not FL then return end
+if not FL then
+    return
+end
 
 FL["Aerie Peak"] = "Заоблачный пик"
 FL["Astranaar"] = "Астранаар"
