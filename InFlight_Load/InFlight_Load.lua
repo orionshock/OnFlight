@@ -65,6 +65,12 @@ if GetAddOnEnableState(UnitName("player"), "InFlight") == 2 then
 		},
 		[L["Blackwind Landing"]] = {
 			{find = L["Skettis-BEM"], s = "Blackwind Landing", d = "Skyguard Outpost"}
+		},
+		[L["Caverns of Time"]] = {
+			{find = L["CoT-Flight"], s = "Tanaris", d = "Caverns of Time"}
+		},
+		[L["Old Hillsbrad Foothills"]] = {
+			{find = L["OHB-Flight"], s = "Old Hillsbrad Foothills Entrance", d = "Durnholde Keep"}
 		}
 	}
 
@@ -72,14 +78,17 @@ if GetAddOnEnableState(UnitName("player"), "InFlight") == 2 then
 	do
 		local orig_SelectGossipOption = SelectGossipOption
 		function SelectGossipOption(option, ...)
-			local gossipText, gossipType = select(option, GetGossipOptions())
+			print("SelectGossipOption", option, ...)
+			local gossipText, gossipType = select(((option * 2) - 1), GetGossipOptions())
+			print(gossipText, gossipType)
 			if (gossipText and gossipText ~= "") and (gossipType == "gossip") then
 				local gossipZoneData = gossipFlightData[GetMinimapZoneText()]
+				print(gossipText, GetMinimapZoneText(), gossipZoneData)
 				if gossipZoneData then
 					for index, gossipFlightOption in ipairs(gossipZoneData) do
 						if strfind(gossipText, gossipFlightOption.find, 1, true) then
 							if gossipFlightOption.s and gossipFlightOption.d and LoadInFlight() then
-								--print("|cff00ff40In|cff00aaffFlight|r: Special Flight - ", gossipFlightOption.s, "->", gossipFlightOption.d)
+								print("|cff00ff40In|cff00aaffFlight|r: Special Flight - ", gossipFlightOption.s, "->", gossipFlightOption.d)
 								self:StartMiscFlight(gossipFlightOption.s, gossipFlightOption.d)
 							end
 						end
