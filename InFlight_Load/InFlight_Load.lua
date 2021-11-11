@@ -71,6 +71,9 @@ if GetAddOnEnableState(UnitName("player"), "InFlight") == 2 then
 		},
 		[L["Old Hillsbrad Foothills"]] = {
 			{find = L["OHB-Flight"], s = "Old Hillsbrad Foothills Entrance", d = "Durnholde Keep"}
+		},
+		[L["Area 52"]] = {
+			{find = L["Scryer-ManaForgeC"], s="Area 52", d = L["ManaForgeC"]}
 		}
 	}
 

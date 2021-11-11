@@ -19,3 +19,6 @@ L["Skettis-BEM"] = "Absolutely!  Send me to the Skyguard Outpost."
 
 L["CoT-Flight"] = "Please take me to the master's lair."
 L["OHB-Flight"] = "I'm ready to go to Durnholde Keep."
+
+L["Scryer-ManaForgeC"] = "I'm as ready as I'll ever be."
+L["ManaForgeC"] = "Manaforge Coruu"
