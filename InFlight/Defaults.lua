@@ -954,6 +954,10 @@ InFlight.defaults = {
 				["Menethil Harbor"] = 270,
 				["Chillwind Camp"] = 435,
 				["Light's Hope Chapel"] = 491
+			},
+			["Area 52"] = {
+				["Evergrove"] = 81,
+				["Manaforge Coruu"] = 43
 			}
 		}
 	}
