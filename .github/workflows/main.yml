@@ -1,0 +1,37 @@
+name: release
+
+# Push when toc file is updated
+on:
+  push:
+    paths:
+      - 'InFlight/InFlight.toc'
+
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+      
+      - name: Get version
+        run: echo "INFLIGHT_VERSION=$(cat InFlight/InFlight.toc | grep Version | cut -d ' ' -f3)" >> $GITHUB_ENV
+      
+      - name: Archive Release
+        uses: thedoctor0/zip-release@master
+        with:
+          type: "zip"
+          filename: "inFlight-${{ env.INFLIGHT_VERSION }}-bc.zip"
+          exclusions: "*.git*"
+
+      - name: Create release
+        uses: ncipollo/release-action@v1
+        with:
+          name: "${{ env.INFLIGHT_VERSION }}"
+          tag: "${{ env.INFLIGHT_VERSION }}"
+          artifacts: "inFlight-${{ env.INFLIGHT_VERSION }}-bc.zip"
+          artifactContentType: application/zip
+          generateReleaseNotes: True
+          token: ${{ secrets.GITHUB_TOKEN }}
