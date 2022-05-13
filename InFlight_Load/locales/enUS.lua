@@ -22,3 +22,6 @@ L["OHB-Flight"] = "I'm ready to go to Durnholde Keep."
 
 L["Scryer-ManaForgeC"] = "I'm as ready as I'll ever be."
 L["ManaForgeC"] = "Manaforge Coruu"
+
+
+L["SSO_BombRun"] = "Speaking of action, I've been ordered to undertake an air strike."

@@ -163,14 +163,14 @@ function InFlight:LoadBulk() -- called from InFlight_Load
 	end
 
 	-- Check that this is the right version of the database to avoid corruption
-	if InFlightDB.version ~= "classic" then
+	if InFlightDB.version ~= "tbc" then
 		InFlightDB.global = nil
-		InFlightDB.version = "classic"
+		InFlightDB.version = "tbc"
 	end
 
 	-- Update default data
-	if InFlightDB.dbinit ~= 1134 or debug then
-		InFlightDB.dbinit = 1134
+	if InFlightDB.dbinit ~= 1135 or debug then
+		InFlightDB.dbinit = 1135
 		InFlightDB.upload = nil
 		Print(L["DefaultsUpdated"])
 
