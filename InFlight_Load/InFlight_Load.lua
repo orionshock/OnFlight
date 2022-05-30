@@ -76,7 +76,11 @@ if GetAddOnEnableState(UnitName("player"), "InFlight") == 2 then
 			{find = L["Scryer-ManaForgeC"], s = "Area 52", d = L["ManaForgeC"]}
 		},
 		[L["Sun's Reach Harbor"]] = {
-			{find = L["SSO_BombRun"], s = "Sun's Reach Harbor", d = "Dead Scar"}
+			{find = L["SSO_BombRun"], s = "Sun's Reach Harbor", d = "Dead Scar"},
+			{find = L["SSO_Boats"], s = "Sun's Reach Harbor", d = "The Sin'loren"},
+		},
+		[L["The Sin'loren"]] = {
+			{find = L["ReturnFromBoats"], s = "The Sin'loren", d = "Sun's Reach Harbor"}
 		}
 	}
 

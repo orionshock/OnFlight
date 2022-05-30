@@ -23,5 +23,8 @@ L["OHB-Flight"] = "I'm ready to go to Durnholde Keep."
 L["Scryer-ManaForgeC"] = "I'm as ready as I'll ever be."
 L["ManaForgeC"] = "Manaforge Coruu"
 
-
+L["The Sin'loren"] = true
+L["Sun's Reach Harbor"] = true
 L["SSO_BombRun"] = "Speaking of action, I've been ordered to undertake an air strike."
+L["SSO_Boats"] = "I need to intercept the Dawnblade reinforcements."
+L["ReturnFromBoats"] = "<Ride the dragonhawk to Sun's Reach.>"
