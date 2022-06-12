@@ -28,7 +28,7 @@ function InFlight:ADDON_LOADED(addonName)
 	elseif addonName == "InFlight" then
 		self:UnregisterEvent("ADDON_LOADED")
 		self:LoadBulk()
-		local Quartz3 = LibStub("AceAddon-3.0"):GetAddon("Quartz3")
+		local Quartz3 = LibStub("AceAddon-3.0"):GetAddon("Quartz3", true)
 		if Quartz3 then
 			local Quartz3_Flight = Quartz3:GetModule("Flight")
 			if Quartz3_Flight then
