@@ -1,4 +1,4 @@
-## Interface: 20502
+## Interface: 30400
 ## Title: InFlight
 ## Notes: Status bar timer for your flight paths
 ## Notes-deDE: Statusleisten-Zeitanzeige für Ihre Flugrouten
@@ -12,7 +12,7 @@
 ## Notes-zhCN: 您的航班路径的状态栏计时器
 ## Notes-zhTW: 您的航班路徑的狀態欄計時器
 ## Author: Wildcard_25, TotalPackage, Kalimash, Orionshock
-## Version: 2.11
+## Version: 3.0
 
 ## SavedVariables: InFlightDB
 ## Dependencies: InFlight_Load

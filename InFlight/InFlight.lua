@@ -156,21 +156,21 @@ function InFlight:LoadBulk() -- called from InFlight_Load
 	end
 
 	-- Check that this is the right version of the client
-	if select(4, GetBuildInfo()) > 30000 then
+	if select(4, GetBuildInfo()) > 40000 then
 		Print(L["AddonDisabled"])
 		DisableAddOn("InFlight")
 		return
 	end
 
 	-- Check that this is the right version of the database to avoid corruption
-	if InFlightDB.version ~= "tbc" then
+	if InFlightDB.version ~= "wrath" then
 		InFlightDB.global = nil
-		InFlightDB.version = "tbc"
+		InFlightDB.version = "wrath"
 	end
 
 	-- Update default data
-	if InFlightDB.dbinit ~= 1135 or debug then
-		InFlightDB.dbinit = 1135
+	if InFlightDB.dbinit ~= 30400 or debug then
+		InFlightDB.dbinit = 30400
 		InFlightDB.upload = nil
 		Print(L["DefaultsUpdated"])
 
