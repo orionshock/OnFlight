@@ -481,19 +481,6 @@ do -- timer bar
 		SetPoints(bord, "TOPLEFT", sb, "TOPLEFT", -5, 5, "BOTTOMRIGHT", sb, "BOTTOMRIGHT", 5, -5)
 		bord:SetFrameStrata("LOW")
 
-		local function IsPlayerOnVehicleTaxi()
-			if UnitInVehicle("player") then --UI Thinks your in a car.
-				if not UnitHasVehicleUI(unit) then
-					if not UnitControllingVehicle("player") then    --But your not in control of it
-						if not CanExitVehicle() then --and you cannot get out
-							return true --then we're on a Vehicle Taxi probabbly
-						end
-					end
-				end
-			end
-			return false
-		end
-
 		local function onupdate(this, a1)
 			PrintD("OnUpdate", elapsed, throt)
 			elapsed = elapsed + a1
@@ -506,8 +493,8 @@ do -- timer bar
 			elapsed = 0
 
 			if takeoff then -- check if actually in flight after take off (doesn't happen immediately)
-				PrintD("TakeOff? ", UnitOnTaxi("player"), IsPlayerOnVehicleTaxi() )
-				if UnitOnTaxi("player") or IsPlayerOnVehicleTaxi() then
+				PrintD("TakeOff? ", UnitOnTaxi("player"), UnitInVehicle("player") )
+				if UnitOnTaxi("player") or UnitInVehicle("player") then
 					takeoff, ontaxi = nil, true
 					elapsed, totalTime, startTime = throt - 0.01, 0, GetTime()
 				elseif totalTime > 5 then
@@ -522,7 +509,7 @@ do -- timer bar
 				return
 			end
 
-			if (not UnitOnTaxi("player")) and (not IsPlayerOnVehicleTaxi()) then -- event bug fix
+			if (not UnitOnTaxi("player")) and (not UnitInVehicle("player")) then -- event bug fix
 				PrintD("Not On Taxi Bail it")
 				ontaxi = nil
 			end
@@ -625,7 +612,7 @@ do -- timer bar
 			self:UnregisterEvent("PLAYER_CONTROL_GAINED")
 			self:UnregisterEvent("UNIT_EXITED_VEHICLE")
 		end
-		self.UNIT_EXITED_VEHICLE = self.PLAYER_CONTROL_GAINED
+		--self.UNIT_EXITED_VEHICLE = self.PLAYER_CONTROL_GAINED
 
 		self:SetScript("OnUpdate", onupdate)
 		self.CreateBar = nil

@@ -95,6 +95,13 @@ if GetAddOnEnableState(UnitName("player"), "InFlight") == 2 then
 		},
 		["Voltarus"] = {
 			{find = "Uhh, can you send me on the tour of Zul'Drak?", s = "Voltaris - Dark Horizon Start", d = "Voltaris - Dark Horizon End"}
+		},
+		["Altar of Har'koa"] = {
+			{
+				find = "Great and powerful Har'koa, please call for one of your children that it might stealthily carry me into the Altar of Quetz'lun.",
+				s = "Altar of Har'koa",
+				d = "Altar of Quetz'lun"
+			}
 		}
 	}
 
@@ -112,7 +119,7 @@ if GetAddOnEnableState(UnitName("player"), "InFlight") == 2 then
 					for index, gossipFlightOption in ipairs(gossipZoneData) do
 						if strfind(gossipText, gossipFlightOption.find, 1, true) then
 							if gossipFlightOption.s and gossipFlightOption.d and LoadInFlight() then
-								--print("|cff00ff40In|cff00aaffFlight|r: Special Flight - ", gossipFlightOption.s, "->", gossipFlightOption.d)
+								print("|cff00ff40In|cff00aaffFlight|r: Special Flight - ", gossipFlightOption.s, "->", gossipFlightOption.d)
 								self:StartMiscFlight(gossipFlightOption.s, gossipFlightOption.d)
 							end
 						end
