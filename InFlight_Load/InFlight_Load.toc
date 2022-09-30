@@ -1,4 +1,4 @@
-## Interface: 20501
+## Interface: 30400
 ## Title: InFlight_Load
 ## Notes: Loader for InFlight
 ## Notes-deDE: Loader für InFlight
@@ -11,8 +11,8 @@
 ## Notes-ruRU: Загрузчик для InFlight
 ## Notes-zhCN: InFlight 的載入器
 ## Notes-zhTW: InFlight 的裝載機
-## Author: TotalPackage
-## Version: 2.05.001
+## Author: Wildcard_25, TotalPackage, Kalimash, Orionshock
+## Version: 3.2
 
 ## X-Category: Interface Enhancements
 
