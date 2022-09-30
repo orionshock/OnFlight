@@ -102,6 +102,9 @@ if GetAddOnEnableState(UnitName("player"), "InFlight") == 2 then
 				s = "Altar of Har'koa",
 				d = "Altar of Quetz'lun"
 			}
+		},
+		["Krasus' Landing"] = {
+			{ find = "I'm ready to fly to Sholazar Basin.", s = "Krasus' Landing", d ="Wildgrowth Mangal"}
 		}
 	}
 

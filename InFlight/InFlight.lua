@@ -302,6 +302,7 @@ function InFlight:LoadBulk() -- called from InFlight_Load
 					button2 = CANCEL,
 					OnAccept = function(this, data)
 						InFlight:StartTimer(data)
+						print("|cff00ff40In|cff00aaffFlight|r: Normal Taxi - ", taxiSrcName, "->", taxiDstName)
 					end,
 					timeout = 0,
 					exclusive = 1,
@@ -315,6 +316,7 @@ function InFlight:LoadBulk() -- called from InFlight_Load
 			end
 		else -- just take the flight
 			self:StartTimer(slot)
+			print("|cff00ff40In|cff00aaffFlight|r: Normal Taxi - ", taxiSrcName, "->", taxiDstName)
 		end
 	end
 
