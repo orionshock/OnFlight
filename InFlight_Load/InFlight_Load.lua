@@ -77,22 +77,25 @@ if GetAddOnEnableState(UnitName("player"), "InFlight") == 2 then
 		},
 		[L["Sun's Reach Harbor"]] = {
 			{find = L["SSO_BombRun"], s = "Sun's Reach Harbor", d = "Dead Scar"},
-			{find = L["SSO_Boats"], s = "Sun's Reach Harbor", d = "The Sin'loren"},
+			{find = L["SSO_Boats"], s = "Sun's Reach Harbor", d = "The Sin'loren"}
 		},
 		[L["The Sin'loren"]] = {
 			{find = L["ReturnFromBoats"], s = "The Sin'loren", d = "Sun's Reach Harbor"}
 		},
 		["Wyrmrest Temple"] = {
 			--Top to Bottom, Top to Middle
-			{find = "Yes, please, I would like to return to the ground level of the temple.", s ="Wyrmrest Temple Top", d ="Wyrmrest Temple Ground"},
-			{find = "I would like to go to Lord Devrestrasz in the middle of the temple.", s ="Wyrmrest Temple Top", d ="Wyrmrest Temple Middle"},
+			{find = "Yes, please, I would like to return to the ground level of the temple.", s = "Wyrmrest Temple Top", d = "Wyrmrest Temple Ground"},
+			{find = "I would like to go to Lord Devrestrasz in the middle of the temple.", s = "Wyrmrest Temple Top", d = "Wyrmrest Temple Middle"},
 			--Middle to Top, Middle to Bottom
-			{find = "My lord, I need to get to the top of the temple.", s ="Wyrmrest Temple Middle", d ="Wyrmrest Temple Top"},
-			{find = "Can I get a ride back to ground level, Lord Devrestrasz?", s ="Wyrmrest Temple Middle", d ="Wyrmrest Temple Ground"},
+			{find = "My lord, I need to get to the top of the temple.", s = "Wyrmrest Temple Middle", d = "Wyrmrest Temple Top"},
+			{find = "Can I get a ride back to ground level, Lord Devrestrasz?", s = "Wyrmrest Temple Middle", d = "Wyrmrest Temple Ground"},
 			--Bottom to Top, Bottom to Middle
-			{find = "Steward, please allow me to ride one of the drakes to the queen's chamber at the top of the temple.", s ="Wyrmrest Temple Ground", d ="Wyrmrest Temple Top"},
-			{find = "Can you spare a drake to take me to Lord Devrestrasz in the middle of the temple?", s ="Wyrmrest Temple Ground", d ="Wyrmrest Temple Middle"},
+			{find = "Steward, please allow me to ride one of the drakes to the queen's chamber at the top of the temple.", s = "Wyrmrest Temple Ground", d = "Wyrmrest Temple Top"},
+			{find = "Can you spare a drake to take me to Lord Devrestrasz in the middle of the temple?", s = "Wyrmrest Temple Ground", d = "Wyrmrest Temple Middle"}
 		},
+		["Voltarus"] = {
+			{find = "Uhh, can you send me on the tour of Zul'Drak?", s = "Voltaris - Dark Horizon Start", d = "Voltaris - Dark Horizon End"}
+		}
 	}
 
 	-- Support flights that are started by gossip options properly so automation addons don't futz it.
