@@ -396,7 +396,6 @@ function InFlight:StartTimer(slot) -- lift off
 	self:RegisterEvent("PLAYER_CONTROL_GAINED")
 	self:RegisterEvent("PLAYER_ENTERING_WORLD")
 	self:RegisterEvent("PLAYER_LEAVING_WORLD")
-	self:RegisterEvent("UNIT_EXITED_VEHICLE")
 
 	if slot then
 		oldTakeTaxiNode(slot)
@@ -612,7 +611,6 @@ do -- timer bar
 			self:UnregisterEvent("PLAYER_ENTERING_WORLD")
 			self:UnregisterEvent("PLAYER_LEAVING_WORLD")
 			self:UnregisterEvent("PLAYER_CONTROL_GAINED")
-			self:UnregisterEvent("UNIT_EXITED_VEHICLE")
 		end
 		--self.UNIT_EXITED_VEHICLE = self.PLAYER_CONTROL_GAINED
 

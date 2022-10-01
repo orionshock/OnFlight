@@ -105,6 +105,9 @@ if GetAddOnEnableState(UnitName("player"), "InFlight") == 2 then
 		},
 		["Krasus' Landing"] = {
 			{ find = "I'm ready to fly to Sholazar Basin.", s = "Krasus' Landing", d ="Wildgrowth Mangal"}
+		},
+		["Frenzyheart Hill"] ={
+			{ find = "You look safe enough... let's do this.", s = "Frenzyheart Hill", d="Mistwhisper Refuge"}
 		}
 	}
 
