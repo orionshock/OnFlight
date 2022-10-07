@@ -109,7 +109,10 @@ if GetAddOnEnableState(UnitName("player"), "InFlight") == 2 then
 		},
 		["Frenzyheart Hill"] = {
 			{find = "You look safe enough... let's do this.", s = "Frenzyheart Hill", d = "Mistwhisper Refuge"}
-		}
+		},
+		["The Shadow Vault"] = {
+			{find = "I am prepared to join the assault, Keritose. Do you have a skeletal gryphon ready for me?", s ="The Shadow Vault", d = "Seeds of Chaos"}
+		},
 	}
 
 	-- Support flights that are started by gossip options properly so automation addons don't futz it.
