@@ -111,7 +111,18 @@ if GetAddOnEnableState(UnitName("player"), "InFlight") == 2 then
 			{find = "You look safe enough... let's do this.", s = "Frenzyheart Hill", d = "Mistwhisper Refuge"}
 		},
 		["The Shadow Vault"] = {
-			{find = "I am prepared to join the assault, Keritose. Do you have a skeletal gryphon ready for me?", s ="The Shadow Vault", d = "Seeds of Chaos"}
+			{find = "I am prepared to join the assault, Keritose. Do you have a skeletal gryphon ready for me?", s = "The Shadow Vault", d = "Seeds of Chaos"}
+		},
+		["Vengeance Landing"] = {
+			{find = "I need a riding bat to intercept the Alliance reinforcements.", s = "Vengeance Landing", d = "Test at Sea"},
+			{find = "I need to fly to the Windrunner.  Official business!", s = "Vengeance Landing", d = "The Windrunner"}
+		},
+		["Howling Fjord"] = {
+			{find = "I don't have time for chit-chat, Lou. Take me to Scalawag Point.", s = "Howling Fjord", d = "Scalawag Point"}
+		},
+		["Warsong Hold"] = {
+			{find = "Send me to Garrosh's Landing, Yanni.", s = "Warsong Hold", d = "Coast of Echoes"},
+			{find = "I am ready to leave, Durkot.", s = "Warsong Hold", d = "Taunka'le Village"},
 		},
 	}
 
