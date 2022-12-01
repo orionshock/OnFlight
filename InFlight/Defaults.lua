@@ -114,7 +114,8 @@ InFlight.defaults = {
 				["Camp Mojache"] = 124,
 				["Shadowprey Village"] = 323,
 				["Splintertree Post"] = 356,
-				["Camp Taurajo"] = 137
+				["Camp Taurajo"] = 137,
+				["Mudsprocket"] = 69
 			},
 			["Falcon Watch"] = {
 				["Mok'Nathal Village"] = 140,
@@ -448,7 +449,8 @@ InFlight.defaults = {
 				["Camp Mojache"] = 414,
 				["Everlook"] = 445,
 				["Splintertree Post"] = 306,
-				["Shadowprey Village"] = 383
+				["Shadowprey Village"] = 383,
+				["Mudsprocket"] = 63
 			},
 			["Camp Taurajo"] = {
 				["Crossroads"] = 79,
@@ -738,7 +740,8 @@ InFlight.defaults = {
 				["Kargath"] = 492,
 				["Booty Bay"] = 884,
 				["Revantusk Village"] = 141,
-				["Tarren Mill"] = 301
+				["Tarren Mill"] = 301,
+				["Zul'Aman"] = 97
 			},
 			["Shattrath"] = {
 				["Shadowmoon Village"] = 134,
@@ -791,6 +794,210 @@ InFlight.defaults = {
 				["Bloodvenom Post"] = 590,
 				["Brackenwall Village"] = 322,
 				["Camp Taurajo"] = 265
+			},
+			["Grom'arsh Crash-Site"] = {
+				["Dun Nifflelem"] = 141,
+			},
+			["Unu'pe"] = {
+				["Vengeance Landing"] = 444,
+			},
+			["Warsong Hold"] = {
+				["Taunka'le Village"] = 87,
+			},
+			["Death's Rise"] = {
+				["The Argent Vanguard"] = 278,
+				["Warsong Camp"] = 114,
+			},
+			["Acherus: The Ebon Hold"] = {
+				["Stonard"] = 821,
+				["Undercity"] = 309,
+			},
+			["Light's Breach"] = {
+				["Agmar's Hammer"] = 198,
+				["Ebon Watch"] = 40,
+				["Apothecary Camp"] = 131,
+				["Dalaran"] = 107,
+				["New Agamand"] = 223,
+			},
+			["Gundrak"] = {
+				["Dalaran"] = 227,
+				["Sunreaver's Command"] = 187,
+			},
+			["Nesingwary Base Camp"] = {
+				["River's Heart"] = 77,
+			},
+			["Wyrmrest Temple Ground"] = {
+				["Wyrmrest Temple Top"] = 19,
+			},
+			["Dalaran"] = {
+				["Crusaders' Pinnacle"] = 39,
+				["Ulduar"] = 181,
+				["Ebon Watch"] = 81,
+				["Light's Breach"] = 126,
+				["Apothecary Camp"] = 268,
+				["The Argent Vanguard"] = 32,
+				["Gundrak"] = 239,
+				["Venomspite"] = 171,
+				["Transitus Shield"] = 346,
+				["Dun Nifflelem"] = 155,
+				["Bouldercrag's Refuge"] = 167,
+				["Camp Winterhoof"] = 313,
+				["Sunreaver's Command"] = 76,
+				["Unu'pe"] = 288,
+				["Warsong Camp"] = 162,
+				["Kamagua"] = 321,
+				["The Shadow Vault"] = 162,
+				["Zim'Torga"] = 185,
+				["Warsong Hold"] = 320,
+				["Bor'gorok Outpost"] = 265,
+				["Amber Ledge"] = 373,
+				["K3"] = 55,
+				["Kor'koron Vanguard"] = 73,
+				["The Argent Stand"] = 145,
+				["Taunka'le Village"] = 298,
+				["Wyrmrest Temple"] = 121,
+				["Agmar's Hammer"] = 125,
+				["Camp Oneqwah"] = 229,
+				["Camp Tunka'lo"] = 145,
+				["Moa'ki"] = 159,
+				["New Agamand"] = 348,
+			},
+			["Camp Oneqwah"] = {
+				["Dalaran"] = 198,
+			},
+			["Vengeance Landing"] = {
+				["New Agamand"] = 87,
+				["Kamagua"] = 163,
+				["Camp Winterhoof"] = 74,
+			},
+			["Kor'koron Vanguard"] = {
+				["Gundrak"] = 264,
+			},
+			["Taunka'le Village"] = {
+				["Warsong Camp"] = 72,
+				["New Agamand"] = 362,
+			},
+			["Wyrmrest Temple"] = {
+				["The Argent Stand"] = 113,
+				["Agmar's Hammer"] = 47,
+				["The Argent Vanguard"] = 80,
+				["Dalaran"] = 65,
+			},
+			["New Agamand"] = {
+				["Dalaran"] = 335,
+				["Apothecary Camp"] = 103,
+				["Vengeance Landing"] = 80,
+				["Camp Winterhoof"] = 80,
+			},
+			["Ulduar"] = {
+				["Agmar's Hammer"] = 267,
+			},
+			["Transitus Shield"] = {
+				["Dalaran"] = 216,
+				["Amber Ledge"] = 30,
+				["Agmar's Hammer"] = 137,
+			},
+			["Apothecary Camp"] = {
+				["Conquest Hold"] = 47,
+				["Moa'ki"] = 200,
+				["New Agamand"] = 92,
+			},
+			["Agmar's Hammer"] = {
+				["Wyrmrest Temple"] = 51,
+				["Unu'pe"] = 194,
+				["Light's Breach"] = 193,
+				["Dalaran"] = 120,
+				["Moa'ki"] = 64,
+				["The Argent Vanguard"] = 143,
+			},
+			["Conquest Hold"] = {
+				["Venomspite"] = 88,
+				["Apothecary Camp"] = 57,
+			},
+						["Bouldercrag's Refuge"] = {
+				["Dun Nifflelem"] = 148,
+			},
+			["River's Heart"] = {
+				["Amber Ledge"] = 177,
+			},
+			["Warsong Camp"] = {
+				["Dalaran"] = 142,
+				["Agmar's Hammer"] = 100,
+				["The Argent Vanguard"] = 163,
+				["Taunka'le Village"] = 80,
+			},
+			["Sunreaver's Command"] = {
+				["Dalaran"] = 55,
+			},
+			["The Bulwark"] = {
+				["Light's Hope Chapel"] = 283,
+			},
+			["Wyrmrest Temple Top"] = {
+				["Wyrmrest Temple Middle"] = 25,
+			},
+			["Moa'ki"] = {
+				["Agmar's Hammer"] = 64,
+				["Wyrmrest Temple"] = 49,
+				["Dalaran"] = 122,
+			},
+			["Camp Winterhoof"] = {
+				["Vengeance Landing"] = 74,
+				["Taunka'le Village"] = 405,
+			},
+			["The Argent Vanguard"] = {
+				["Dalaran"] = 32,
+				["The Shadow Vault"] = 148,
+			},
+			["Camp Tunka'lo"] = {
+				["Dun Nifflelem"] = 45,
+				["The Argent Vanguard"] = 180,
+			},
+						["Dun Nifflelem"] = {
+				["Camp Tunka'lo"] = 33,
+				["Dalaran"] = 158,
+			},
+			["Krasus' Landing"] = {
+				["Orgrim's Hammer"] = 135,
+				["Wildgrowth Mangal"] = 47,
+			},
+			["The Shadow Vault"] = {
+				["Dalaran"] = 166,
+				["The Argent Vanguard"] = 135,
+				["Warsong Camp"] = 138,
+			},
+			["Ebon Watch"] = {
+				["Venomspite"] = 99,
+				["Dalaran"] = 68,
+				["Light's Breach"] = 44,
+			},
+			["Venomspite"] = {
+				["Dalaran"] = 148,
+				["Conquest Hold"] = 59,
+				["New Agamand"] = 186,
+			},
+			["Bor'gorok Outpost"] = {
+				["Dalaran"] = 250,
+				["Amber Ledge"] = 57,
+				["Apothecary Camp"] = 351,
+			},
+			["K3"] = {
+				["Ulduar"] = 127,
+				["Dalaran"] = 72,
+			},
+			["The Argent Stand"] = {
+				["Light's Breach"] = 24,
+			},
+			["Amber Ledge"] = {
+				["Warsong Hold"] = 29,
+				["Transitus Shield"] = 25,
+			},
+			["Zim'Torga"] = {
+				["Gundrak"] = 54,
+			},
+			["Mudsprocket"] = {
+				["Brackenwall Village"] = 63,
+				["Freewind Post"] = 72,
+				["Ratchet"] = 151,
 			}
 		},
 		["Alliance"] = {
