@@ -111,18 +111,25 @@ local function addDuration(flightTime, estimated)
 end
 
 local function postTaxiNodeOnButtonEnter(button) -- adds duration info to taxi node tooltips
-	local id = button:GetID()
-	if TaxiNodeGetType(id) ~= "REACHABLE" then
-		return
-	end
+	if TaxiFrame:IsShown() and button:GetID() and gtt:IsShown() then
+		local id = button:GetID()
+		if TaxiNodeGetType(id) ~= "REACHABLE" then
+			return
+		end
 
-	local duration = vars[taxiSrc] and vars[taxiSrc][L[ShortenName(TaxiNodeName(id))]]
-	if duration then
-		addDuration(duration)
-	else
-		addDuration(GetEstimatedTime(id) or 0, true)
+		local duration = vars[taxiSrc] and vars[taxiSrc][L[ShortenName(TaxiNodeName(id))]]
+		if duration then
+			addDuration(duration)
+		else
+			addDuration(GetEstimatedTime(id) or 0, true)
+		end
 	end
 end
+
+InFlight.postTaxiNodeOnButtonEnter = postTaxiNodeOnButtonEnter
+--Expose this as an External API
+--Assumes the button passed has an ID that makes sense to the flight map system.
+--Assumes the GameTooltip is being used
 
 function InFlight.Print(...) -- prefix chat messages
 	print("|cff0040ffIn|cff00aaffFlight|r:", ...)
@@ -486,7 +493,7 @@ do -- timer bar
 			PrintD("OnUpdate", elapsed, throt)
 			elapsed = elapsed + a1
 			if elapsed < throt then
-				PrintD("Throttling OnUpdate", elapsed, throt )
+				PrintD("Throttling OnUpdate", elapsed, throt)
 				return
 			end
 
@@ -494,7 +501,7 @@ do -- timer bar
 			elapsed = 0
 
 			if takeoff then -- check if actually in flight after take off (doesn't happen immediately)
-				PrintD("TakeOff? ", UnitOnTaxi("player"), UnitInVehicle("player") )
+				PrintD("TakeOff? ", UnitOnTaxi("player"), UnitInVehicle("player"))
 				if UnitOnTaxi("player") or UnitInVehicle("player") then
 					takeoff, ontaxi = nil, true
 					elapsed, totalTime, startTime = throt - 0.01, 0, GetTime()
