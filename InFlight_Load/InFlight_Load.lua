@@ -131,9 +131,10 @@ if GetAddOnEnableState(UnitName("player"), "InFlight") == 2 then
 		local orig_SelectGossipOption = SelectGossipOption
 		function SelectGossipOption(option, ...)
 			--print("SelectGossipOption", option, ...)
-			local gossipText, gossipType = select(((option * 2) - 1), GetGossipOptions())
+			local gossipOptions = C_GossipInfo.GetOptions()
+			local gossipText = gossipOptions[option].name
 			--print(gossipText, gossipType)
-			if (gossipText and gossipText ~= "") and (gossipType == "gossip") then
+			if (gossipText and gossipText ~= "") then
 				local gossipZoneData = gossipFlightData[GetMinimapZoneText()]
 				--print(gossipText, GetMinimapZoneText(), gossipZoneData)
 				if gossipZoneData then
