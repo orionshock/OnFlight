@@ -122,8 +122,8 @@ if GetAddOnEnableState(UnitName("player"), "InFlight") == 2 then
 		},
 		["Warsong Hold"] = {
 			{find = "Send me to Garrosh's Landing, Yanni.", s = "Warsong Hold", d = "Coast of Echoes"},
-			{find = "I am ready to leave, Durkot.", s = "Warsong Hold", d = "Taunka'le Village"},
-		},
+			{find = "I am ready to leave, Durkot.", s = "Warsong Hold", d = "Taunka'le Village"}
+		}
 	}
 
 	-- Support flights that are started by gossip options properly so automation addons don't futz it.
@@ -141,7 +141,9 @@ if GetAddOnEnableState(UnitName("player"), "InFlight") == 2 then
 					for index, gossipFlightOption in ipairs(gossipZoneData) do
 						if strfind(gossipText, gossipFlightOption.find, 1, true) then
 							if gossipFlightOption.s and gossipFlightOption.d and LoadInFlight() then
-								print("|cff00ff40In|cff00aaffFlight|r: Special Flight - ", gossipFlightOption.s, "->", gossipFlightOption.d)
+								if InFlight and InFlight.db.profile.chatlog then
+									print("|cff00ff40In|cff00aaffFlight|r: Special Flight - ", gossipFlightOption.s, "->", gossipFlightOption.d)
+								end
 								self:StartMiscFlight(gossipFlightOption.s, gossipFlightOption.d)
 							end
 						end
