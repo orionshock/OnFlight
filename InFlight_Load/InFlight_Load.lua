@@ -127,16 +127,45 @@ if GetAddOnEnableState(UnitName("player"), "InFlight") == 2 then
 	}
 
 	-- Support flights that are started by gossip options properly so automation addons don't futz it.
+	-- do
+	-- 	local orig_SelectGossipOption = SelectGossipOption
+	-- 	function SelectGossipOption(option, ...)
+	-- 		--print("SelectGossipOption", option, ...)
+	-- 		local gossipOptions = C_GossipInfo.GetOptions()
+	-- 		local gossipText = gossipOptions[option].name
+	-- 		--print(gossipText, gossipType)
+	-- 		if (gossipText and gossipText ~= "") then
+	-- 			local gossipZoneData = gossipFlightData[GetMinimapZoneText()]
+	-- 			--print(gossipText, GetMinimapZoneText(), gossipZoneData)
+	-- 			if gossipZoneData then
+	-- 				for index, gossipFlightOption in ipairs(gossipZoneData) do
+	-- 					if strfind(gossipText, gossipFlightOption.find, 1, true) then
+	-- 						if gossipFlightOption.s and gossipFlightOption.d and LoadInFlight() then
+	-- 							if InFlight and InFlight.db.profile.chatlog then
+	-- 								print("|cff00ff40In|cff00aaffFlight|r: Special Flight - ", gossipFlightOption.s, "->", gossipFlightOption.d)
+	-- 							end
+	-- 							self:StartMiscFlight(gossipFlightOption.s, gossipFlightOption.d)
+	-- 						end
+	-- 					end
+	-- 				end
+	-- 			end
+	-- 		end
+	-- 		orig_SelectGossipOption(option, ...)
+	-- 	end
+	-- end
+
 	do
-		local orig_SelectGossipOption = SelectGossipOption
-		function SelectGossipOption(option, ...)
-			--print("SelectGossipOption", option, ...)
+		local orig_C_GossipInfo_SelectOption = C_GossipInfo.SelectOption
+		function C_GossipInfo.SelectOption(option, ...)
 			local gossipOptions = C_GossipInfo.GetOptions()
-			local gossipText = gossipOptions[option].name
-			--print(gossipText, gossipType)
+			local gossipText
+			for _,v in pairs(gossipOptions) do
+				if v.gossipOptionID == option then
+					gossipText = v.name
+				end
+			end
 			if (gossipText and gossipText ~= "") then
 				local gossipZoneData = gossipFlightData[GetMinimapZoneText()]
-				--print(gossipText, GetMinimapZoneText(), gossipZoneData)
 				if gossipZoneData then
 					for index, gossipFlightOption in ipairs(gossipZoneData) do
 						if strfind(gossipText, gossipFlightOption.find, 1, true) then
@@ -150,7 +179,7 @@ if GetAddOnEnableState(UnitName("player"), "InFlight") == 2 then
 					end
 				end
 			end
-			orig_SelectGossipOption(option, ...)
+			orig_C_GossipInfo_SelectOption(option, ...)
 		end
 	end
 
