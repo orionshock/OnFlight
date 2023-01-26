@@ -14,7 +14,8 @@ externals:
         url: https://repos.curseforge.com/wow/ace3/trunk/AceLocale-3.0
 
     libs/LibSharedMedia-3.0:
-        url: svn://repos.wowace.com/wow/libsharedmedia-3-0
+        url: svn://repos.curseforge.com/wow/libsharedmedia-3-0
+        tag: latest
 
 ignore: 
     - README.md
