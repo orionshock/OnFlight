@@ -1,23 +1,9 @@
 externals:
-    libs/LibStub:
-        url: https://repos.wowace.com/wow/libstub
-        tag: latest
-
-    libs/CallbackHandler-1.0:
-        url: https://repos.wowace.com/wow/callbackhandler
-        tag: latest
-
-    libs/AceDB-3.0: 
-        url: https://repos.curseforge.com/wow/ace3/trunk/AceDB-3.0
-        tag: latest
-
-    libs/AceLocale-3.0: 
-        url: https://repos.curseforge.com/wow/ace3/trunk/AceLocale-3.0
-        tag: latest
-
-    libs/LibSharedMedia-3.0:
-        url: https://repos.wowace.com/wow/ace-gui-3-0-shared-media-widgets/
-        tag: latest
+    libs/LibStub: https://repos.wowace.com/wow/libstub/trunk
+    libs/CallbackHandler-1.0: https://repos.wowace.com/wow/callbackhandler/trunk/CallbackHandler-1.0
+    libs/AceDB-3.0: https://repos.curseforge.com/wow/ace3/trunk/AceDB-3.0
+    libs/AceLocale-3.0: https://repos.curseforge.com/wow/ace3/trunk/AceLocale-3.0
+    libs/LibSharedMedia-3.0: https://repos.wowace.com/wow/ace-gui-3-0-shared-media-widgets/
 
 ignore: 
     - README.md
