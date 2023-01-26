@@ -9,4 +9,4 @@ ignore:
     - README.md
 
 move-folders:
-  InFlight_Load: InFlight_Load
+  InFlight/InFlight_Load: InFlight_Load
