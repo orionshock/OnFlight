@@ -1,26 +1,32 @@
+package-as: InFlight
+
 externals:
-    libs/LibStub:
+    InFlight/libs/LibStub:
         url: https://repos.wowace.com/wow/libstub/trunk
         tag: latest
 
-    libs/CallbackHandler-1.0:
+    InFlight/libs/CallbackHandler-1.0:
         url: https://repos.wowace.com/wow/callbackhandler/trunk/CallbackHandler-1.0
         tag: latest
 
-    libs/LibQTip-1.0:
+    InFlight/libs/LibQTip-1.0:
         url: https://repos.curseforge.com/wow/libqtip-1-0
         #tag: latest
         ## current latest tag are too old. latest commit aren't tagged.
         commit: 4c6a3d882373fa0b52c6b71d09acc0b87ec1ae00
 
-    libs/AceDB-3.0: 
+    InFlight/libs/AceDB-3.0: 
         url: https://repos.curseforge.com/wow/ace3/trunk/AceDB-3.0
 
-    libs/AceLocale-3.0: 
+    InFlight/libs/AceLocale-3.0: 
         url: https://repos.curseforge.com/wow/ace3/trunk/AceLocale-3.0
 
-    libs/LibSharedMedia-3.0:
+    InFlight/libs/LibSharedMedia-3.0:
         url: https://repos.wowace.com/wow/sharedmedia
 
 ignore: 
     - README.md
+
+move-folders:
+  InFlight: InFlight
+  InFlight_Load: InFlight_Load
