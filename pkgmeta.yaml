@@ -28,5 +28,5 @@ ignore:
     - README.md
 
 move-folders:
-  InFlight: InFlight
   InFlight_Load: InFlight_Load
+  
