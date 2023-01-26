@@ -22,7 +22,7 @@ externals:
         url: https://repos.curseforge.com/wow/ace3/trunk/AceLocale-3.0
 
     InFlight/libs/LibSharedMedia-3.0:
-        url: https://repos.wowace.com/wow/sharedmedia
+        url: https://repos.wowace.com/wow/libsharedmedia-3-0
 
 ignore: 
     - README.md
