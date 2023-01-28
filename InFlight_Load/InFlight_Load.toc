@@ -21,7 +21,7 @@
 ## LoadManagers: AddonLoader
 ## X-LoadOn-Always: delayed
 
-embeds.xml
+#embeds.xml
 
-locales\locales.xml
-InFlight_Load.lua
+#locales\locales.xml
+#InFlight_Load.lua
