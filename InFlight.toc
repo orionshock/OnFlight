@@ -4,7 +4,7 @@
 ## Author: Wildcard_25, TotalPackage, Kalimash, Orionshock
 ## Version: 3.6
 
-## SavedVariables: InFlightSV
+## ## SavedVariables: InFlightSV
 
 embeds.xml
 locales\locales.xml

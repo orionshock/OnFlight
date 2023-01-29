@@ -14,10 +14,33 @@ local L = LibStub("AceLocale-3.0"):GetLocale("InFlight")
 local db
 local svDefaults = {
     profile = {
-        chatlog = true
+        countUp = false,
+        fillUp = false,
+        showSpark = true,
+        backgroundColor = {r = 0.1, g = 0.1, b = 0.1, a = 0.6},
+        unknownFlightColor = {r = 0.2, g = 0.2, b = 0.4, a = 1.0},
+        barHeight = 12,
+        barWidth = 300,
+        barTexture = "Blizzard",
+        barColor = {r = 0.5, g = 0.5, b = 0.8, a = 1.0},
+        borderTexture = "Blizzard Dialog",
+        borderColor = {r = 0.6, g = 0.6, b = 0.6, a = 0.8},
+        compactMode = false,
+        fontName = "2002 Bold",
+        fontSize = 12,
+        fontColor = {r = 1.0, g = 1.0, b = 1.0, a = 1.0},
+        showChat = true,
+        confirmFlight = false,
+        barLocation = {
+            x = 0,
+            y = -170,
+            anchor = "TOP",
+            anchorPoint = "TOP"
+        }
     },
     global = {}
 }
+addonCore.svDefaults = svDefaults
 
 function addonCore:OnInitialize()
     self.db = LibStub("AceDB-3.0"):New("InFlightSV", svDefaults, true)
@@ -26,8 +49,9 @@ end
 
 function addonCore:OnEnable()
     LibStub("AceConfig-3.0"):RegisterOptionsTable(addonName, self.configOptionsTable)
-
     self:RegisterChatCommand("inflight", "ChatCommand")
+
+    self:SetupTimerBar()
 end
 
 function addonCore:OnDisable()
@@ -45,26 +69,26 @@ end
 ---Ace3 Config Table
 function addonCore:GetOption(info)
     if info.type == "color" then
-        if db[info[#info]] then
-            return db[info[#info]].r, db[info[#info]].b, db[info[#info]].g, db[info[#info]].a
+        if db.profile[info[#info]] then
+            return db.profile[info[#info]].r, db.profile[info[#info]].b, db[info[#info]].g, db.profile[info[#info]].a
         else
             return math.random(0, 100) / 100, math.random(0, 100) / 100, math.random(0, 100) / 100, math.random(0, 100) / 100
         end
     else
-        return db[info[#info]]
+        return db.profile[info[#info]]
     end
 end
 function addonCore:SetOption(info, ...)
     if info.type == "color" then
         local red, blue, green, alpha = ...
-        db[info[#info]] = db[info[#info]] or {}
-        db[info[#info]].r = red
-        db[info[#info]].b = blue
-        db[info[#info]].g = green
-        db[info[#info]].a = alpha
+        db.profile[info[#info]] = db.profile[info[#info]] or {}
+        db.profile[info[#info]].r = red
+        db.profile[info[#info]].b = blue
+        db.profile[info[#info]].g = green
+        db.profile[info[#info]].a = alpha
         print("Option Color: " .. info[#info] .. " => " .. red, blue, green, alpha)
     else
-        db[info[#info]] = ...
+        db.profile[info[#info]] = ...
         print("Option " .. info[#info] .. " => " .. tostringall(...))
     end
 end
@@ -159,7 +183,7 @@ addonCore.configOptionsTable = {
                     inline = true,
                     width = "normal",
                     args = {
-                        border = {
+                        borderTexture = {
                             name = L["Border Texture"],
                             type = "select",
                             order = 10,
@@ -180,7 +204,7 @@ addonCore.configOptionsTable = {
             type = "group",
             order = 200,
             args = {
-                CompactMode = {
+                compactMode = {
                     name = L["Compact Mode"],
                     type = "toggle",
                     order = 10
@@ -230,3 +254,6 @@ addonCore.configOptionsTable = {
         }
     }
 }
+
+function addonCore:SetupTimerBar()
+end
