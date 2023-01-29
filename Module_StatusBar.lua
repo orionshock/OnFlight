@@ -46,16 +46,16 @@ function statusBarModuleCore:OnEnable()
 end
 
 function statusBarModuleCore:InFlight_Taxi_Start(event, taxiSrcName, taxiDestName, taxiDuration)
-    print(event, " -- ", string.format("%s --> %s", taxiSrcName, taxiDestName), " -- ",taxiDuration)
+    print(event, " -- ", string.format("%s --> %s", taxiSrcName, taxiDestName), " -- Duration:", SecondsToTime(taxiDuration))
     if taxiDuration ~= 0 then
-        self:StartTimerBar(string.format("%s --> %s", taxiSrcName, taxiDestName), taxiDuration)
+        self:StartTimerBar(taxiSrcName, taxiDestName, taxiDuration)
     else
         --eventually we'll show a bar for unknown times but empty if statement for now.
     end
 end
 
 function statusBarModuleCore:InFlight_Taxi_Stop(event, taxiSrcName, taxiDestName, taxiDuration)
-    print(event, " -- ", string.format("%s --> %s", taxiSrcName, taxiDestName), " -- Completed")
+    print(event, " -- ", string.format("%s --> %s", taxiSrcName, taxiDestName), " -- Completed, Duration: ", SecondsToTime(taxiDuration))
     self:StopTimerBar()
 end
 
@@ -78,7 +78,15 @@ local function timerBarOnUpdate(self, elapsed)
     self.timeRemaining = self.timeRemaining - elapsed
     if self.timeRemaining > 0 then
         _G[self:GetName() .. "StatusBar"]:SetValue(self.timeRemaining)
-        _G[self:GetName() .. "Text"]:SetFormattedText("%s - %s", self.text, disp_time(self.timeRemaining))
+        if db.profile.compactMode then
+            _G[self:GetName() .. "Text"]:SetText(disp_time(self.timeRemaining))
+        else
+            if db.profile.shortNames then
+                _G[self:GetName() .. "Text"]:SetFormattedText("%s - %s", self.shortText, disp_time(self.timeRemaining))
+            else
+                _G[self:GetName() .. "Text"]:SetFormattedText("%s - %s", self.text, disp_time(self.timeRemaining))
+            end
+        end
     else
         self:Hide()
         self.timeRemaining = 0
@@ -135,18 +143,25 @@ function statusBarModuleCore:SetupTimerBar()
     self.InFlightTimerFrame = InFlightTimerFrame
 end
 
-function statusBarModuleCore:StartTimerBar(text, duration, unknownFlightFlag) --Bar Text and Duration in seconds--
+function statusBarModuleCore:StartTimerBar(taxiSrcName, taxiDestName, duration, unknownFlightFlag) --Bar Text and Duration in seconds--
+    print("StartTimerBar:", taxiSrcName, taxiDestName, duration, unknownFlightFlag)
     if not self.InFlightTimerFrame then
+        print("No Timer Bar?")
         return
     end
-    if (not text) or (not duration) then
+    if ((not taxiSrcName) or (not taxiDestName)) or (not duration) then
+        print("missing args: ", taxiSrcName, taxiDestName, duration, ((not taxiSrcName) or (not taxiDestName)) or (not duration))
         return
     end
 
     local timerFrame = self.InFlightTimerFrame
     timerFrame.duration = duration
     timerFrame.timeRemaining = duration
-    timerFrame.text = text
+    timerFrame.text = ("%s - %s"):format(taxiSrcName, taxiDestName)
+
+    local taxiSrcNameShort = taxiSrcName:match("(.+), .+")
+    local taxiDestNameShort = taxiDestName:match("(.+), .+")
+    timerFrame.shortText = ("%s - %s"):format(taxiSrcNameShort, taxiDestNameShort)
 
     local statusBar = _G[InFlightTimerFrame:GetName() .. "StatusBar"]
     statusBar:SetMinMaxValues(0, duration)
@@ -158,9 +173,6 @@ function statusBarModuleCore:StartTimerBar(text, duration, unknownFlightFlag) --
         statusBar:SetStatusBarColor(db.profile.barColor.r, db.profile.barColor.g, db.profile.barColor.b, db.profile.barColor.a)
     end
 
-    local displayText = _G[timerFrame:GetName() .. "Text"]
-    displayText:SetFormattedText("%s - %s", text, disp_time(duration))
-
     timerFrame:Show()
 end
 
@@ -171,7 +183,6 @@ function statusBarModuleCore:StopTimerBar()
     self.InFlightTimerFrame.text = ""
     _G[self.InFlightTimerFrame:GetName() .. "Text"]:SetText("")
 end
-
 
 function statusBarModuleCore:GetOption(info)
     if info.type == "color" then
@@ -318,7 +329,15 @@ addonCore.configOptionsTable.plugins["StatusBarModule"] = {
             compactMode = {
                 name = L["Compact Mode"],
                 type = "toggle",
-                order = 10
+                order = 9
+            },
+            shortNames = {
+                name = L["Short Names"],
+                type = "toggle",
+                order = 10,
+                disabled = function()
+                    return db.profile.compactMode
+                end
             },
             fontOptions = {
                 name = L["Font Options"],

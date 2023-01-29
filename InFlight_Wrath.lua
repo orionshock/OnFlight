@@ -41,6 +41,16 @@ local svDefaults = {
     profile = {
         showChat = true,
         confirmFlight = false
+    },
+    global = {
+        Horde = {
+            ["Booty Bay, Stranglethorn"] = {
+                ["Grom'gol, Stranglethorn"] = 75
+            },
+            ["Grom'gol, Stranglethorn"] = {
+                ["Booty Bay, Stranglethorn"] = 78
+            }
+        }
     }
 }
 addonCore.svDefaults = svDefaults
@@ -126,14 +136,22 @@ do
                         --safely create DB entries if not present
                         db.global[playerFaction][self.taxiSrcName] = db.global[playerFaction][self.taxiSrcName] or {}
                         db.global[playerFaction][self.taxiSrcName][self.taxiDestName] = math.floor(flightDuration) --stash the flight time.
-                        addonCore:SendMessage("InFlight_Taxi_Stop", taxiSrcName, taxiDestName, flightDuration)
+                        addonCore:SendMessage("InFlight_Taxi_Stop", self.taxiSrcName, self.taxiDestName, flightDuration)
                         print("InFlight End:", self.taxiSrcName, "-->", self.taxiDestName, " -- Duration:", SecondsToTime(flightDuration))
                         ResetInFlightTimer()
                     elseif self.earlyExit then --we left the flight early, nill it out
-                        addonCore:SendMessage("InFlight_Taxi_EarlyExit", taxiSrcName, taxiDestName, self.earlyExit)
+                        addonCore:SendMessage("InFlight_Taxi_EarlyExit", self.taxiSrcName, self.taxiDestName, self.earlyExit)
                         print("InFlight EarlyExit:", self.taxiSrcName, "-->", self.taxiDestName, " -- Reason: ", self.earlyExit)
                         ResetInFlightTimer()
                     end
+                end
+            end
+            if not self.taxiState then
+                self.elapsedNotOnFlight = self.elapsedNotOnFlight + elapsed
+                if self.elapsedNotOnFlight > 10 then --we tried to get on a flight but it didn't work after 10sec?
+                    print("InFlight EarlyExit:", self.taxiSrcName, "-->", self.taxiDestName, " -- Reason: Failed Entry?")
+                    addonCore:SendMessage("InFlight_Taxi_FAILED_ENTRY", self.taxiSrcName, self.taxiDestName)
+                    ResetInFlightTimer()
                 end
             end
         end
@@ -147,6 +165,7 @@ do --Hoook Func
             if TaxiNodeGetType(taxiIndex) == "CURRENT" then
                 taxiTimerFrame.taxiSrcName = TaxiNodeName(taxiIndex)
                 taxiTimerFrame.taxiDestName = TaxiNodeName(slot)
+                taxiTimerFrame.elapsedNotOnFlight = 0
                 taxiTimerFrame:Show() --we'll let the OnUpdate frame handle the AceEvent Messages
                 break
             end
