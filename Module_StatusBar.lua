@@ -46,7 +46,7 @@ function statusBarModuleCore:OnEnable()
 end
 
 function statusBarModuleCore:InFlight_Taxi_Start(event, taxiSrcName, taxiDestName, taxiDuration)
-    print(event, taxiSrcName, taxiDestName, taxiDuration)
+    print(event, " -- ", string.format("%s --> %s", taxiSrcName, taxiDestName), " -- ",taxiDuration)
     if taxiDuration ~= 0 then
         self:StartTimerBar(string.format("%s --> %s", taxiSrcName, taxiDestName), taxiDuration)
     else
@@ -54,8 +54,13 @@ function statusBarModuleCore:InFlight_Taxi_Start(event, taxiSrcName, taxiDestNam
     end
 end
 
-function statusBarModuleCore:InFlight_Taxi_Stop(event)
-    print(event)
+function statusBarModuleCore:InFlight_Taxi_Stop(event, taxiSrcName, taxiDestName, taxiDuration)
+    print(event, " -- ", string.format("%s --> %s", taxiSrcName, taxiDestName), " -- Completed")
+    self:StopTimerBar()
+end
+
+function statusBarModuleCore:InFlight_Taxi_EarlyExit(event, taxiSrcName, taxiDestName, exitReason)
+    print(event, " -- ", string.format("%s --> %s", taxiSrcName, taxiDestName), " -- ExitReason: ", exitReason)
     self:StopTimerBar()
 end
 
