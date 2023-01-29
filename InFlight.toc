@@ -6,6 +6,8 @@
 
 ## ## SavedVariables: InFlightSV
 
+LibEdrik.lua
+
 embeds.xml
 locales\locales.xml
 InFlight_Wrath.lua

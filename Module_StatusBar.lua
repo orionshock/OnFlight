@@ -1,6 +1,9 @@
 --[[
     This Module's Entire Job is to handle the Status Bar
 ]]
+local Debug = LibEdrik_GetDebugFunction and LibEdrik_GetDebugFunction("|cff0040ffIn|cff00aaffFlight-SB|r|r:", nil, nil, false) or function()
+end
+
 local addonName, addonCore = ...
 local statusBarModuleCore = addonCore:NewModule("StatusBarModule", "AceEvent-3.0")
 
@@ -10,21 +13,33 @@ local LSM = LibStub("LibSharedMedia-3.0")
 local db
 local svDefaults = {
     profile = {
+        --Basic Bar Options
         countUp = false,
         fillUp = false,
         showSpark = true,
+        --Bar Background Color
         backgroundColor = {r = 0, g = 0, b = 1, a = 1},
-        unknownFlightColor = {r = 1, g = 0, b = 0, a = 1},
+        
+        --Bar Size Settings
         barHeight = 12,
         barWidth = 300,
+        --Bar Settings
         barTexture = "Blizzard",
         barColor = {r = 0, g = 1, b = 0, a = 1},
+        unknownFlightColor = {r = 1, g = 0, b = 0, a = 1},
+        --Border Settings
         borderTexture = "Blizzard Dialog",
         borderColor = {r = 0, g = 1, b = 0, a = 1},
+
+        --Basic Text Options
         compactMode = false,
+        shortNames = true,
+        --Font Options
         fontName = "2002 Bold",
         fontSize = 12,
         fontColor = {r = 1.0, g = 1.0, b = 1.0, a = 1.0},
+
+        --Bar Location
         barLocation = {
             offsetX = 0,
             offsetY = -170,
@@ -46,16 +61,18 @@ function statusBarModuleCore:OnEnable()
 end
 
 function statusBarModuleCore:InFlight_Taxi_Start(event, taxiSrcName, taxiDestName, taxiDuration)
-    print(event, " -- ", string.format("%s --> %s", taxiSrcName, taxiDestName), " -- Duration:", SecondsToTime(taxiDuration))
+    Debug(event, " -- ", string.format("%s --> %s", taxiSrcName, taxiDestName), " -- Duration:", SecondsToTime(taxiDuration))
     if taxiDuration ~= 0 then
+        Debug("Star Timer Bar:", taxiSrcName, taxiDestName,"--Duration:", taxiDuration)
         self:StartTimerBar(taxiSrcName, taxiDestName, taxiDuration)
     else
-        --eventually we'll show a bar for unknown times but empty if statement for now.
+        Debug("Star Timer Bar", taxiSrcName, taxiDestName, "--Unknown Duration.")
+        self:StartTimerBar(taxiSrcName, taxiDestName, 0, true)
     end
 end
 
 function statusBarModuleCore:InFlight_Taxi_Stop(event, taxiSrcName, taxiDestName, taxiDuration)
-    print(event, " -- ", string.format("%s --> %s", taxiSrcName, taxiDestName), " -- Completed, Duration: ", SecondsToTime(taxiDuration))
+    Debug(event, " -- ", string.format("%s --> %s", taxiSrcName, taxiDestName), " -- Completed, Duration: ", SecondsToTime(taxiDuration))
     self:StopTimerBar()
 end
 
@@ -146,11 +163,15 @@ end
 function statusBarModuleCore:StartTimerBar(taxiSrcName, taxiDestName, duration, unknownFlightFlag) --Bar Text and Duration in seconds--
     print("StartTimerBar:", taxiSrcName, taxiDestName, duration, unknownFlightFlag)
     if not self.InFlightTimerFrame then
-        print("No Timer Bar?")
+        Debug("No Timer Bar?")
         return
     end
-    if ((not taxiSrcName) or (not taxiDestName)) or (not duration) then
-        print("missing args: ", taxiSrcName, taxiDestName, duration, ((not taxiSrcName) or (not taxiDestName)) or (not duration))
+    if ((not taxiSrcName) or (not taxiDestName)) then
+        Debug("No Src or Dest? ", taxiSrcName, taxiDestName)
+        return
+    end
+    if not duration and unknownFlightFlag then
+        Debug("Unknown Duration Flight, not Implemented :(")
         return
     end
 
@@ -166,6 +187,7 @@ function statusBarModuleCore:StartTimerBar(taxiSrcName, taxiDestName, duration, 
     local statusBar = _G[InFlightTimerFrame:GetName() .. "StatusBar"]
     statusBar:SetMinMaxValues(0, duration)
     statusBar:SetValue(duration)
+    statusBar:SetStatusBarTexture( LSM:Fetch(db.profile.barTexture) )
 
     if unknownFlightFlag then
         statusBar:SetStatusBarColor(db.profile.unknownFlightColor.r, db.profile.unknownFlightColor.g, db.profile.unknownFlightColor.b, db.profile.unknownFlightColor.a)
@@ -204,8 +226,10 @@ function statusBarModuleCore:SetOption(info, ...)
         db.profile[info[#info]].b = blue
         db.profile[info[#info]].g = green
         db.profile[info[#info]].a = alpha
+        Debug("SetColorOption:", info[#info], "to:", red, blue, green, alpha)
     else
         db.profile[info[#info]] = ...
+        Debug("SetOption:", info[#info], "to:", ...)
     end
 end
 
@@ -220,36 +244,36 @@ addonCore.configOptionsTable.plugins["StatusBarModule"] = {
         order = 100,
         args = {
             countUp = {
-                hidden = true,
+                disabled = true,
+                desc = "Not Implemented",
                 name = L["Count Upwards"],
                 type = "toggle",
                 order = 10
             },
             fillUp = {
-                hidden = true,
+                disabled = true,
+                desc = "Not Implemented",
                 name = L["Fill Upwards"],
                 type = "toggle",
                 order = 20
             },
             showSpark = {
-                hidden = true,
+                disabled = true,
+                desc = "Not Implemented",
                 name = L["Show Spark"],
                 type = "toggle",
                 order = 30
             },
             backgroundColor = {
-                hidden = true,
+                disabled = true,
+                desc = "Not Implemented",
                 name = L["Background Color"],
                 type = "color",
                 order = 40
             },
-            unknownFlightColor = {
-                name = L["Unknown Flight Color"],
-                type = "color",
-                order = 50
-            },
             size = {
-                hidden = true,
+                disabled = true,
+                desc = "Not Implemented",
                 name = L["Bar Size Settings"],
                 type = "group",
                 order = 60,
@@ -288,14 +312,20 @@ addonCore.configOptionsTable.plugins["StatusBarModule"] = {
                         values = AceGUIWidgetLSMlists.statusbar
                     },
                     barColor = {
-                        name = L["Bar Color"],
+                        name = L["Known Flight Color"],
                         type = "color",
                         order = 20
-                    }
+                    },
+                    unknownFlightColor = {
+                        name = L["Unknown Flight Color"],
+                        type = "color",
+                        order = 30
+                    },
                 }
             },
             borderSettings = {
-                hidden = true,
+                disabled = true,
+                desc = "Not Implemented",
                 name = L["Border Settings"],
                 type = "group",
                 order = 80,
@@ -340,6 +370,8 @@ addonCore.configOptionsTable.plugins["StatusBarModule"] = {
                 end
             },
             fontOptions = {
+                disabled = true,
+                desc = "Not Implemented",
                 name = L["Font Options"],
                 type = "group",
                 inline = true,
@@ -352,12 +384,12 @@ addonCore.configOptionsTable.plugins["StatusBarModule"] = {
                         order = 10
                     },
                     fontSize = {
-                        name = L["Size"],
+                        name = L["Font Size"],
                         type = "input",
                         order = 20
                     },
                     fontColor = {
-                        name = L["Color"],
+                        name = L["Font Color"],
                         type = "color",
                         order = 30
                     }

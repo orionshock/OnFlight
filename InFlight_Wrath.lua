@@ -29,6 +29,9 @@ reason -- why did we exit early
 ]]
 --luacheck: globals LibStub InCombatLockdown
 
+local Debug = LibEdrik_GetDebugFunction and LibEdrik_GetDebugFunction("|cff0040ffIn|cff00aaffFlight-C|r|r:", nil, nil, false) or function()
+    end
+
 local addonName, addonCore = ...
 addonCore = LibStub("AceAddon-3.0"):NewAddon(addonCore, "InFlight", "AceConsole-3.0", "AceEvent-3.0")
 _G[addonName] = addonCore
@@ -95,7 +98,9 @@ do
         taxiTimerFrame.taxiSrcName = nil
         taxiTimerFrame.taxiDestName = nil
         taxiTimerFrame.taxiStartTime = nil
+        taxiTimerFrame.elapsedNotOnFlight = nil
         taxiTimerFrame:Hide()
+        Debug("ResetInFlightTimer()")
     end
 
     local UnitOnTaxi, UnitInVehicle = UnitOnTaxi, UnitInVehicle
@@ -106,52 +111,52 @@ do
             self.taxiState = UnitOnTaxi("player") or UnitInVehicle("player")
 
             if (not self.taxiSrcName) or (not self.taxiDestName) then
-                --if we don't know where we started or going to then reset it all for good mesure and hide
-                self.taxiSrcName = nil
-                self.taxiDestName = nil
-                self.taxiStartTime = nil
-                self:Hide()
+                Debug("OnUpdateMonitor - No Source or Destination. Reset & Exit")
+                return ResetInFlightTimer()
             end
 
-            if (prevState ~= self.taxiState) then --Status Changed
-                if self.taxiState then --if we are on a taxi, then lets keep track of things a bit
+            if (prevState ~= self.taxiState) then
+                Debug("State Changed, Old:", prevState, "New:", self.taxiState)
+                if self.taxiState then
                     self.taxiStartTime = GetTime()
-                    print("InFlight Start:", self.taxiSrcName, "-->", self.taxiDestName, " -- StartTime:", self.taxiStartTime)
+                    Debug("On Taxi", self.taxiSrcName, "-->", self.taxiDestName, " -- StartTime:", date("%I:%M:%S %p"))
 
                     if db.global[playerFaction][self.taxiSrcName] then
                         if db.global[playerFaction][self.taxiSrcName][self.taxiDestName] then
-                            --we have src,dest, and flight time, send known flight time event
+                            Debug("Send Event: InFlight_Taxi_Start -- Duration:", SecondsToTime(db.global[playerFaction][self.taxiSrcName][self.taxiDestName]))
                             addonCore:SendMessage("InFlight_Taxi_Start", self.taxiSrcName, self.taxiDestName, db.global[playerFaction][self.taxiSrcName][self.taxiDestName])
                         else
-                            --unknown flight time to destination, send 0
+                            Debug("Send Event: InFlight_Taxi_Start -- Unknown Duration")
                             addonCore:SendMessage("InFlight_Taxi_Start", self.taxiSrcName, self.taxiDestName, 0)
                         end
                     else
-                        --unknown flight time from source or destination, send 0
+                        Debug("Send Event: InFlight_Taxi_Start -- Unknown Duration")
                         addonCore:SendMessage("InFlight_Taxi_Start", self.taxiSrcName, self.taxiDestName, 0)
                     end
-                elseif (not self.taxiState) and (self.taxiStartTime) then --We're off the Taxi and was on it previously
-                    if not self.earlyExit then --we did not exit early
-                        local flightDuration = abs(GetTime() - self.taxiStartTime) --figure out the flight time in seconds...
-                        --safely create DB entries if not present
+                elseif (not self.taxiState) and (self.taxiStartTime) then
+                    Debug("Off Taxi:", (not self.taxiState), date("%I:%M:%S %p"))
+                    if not self.earlyExit then
+                        Debug("No Exit Early:", self.earlyExit)
+                        local flightDuration = abs(GetTime() - self.taxiStartTime)
                         db.global[playerFaction][self.taxiSrcName] = db.global[playerFaction][self.taxiSrcName] or {}
-                        db.global[playerFaction][self.taxiSrcName][self.taxiDestName] = math.floor(flightDuration) --stash the flight time.
+                        db.global[playerFaction][self.taxiSrcName][self.taxiDestName] = math.floor(flightDuration) + 2 --Add 2 sec slosh
+                        Debug("Send Event: InFlight_Taxi_Stop", self.taxiSrcName, self.taxiDestName, "-- Druation:", SecondsToTime(flightDuration))
                         addonCore:SendMessage("InFlight_Taxi_Stop", self.taxiSrcName, self.taxiDestName, flightDuration)
-                        print("InFlight End:", self.taxiSrcName, "-->", self.taxiDestName, " -- Duration:", SecondsToTime(flightDuration))
-                        ResetInFlightTimer()
-                    elseif self.earlyExit then --we left the flight early, nill it out
+                        return ResetInFlightTimer()
+                    elseif self.earlyExit then
+                        Debug("EarlyExit:", self.taxiSrcName, "-->", self.taxiDestName, " -- Reason: ", self.earlyExit)
                         addonCore:SendMessage("InFlight_Taxi_EarlyExit", self.taxiSrcName, self.taxiDestName, self.earlyExit)
-                        print("InFlight EarlyExit:", self.taxiSrcName, "-->", self.taxiDestName, " -- Reason: ", self.earlyExit)
-                        ResetInFlightTimer()
+                        return ResetInFlightTimer()
                     end
                 end
             end
-            if not self.taxiState then
-                self.elapsedNotOnFlight = self.elapsedNotOnFlight + elapsed
-                if self.elapsedNotOnFlight > 10 then --we tried to get on a flight but it didn't work after 10sec?
-                    print("InFlight EarlyExit:", self.taxiSrcName, "-->", self.taxiDestName, " -- Reason: Failed Entry?")
+            if (not self.taxiState) then
+                self.elapsedNotOnFlight = (self.elapsedNotOnFlight or 0) + elapsed
+                Debug("Failed Entry - TaxiState:", self.taxiState, self.elapsedNotOnFlight)
+                if self.elapsedNotOnFlight > 10 then
+                    Debug("Failed Entry > 10sec, send Failed Entry Event and Reset?:", self.taxiSrcName, "-->", self.taxiDestName)
                     addonCore:SendMessage("InFlight_Taxi_FAILED_ENTRY", self.taxiSrcName, self.taxiDestName)
-                    ResetInFlightTimer()
+                    return ResetInFlightTimer()
                 end
             end
         end
@@ -218,9 +223,33 @@ addonCore.configOptionsTable = {
                     order = 10
                 },
                 confirmFlight = {
+                    disabled = true,
+                    desc = "Not Implemented, Might not be. What's the point?",
                     name = L["Confirm Flights"],
                     type = "toggle",
                     order = 20
+                },
+                showDebug = {
+                    name = L["Debug"],
+                    type = "toggle",
+                    order = 30
+                },
+                ADVANCED_OPTIONS = {
+                    name = L["Show Advanced Options"],
+                    type = "toggle",
+                    order = 100
+                }
+            }
+        },
+        advancedOptions = {
+            name = "Advanced Options",
+            type = "group",
+            order = 900,
+            hidden = function() return not db.profile.ADVANCED_OPTIONS end,
+            args ={
+                helpText = {
+                    name = "Not Implemented",
+                    type = "description",
                 }
             }
         }
