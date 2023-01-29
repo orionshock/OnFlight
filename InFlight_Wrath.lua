@@ -81,6 +81,13 @@ local taxiTimerFrame = CreateFrame("frame")
 taxiTimerFrame:Hide()
 taxiTimerFrame.taxiState = false
 do
+    local function ResetInFlightTimer()
+        taxiTimerFrame.taxiSrcName = nil
+        taxiTimerFrame.taxiDestName = nil
+        taxiTimerFrame.taxiStartTime = nil
+        taxiTimerFrame:Hide()
+    end
+
     local UnitOnTaxi, UnitInVehicle = UnitOnTaxi, UnitInVehicle
     taxiTimerFrame:SetScript(
         "OnUpdate",
@@ -99,7 +106,7 @@ do
             if (prevState ~= self.taxiState) then --Status Changed
                 if self.taxiState then --if we are on a taxi, then lets keep track of things a bit
                     self.taxiStartTime = GetTime()
-                    print("InFlight:", self.taxiSrcName, self.taxiDestName, "StartTime:", self.taxiStartTime)
+                    print("InFlight Start:", self.taxiSrcName, "-->", self.taxiDestName, " -- StartTime:", self.taxiStartTime)
 
                     if db.global[playerFaction][self.taxiSrcName] then
                         if db.global[playerFaction][self.taxiSrcName][self.taxiDestName] then
@@ -113,7 +120,6 @@ do
                         --unknown flight time from source or destination, send 0
                         addonCore:SendMessage("InFlight_Taxi_Start", self.taxiSrcName, self.taxiDestName, 0)
                     end
-
                 elseif (not self.taxiState) and (self.taxiStartTime) then --We're off the Taxi and was on it previously
                     if not self.earlyExit then --we did not exit early
                         local flightDuration = abs(GetTime() - self.taxiStartTime) --figure out the flight time in seconds...
@@ -121,18 +127,12 @@ do
                         db.global[playerFaction][self.taxiSrcName] = db.global[playerFaction][self.taxiSrcName] or {}
                         db.global[playerFaction][self.taxiSrcName][self.taxiDestName] = math.floor(flightDuration) --stash the flight time.
                         addonCore:SendMessage("InFlight_Taxi_Stop", taxiSrcName, taxiDestName, flightDuration)
-                        print("InFlight:", self.taxiSrcName, self.taxiDestName, "Duration:", SecondsToTime(flightDuration))
-                        --Nill it out for reset
-                        self.taxiSrcName = nil
-                        self.taxiDestName = nil
-                        self.taxiStartTime = nil
-                        self:Hide() --don't need to run this constantly
+                        print("InFlight End:", self.taxiSrcName, "-->", self.taxiDestName, " -- Duration:", SecondsToTime(flightDuration))
+                        ResetInFlightTimer()
                     elseif self.earlyExit then --we left the flight early, nill it out
                         addonCore:SendMessage("InFlight_Taxi_EarlyExit", taxiSrcName, taxiDestName, self.earlyExit)
-                        self.taxiSrcName = nil
-                        self.taxiDestName = nil
-                        self.taxiStartTime = nil
-                        self:Hide() --don't need to run this constantly
+                        print("InFlight EarlyExit:", self.taxiSrcName, "-->", self.taxiDestName, " -- Reason: ", self.earlyExit)
+                        ResetInFlightTimer()
                     end
                 end
             end
@@ -143,19 +143,14 @@ end
 do --Hoook Func
     local oldTakeTaxiNode = TakeTaxiNode
     TakeTaxiNode = function(slot, ...)
-        local taxiSrcName, taxiSrcIndex
-        local taxiDestName = TaxiNodeName(slot)
-
         for taxiIndex = 1, NumTaxiNodes(), 1 do
             if TaxiNodeGetType(taxiIndex) == "CURRENT" then
-                taxiSrcName = TaxiNodeName(taxiIndex)
-                taxiSrcIndex = taxiIndex
+                taxiTimerFrame.taxiSrcName = TaxiNodeName(taxiIndex)
+                taxiTimerFrame.taxiDestName = TaxiNodeName(slot)
+                taxiTimerFrame:Show() --we'll let the OnUpdate frame handle the AceEvent Messages
                 break
             end
         end
-        taxiTimerFrame.taxiSrcName = taxiSrcName
-        taxiTimerFrame.taxiDestName = taxiDestName
-        taxiTimerFrame:Show()   --we'll let the OnUpdate frame handle the AceEvents
         oldTakeTaxiNode(slot, ...)
     end
 end
