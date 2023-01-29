@@ -41,16 +41,20 @@ function statusBarModuleCore:OnInitialize()
 end
 function statusBarModuleCore:OnEnable()
     self:SetupTimerBar()
-    self:RegisterMessage("InFlight_Start")
-    self:RegisterMessage("InFlight_Stop")
+    self:RegisterMessage("InFlight_Taxi_Start")
+    self:RegisterMessage("InFlight_Taxi_Stop")
 end
 
-function statusBarModuleCore:InFlight_Start(event, text, duration, knownFlightFlag)
-    print(event, text, duration)
-    self:StartTimerBar(text, duration, knownFlightFlag)
+function statusBarModuleCore:InFlight_Taxi_Start(event, taxiSrcName, taxiDestName, taxiDuration)
+    print(event, taxiSrcName, taxiDestName, taxiDuration)
+    if taxiDuration ~= 0 then
+        self:StartTimerBar(string.format("%s --> %s", taxiSrcName, taxiDestName), taxiDuration)
+    else
+        --eventually we'll show a bar for unknown times but empty if statement for now.
+    end
 end
 
-function statusBarModuleCore:InFlight_Stop(event)
+function statusBarModuleCore:InFlight_Taxi_Stop(event)
     print(event)
     self:StopTimerBar()
 end
