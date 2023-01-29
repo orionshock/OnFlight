@@ -10,6 +10,7 @@ addonCore = LibStub("AceAddon-3.0"):NewAddon(addonCore, "InFlight", "AceConsole-
 _G[addonName] = addonCore
 
 local L = LibStub("AceLocale-3.0"):GetLocale("InFlight")
+local LSM = LibStub("LibSharedMedia-3.0")
 
 local db
 local svDefaults = {
@@ -17,14 +18,14 @@ local svDefaults = {
         countUp = false,
         fillUp = false,
         showSpark = true,
-        backgroundColor = {r = 0.1, g = 0.1, b = 0.1, a = 0.6},
-        unknownFlightColor = {r = 0.2, g = 0.2, b = 0.4, a = 1.0},
+        backgroundColor = {r = 0, g = 0, b = 1, a = 1},
+        unknownFlightColor = {r = 1, g = 0, b = 0, a = 1},
         barHeight = 12,
         barWidth = 300,
         barTexture = "Blizzard",
-        barColor = {r = 0.5, g = 0.5, b = 0.8, a = 1.0},
+        barColor = {r = 0, g = 1, b = 0, a = 1},
         borderTexture = "Blizzard Dialog",
-        borderColor = {r = 0.6, g = 0.6, b = 0.6, a = 0.8},
+        borderColor = {r = 0, g = 1, b = 0, a = 1},
         compactMode = false,
         fontName = "2002 Bold",
         fontSize = 12,
@@ -32,10 +33,10 @@ local svDefaults = {
         showChat = true,
         confirmFlight = false,
         barLocation = {
-            x = 0,
-            y = -170,
-            anchor = "TOP",
-            anchorPoint = "TOP"
+            offsetX = 0,
+            offsetY = -170,
+            anchorPoint = "TOP",
+            relativePoint = "TOP"
         }
     },
     global = {}
@@ -107,21 +108,25 @@ addonCore.configOptionsTable = {
             order = 100,
             args = {
                 countUp = {
+                    hidden = true,
                     name = L["Count Upwards"],
                     type = "toggle",
                     order = 10
                 },
                 fillUp = {
+                    hidden = true,
                     name = L["Fill Upwards"],
                     type = "toggle",
                     order = 20
                 },
                 showSpark = {
+                    hidden = true,
                     name = L["Show Spark"],
                     type = "toggle",
                     order = 30
                 },
                 backgroundColor = {
+                    hidden = true,
                     name = L["Background Color"],
                     type = "color",
                     order = 40
@@ -132,6 +137,7 @@ addonCore.configOptionsTable = {
                     order = 50
                 },
                 size = {
+                    hidden = true,
                     name = L["Bar Size Settings"],
                     type = "group",
                     order = 60,
@@ -177,6 +183,7 @@ addonCore.configOptionsTable = {
                     }
                 },
                 borderSettings = {
+                    hidden = true,
                     name = L["Border Settings"],
                     type = "group",
                     order = 80,
@@ -254,6 +261,110 @@ addonCore.configOptionsTable = {
         }
     }
 }
+local function disp_time(time)
+    local minutes = floor(mod(time, 3600) / 60)
+    local seconds = floor(mod(time, 60))
+    return format("%d:%02d", minutes, seconds)
+end
+
+local function timerBarOnUpdate(self, elapsed)
+    if not self.timeRemaining then
+        self:Hide()
+        return
+    end
+    self.timeRemaining = self.timeRemaining - elapsed
+    if self.timeRemaining > 0 then
+        _G[self:GetName() .. "StatusBar"]:SetValue(self.timeRemaining)
+        _G[self:GetName() .. "Text"]:SetFormattedText("%s - %s", self.text, disp_time(self.timeRemaining))
+    else
+        self:Hide()
+        self.timeRemaining = 0
+        self.duration = 0
+        self.text = ""
+        _G[self:GetName() .. "Text"]:SetText("")
+    end
+end
 
 function addonCore:SetupTimerBar()
+    local barLocation = db.profile.barLocation
+    local InFlightTimerFrame = CreateFrame("Frame", "InFlightTimerFrame", UIParent, "MirrorTimerTemplate")
+    InFlightTimerFrame:UnregisterAllEvents()
+    InFlightTimerFrame:SetScript("OnEvent", nil)
+    InFlightTimerFrame:SetScript("OnUpdate", timerBarOnUpdate)
+    InFlightTimerFrame:Hide()
+    InFlightTimerFrame:SetPoint(barLocation.anchorPoint, UIParent, barLocation.relativePoint, barLocation.offsetX, barLocation.offsetY)
+    InFlightTimerFrame:SetMovable(true)
+    InFlightTimerFrame:EnableMouse(true)
+    InFlightTimerFrame:SetClampedToScreen(true)
+    InFlightTimerFrame:RegisterForDrag("LeftButton")
+
+    local statusBar = _G[InFlightTimerFrame:GetName() .. "StatusBar"]
+    statusBar:SetStatusBarColor(db.profile.barColor.r, db.profile.barColor.g, db.profile.barColor.b, db.profile.barColor.a)
+
+    InFlightTimerFrame:SetScript(
+        "OnMouseUp",
+        function(frame, button)
+            print(frame:GetName(), button)
+        end
+    )
+
+    InFlightTimerFrame:SetScript(
+        "OnDragStart",
+        function(frame)
+            if IsShiftKeyDown() then
+                frame:StartMoving()
+            end
+        end
+    )
+    InFlightTimerFrame:SetScript(
+        "OnDragStop",
+        function(frame)
+            frame:StopMovingOrSizing()
+            local a, b, c, d, e = frame:GetPoint()
+            db.p, db.rp, db.x, db.y = a, c, floor(d + 0.5), floor(e + 0.5)
+            local anchorPoint, relativeTo, relativePoint, offsetX, offsetY = frame:GetPoint()
+            db.profile.barLocation.anchorPoint = anchorPoint
+            db.profile.barLocation.relativePoint = relativePoint
+            db.profile.barLocation.offsetX = offsetX
+            db.profile.barLocation.offsetY = offsetY
+        end
+    )
+    self.InFlightTimerFrame = InFlightTimerFrame
+end
+
+function addonCore:StartTimerBar(text, duration, unknownFlightFlag) --Bar Text and Duration in seconds--
+    if not self.InFlightTimerFrame then
+        return
+    end
+    if (not text) or (not duration) then
+        return
+    end
+
+    local timerFrame = self.InFlightTimerFrame
+    timerFrame.duration = duration
+    timerFrame.timeRemaining = duration
+    timerFrame.text = text
+
+    local statusBar = _G[InFlightTimerFrame:GetName() .. "StatusBar"]
+    statusBar:SetMinMaxValues(0, duration)
+    statusBar:SetValue(duration)
+
+    if unknownFlightFlag then
+        statusBar:SetStatusBarColor(db.profile.unknownFlightColor.r, db.profile.unknownFlightColor.g, db.profile.unknownFlightColor.b, db.profile.unknownFlightColor.a)
+    else
+        statusBar:SetStatusBarColor(db.profile.barColor.r, db.profile.barColor.g, db.profile.barColor.b, db.profile.barColor.a)
+    end
+
+    local displayText = _G[timerFrame:GetName() .. "Text"]
+    displayText:SetFormattedText("%s - %s", text, disp_time(duration))
+
+    timerFrame:Show()
+end
+
+function addonCore:StopTimerBar()
+    self.InFlightTimerFrame:Hide()
+    self.InFlightTimerFrame.timeRemaining = 0
+    self.InFlightTimerFrame.duration = 0
+    self.InFlightTimerFrame.text = ""
+    _G[self.InFlightTimerFrame:GetName() .. "Text"]:SetText("")
 end
