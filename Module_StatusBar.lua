@@ -16,25 +16,24 @@ local svDefaults = {
         --Basic Bar Options
         countUp = false,
         fillUp = false,
-        showSpark = true,
         --Bar Background Color
-        backgroundColor = {r = 0, g = 0, b = 1, a = 1},
+        backgroundColor = {r = 0.1, g = 0.1, b = 0.1, a = 0.6},
         --Bar Size Settings
         barHeight = 30,
         barWidth = 300,
         --Bar Settings
         barTexture = "Blizzard",
-        barColor = {r = 0, g = 1, b = 0, a = 1},
-        unknownFlightColor = {r = 1, g = 0, b = 0, a = 1},
+        barColor = {r = 0.5, g = 0.5, b = 0.8, a = 1.0},
+        unknownFlightColor = {r = 0.2, g = 0.2, b = 0.4, a = 1.0},
         --Border Settings
         borderTexture = "Blizzard Dialog",
-        borderColor = {r = 1, g = 1, b = 1, a = 1},
+        borderColor = {r = 0.6, g = 0.6, b = 0.6, a = 1},
         --Basic Text Options
         compactMode = false,
         shortNames = true,
         --Font Options
         fontName = "2002 Bold",
-        fontSize = 12,
+        fontSize = "15",
         fontColor = {r = 1, g = 1, b = 1, a = 1},
         --Bar Location
         barLocation = {
@@ -55,6 +54,7 @@ function statusBarModuleCore:OnEnable()
     self:SetupTimerBar()
     self:RegisterMessage("InFlight_Taxi_Start")
     self:RegisterMessage("InFlight_Taxi_Stop")
+    self:RegisterMessage("InFlight_Taxi_FAILED_ENTRY", "InFlight_Taxi_Stop")
 end
 
 function statusBarModuleCore:InFlight_Taxi_Start(event, taxiSrcName, taxiDestName, taxiDuration, unknownFlight)
@@ -74,7 +74,7 @@ function statusBarModuleCore:InFlight_Taxi_Stop(event, taxiSrcName, taxiDestName
 end
 
 function statusBarModuleCore:InFlight_Taxi_EarlyExit(event, taxiSrcName, taxiDestName, exitReason)
-    print(event, " -- ", string.format("%s --> %s", taxiSrcName, taxiDestName), " -- ExitReason: ", exitReason)
+    Debug(event, " -- ", string.format("%s --> %s", taxiSrcName, taxiDestName), " -- ExitReason: ", exitReason)
     self:StopTimerBar()
 end
 
@@ -93,12 +93,14 @@ local function timerBarOnUpdate(self, elapsed)
         else
             self.textObj:SetText(self.text)
         end
+        self.spark:Hide()
+        local ajdBarWidth = math.max(self.textObj:GetStringWidth() + 30, db.profile.barWidth)
+        self:SetWidth(ajdBarWidth)
         return
     end
 
     self.timeRemaining = self.timeRemaining - elapsed
     if self.timeRemaining > 0 then
-        self.statusBar:SetValue(self.timeRemaining)
         if db.profile.compactMode then
             self.textObj:SetText(disp_time(self.timeRemaining))
         else
@@ -108,6 +110,14 @@ local function timerBarOnUpdate(self, elapsed)
                 self.textObj:SetFormattedText("%s - %s", self.text, disp_time(self.timeRemaining))
             end
         end
+
+        local ajdBarWidth = math.max(self.textObj:GetStringWidth() + 30, db.profile.barWidth)
+        self:SetWidth(ajdBarWidth)
+
+        self.statusBar:SetValue(self.timeRemaining)
+        self.spark:Show()
+        local sparkPosition = (self.timeRemaining / self.duration) * self.statusBar:GetWidth()
+        self.spark:SetPoint("CENTER", self.statusBar, "LEFT", sparkPosition, 0)
     elseif self.timeRemaining <= 0 then
         self:Hide()
         self.timeRemaining = 0
@@ -138,10 +148,17 @@ local function ApplyLookAndFeel(self) --self is the baseFrame
     statusBar:ClearAllPoints()
     statusBar:SetPoint("TOPLEFT", self, "TOPLEFT", 6, -6)
     statusBar:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", -6, 6)
+    local spark = self.spark
+    spark:ClearAllPoints()
+    spark:SetHeight(db.profile.barHeight)
+    spark:SetWidth(16)
 
+    --Text Object
     local textObj = self.textObj
     textObj:ClearAllPoints()
     textObj:SetPoint("CENTER", self, "CENTER")
+    textObj:SetFont(LSM:Fetch("font", db.profile.fontName), db.profile.fontSize)
+    textObj:SetTextColor(db.profile.fontColor.r, db.profile.fontColor.g, db.profile.fontColor.b, db.profile.fontColor.a)
 
     if self.unknownFlight then
         statusBar:SetStatusBarColor(db.profile.unknownFlightColor.r, db.profile.unknownFlightColor.g, db.profile.unknownFlightColor.b, db.profile.unknownFlightColor.a)
@@ -168,6 +185,14 @@ function statusBarModuleCore:SetupTimerBar()
 
     InFlightTimerFrame.statusBar = statusBar
     InFlightTimerFrame.textObj = textObj
+
+    local spark = statusBar:CreateTexture(nil, "OVERLAY", nil, 7)
+    InFlightTimerFrame.spark = spark
+    spark:Hide()
+    spark:SetTexture("Interface\\CastingBar\\UI-CastingBar-Spark")
+    spark:SetWidth(16)
+    spark:SetHeight(16)
+    spark:SetBlendMode("ADD")
 
     ApplyLookAndFeel(InFlightTimerFrame)
 
@@ -201,7 +226,7 @@ function statusBarModuleCore:SetupTimerBar()
 end
 
 function statusBarModuleCore:StartTimerBar(taxiSrcName, taxiDestName, duration, unknownFlight) --Bar Text and Duration in seconds--
-    print("StartTimerBar:", taxiSrcName, taxiDestName, duration, unknownFlight)
+    Debug("StartTimerBar:", taxiSrcName, taxiDestName, duration, unknownFlight)
     if not self.InFlightTimerFrame then
         Debug("No Timer Bar?")
         return
@@ -215,11 +240,11 @@ function statusBarModuleCore:StartTimerBar(taxiSrcName, taxiDestName, duration, 
 
     timerFrame.duration = duration
     timerFrame.timeRemaining = duration
-    timerFrame.text = ("%s - %s"):format(taxiSrcName, taxiDestName)
+    timerFrame.text = ("%s --> %s"):format(taxiSrcName, taxiDestName)
 
-    local taxiSrcNameShort = taxiSrcName:match("(.+), .+")
-    local taxiDestNameShort = taxiDestName:match("(.+), .+")
-    timerFrame.shortText = ("%s - %s"):format(taxiSrcNameShort, taxiDestNameShort)
+    local taxiSrcNameShort = taxiSrcName:gsub(L["DestParse"], "")
+    local taxiDestNameShort = taxiDestName:gsub(L["DestParse"], "")
+    timerFrame.shortText = ("%s --> %s"):format(taxiSrcNameShort, taxiDestNameShort)
 
     local statusBar = timerFrame.statusBar
     if unknownFlight then
@@ -243,7 +268,7 @@ function statusBarModuleCore:StopTimerBar()
     self.InFlightTimerFrame.text = nil
     self.InFlightTimerFrame.shortText = nil
     self.InFlightTimerFrame.unknownFlight = false
-    _G[self.InFlightTimerFrame:GetName() .. "Text"]:SetText("")
+    self.InFlightTimerFrame.textObj:SetText("")
 end
 
 function statusBarModuleCore:GetOption(info)
@@ -285,28 +310,21 @@ addonCore.configOptionsTable.plugins["StatusBarModule"] = {
         order = 100,
         args = {
             countUp = {
-                disabled = true,
+                hidden = true,
                 desc = "Not Implemented",
                 name = L["Count Upwards"],
                 type = "toggle",
                 order = 10
             },
             fillUp = {
-                disabled = true,
+                hidden = true,
                 desc = "Not Implemented",
                 name = L["Fill Upwards"],
                 type = "toggle",
                 order = 20
             },
-            showSpark = {
-                disabled = true,
-                desc = "Not Implemented",
-                name = L["Show Spark"],
-                type = "toggle",
-                order = 30
-            },
             size = {
-                name = L["Bar Size Settings"],
+                name = L["Bar Size"],
                 type = "group",
                 order = 60,
                 inline = true,
@@ -330,7 +348,7 @@ addonCore.configOptionsTable.plugins["StatusBarModule"] = {
                 }
             },
             barSettings = {
-                name = L["Bar Settings"],
+                name = L["Look and Feel"],
                 type = "group",
                 order = 70,
                 inline = true,
@@ -405,8 +423,6 @@ addonCore.configOptionsTable.plugins["StatusBarModule"] = {
                 end
             },
             fontOptions = {
-                disabled = true,
-                desc = "Not Implemented",
                 name = L["Font Options"],
                 type = "group",
                 inline = true,

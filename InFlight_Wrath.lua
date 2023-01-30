@@ -53,6 +53,15 @@ local svDefaults = {
             ["Grom'gol, Stranglethorn"] = {
                 ["Booty Bay, Stranglethorn"] = 78
             }
+        },
+        Alliance = {},
+        gossipTriggered = {
+            -- [gossipOptionID] = {startingPoint, endingPoint},
+            -- Gossip Triggered Flights get integrated in to main Horde/Alliance DB as they occur as any other flight
+            -- we set a start locatoin name and end location name here as it's not provided otherwise and is needed for the rest of it to work.
+            -- likely will be editable in the future via ADV Options pannel so people can and in more as desired / found.
+            [93033] = {"Sun's Reach Harbor", "The Sin'loren"},
+            [92694] = {"The Sin'loren", "Sun's Reach Harbor"}
         }
     }
 }
@@ -87,6 +96,19 @@ function addonCore:ChatCommand(input)
     end
     if not input or input:trim() == "" then
         LibStub("AceConfigDialog-3.0"):Open(addonName)
+    else
+        LibStub("AceConfigCmd-3.0").HandleCommand(addonCore, "inflight", addonName, input)
+    end
+end
+
+function addonCore:ChatMessage(...)
+    if not self.db.profile.showChat then
+        return
+    end
+    local msg = string.join(" ", tostringall(...))
+    msg = msg:trim()
+    if msg then
+        print("|cff0040ffIn|cff00aaffFlight|r|r:", msg)
     end
 end
 
@@ -125,13 +147,16 @@ do
                         if db.global[playerFaction][self.taxiSrcName][self.taxiDestName] then
                             Debug("Send Event: InFlight_Taxi_Start -- Duration:", SecondsToTime(db.global[playerFaction][self.taxiSrcName][self.taxiDestName]))
                             addonCore:SendMessage("InFlight_Taxi_Start", self.taxiSrcName, self.taxiDestName, db.global[playerFaction][self.taxiSrcName][self.taxiDestName], false)
+                            addonCore:ChatMessage(L["On Taxi:"], self.taxiSrcName, self.taxiDestName, "--", L["Flight Time:"], SecondsToTime(db.global[playerFaction][self.taxiSrcName][self.taxiDestName]))
                         else
                             Debug("Send Event: InFlight_Taxi_Start -- Unknown Duration")
                             addonCore:SendMessage("InFlight_Taxi_Start", self.taxiSrcName, self.taxiDestName, 0, true)
+                            addonCore:ChatMessage(L["On Taxi:"], self.taxiSrcName .. " --> " .. self.taxiDestName)
                         end
                     else
                         Debug("Send Event: InFlight_Taxi_Start -- Unknown Duration")
                         addonCore:SendMessage("InFlight_Taxi_Start", self.taxiSrcName, self.taxiDestName, 0, true)
+                        addonCore:ChatMessage(L["On Taxi:"], self.taxiSrcName .. " --> " .. self.taxiDestName)
                     end
                 elseif (not self.taxiState) and (self.taxiStartTime) then
                     Debug("Off Taxi:", (not self.taxiState), date("%I:%M:%S %p"))
@@ -139,13 +164,15 @@ do
                         Debug("No Exit Early:", self.earlyExit)
                         local flightDuration = abs(GetTime() - self.taxiStartTime)
                         db.global[playerFaction][self.taxiSrcName] = db.global[playerFaction][self.taxiSrcName] or {}
-                        db.global[playerFaction][self.taxiSrcName][self.taxiDestName] = math.floor(flightDuration) + 2 --Add 2 sec slosh
+                        db.global[playerFaction][self.taxiSrcName][self.taxiDestName] = math.floor(flightDuration)
                         Debug("Send Event: InFlight_Taxi_Stop", self.taxiSrcName, self.taxiDestName, "-- Druation:", SecondsToTime(flightDuration))
                         addonCore:SendMessage("InFlight_Taxi_Stop", self.taxiSrcName, self.taxiDestName, flightDuration)
+                        addonCore:ChatMessage(L["Taxi Ended:"], self.taxiSrcName .. " --> " .. self.taxiDestName, "--", L["Flight Time:"], SecondsToTime(flightDuration))
                         return ResetInFlightTimer()
                     elseif self.earlyExit then
                         Debug("EarlyExit:", self.taxiSrcName, "-->", self.taxiDestName, " -- Reason: ", self.earlyExit)
                         addonCore:SendMessage("InFlight_Taxi_EarlyExit", self.taxiSrcName, self.taxiDestName, self.earlyExit)
+                        addonCore:ChatMessage(L["Taxi Ended Early:"], self.earlyExit)
                         return ResetInFlightTimer()
                     end
                 end
@@ -163,19 +190,55 @@ do
     )
 end
 
+function addonCore:StartAFlight(source, destination)
+    --there are no sanity Checks here -- use with care.
+    taxiTimerFrame.taxiSrcName = source
+    taxiTimerFrame.taxiDestName = destination
+    taxiTimerFrame.elapsedNotOnFlight = 0
+    taxiTimerFrame:Show()
+end
+
 do --Hoook Func
     local oldTakeTaxiNode = TakeTaxiNode
     TakeTaxiNode = function(slot, ...)
         for taxiIndex = 1, NumTaxiNodes(), 1 do
             if TaxiNodeGetType(taxiIndex) == "CURRENT" then
-                taxiTimerFrame.taxiSrcName = TaxiNodeName(taxiIndex)
-                taxiTimerFrame.taxiDestName = TaxiNodeName(slot)
-                taxiTimerFrame.elapsedNotOnFlight = 0
-                taxiTimerFrame:Show() --we'll let the OnUpdate frame handle the AceEvent Messages
-                break
+                local taxiSrcName = TaxiNodeName(taxiIndex)
+                local taxiDestName = TaxiNodeName(slot)
+                if taxiSrcName and taxiDestName then
+                    addonCore:StartAFlight(source, destination)
+                    break
+                end
             end
         end
         oldTakeTaxiNode(slot, ...)
+    end
+end
+
+do
+    local orig_C_GossipInfo_SelectOption = C_GossipInfo.SelectOption
+    function C_GossipInfo.SelectOption(option, ...)
+        Debug("C_GossipInfo.SelectOption", option, ...)
+        local gossipOptions = C_GossipInfo.GetOptions()
+        local gossipSelection, gossipOptionID
+        for _,v in pairs(gossipOptions) do
+            if v.gossipOptionID == option then
+                gossipOptionID = v.gossipOptionID
+                gossipSelection = v --used for debugging....
+            end
+        end
+        if not gossipSelection then
+            --?? this should never really happen, but send back to game API and let it deal with it.
+            orig_C_GossipInfo_SelectOption(option, ...)
+            return
+        end
+        Debug(gossipOptionID, gossipSelection.name)
+        if db.global.gossipTriggered[gossipOptionID] then
+            Debug( unpack(db.global.gossipTriggered[gossipOptionID]) )
+            addonCore:StartAFlight(unpack(db.global.gossipTriggered[gossipOptionID]))
+        end
+
+        orig_C_GossipInfo_SelectOption(option, ...)
     end
 end
 
@@ -193,14 +256,18 @@ function addonCore:GetOption(info)
 end
 function addonCore:SetOption(info, ...)
     if info.type == "color" then
-        local red, blue, green, alpha = ...
+        local red, green, blue, alpha = ...
         db.profile[info[#info]] = db.profile[info[#info]] or {}
         db.profile[info[#info]].r = red
         db.profile[info[#info]].b = blue
         db.profile[info[#info]].g = green
         db.profile[info[#info]].a = alpha
+        Debug("SetColorOption:", info[#info], "to:", red, blue, green, alpha)
+
     else
         db.profile[info[#info]] = ...
+        Debug("SetOption:", info[#info], "to:", ...)
+
     end
 end
 
@@ -222,17 +289,10 @@ addonCore.configOptionsTable = {
                     type = "toggle",
                     order = 10
                 },
-                confirmFlight = {
-                    disabled = true,
-                    desc = "Not Implemented, Might not be. What's the point?",
-                    name = L["Confirm Flights"],
-                    type = "toggle",
-                    order = 20
-                },
                 showDebug = {
                     name = L["Debug"],
                     type = "toggle",
-                    order = 30
+                    order = 99
                 },
                 ADVANCED_OPTIONS = {
                     name = L["Show Advanced Options"],
@@ -252,15 +312,15 @@ addonCore.configOptionsTable = {
                     order = 1,
                     func = function(info)
                         addonCore:GetModule("StatusBarModule"):StartTimerBar("City1, Zone1", "City2, Zone2", 300)
-                    end,
+                    end
                 },
                 ["testUnknown"] = {
                     type = "execute",
                     name = "Test Unknown Flight",
                     order = 2,
                     func = function(info)
-                        addonCore:GetModule("StatusBarModule"):StartTimerBar("Unknown1, Zone1", "Unknown2, Zone2",0,true)
-                    end,
+                        addonCore:GetModule("StatusBarModule"):StartTimerBar("Unknown1, Zone1", "Unknown2, Zone2", 0, true)
+                    end
                 },
                 ["stopTest"] = {
                     type = "execute",
@@ -268,7 +328,7 @@ addonCore.configOptionsTable = {
                     order = 3,
                     func = function(info)
                         addonCore:GetModule("StatusBarModule"):StopTimerBar()
-                    end,
+                    end
                 }
             }
         },
@@ -276,11 +336,13 @@ addonCore.configOptionsTable = {
             name = "Advanced Options",
             type = "group",
             order = 900,
-            hidden = function() return not db.profile.ADVANCED_OPTIONS end,
-            args ={
+            hidden = function()
+                return not db.profile.ADVANCED_OPTIONS
+            end,
+            args = {
                 helpText = {
                     name = "Not Implemented",
-                    type = "description",
+                    type = "description"
                 }
             }
         }
