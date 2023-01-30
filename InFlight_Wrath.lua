@@ -41,6 +41,9 @@ local L = LibStub("AceLocale-3.0"):GetLocale("InFlight")
 
 local db, playerFaction
 local svDefaults = {
+    char = {
+        --resumed flight details from reloading UI or zoning, not sure i want to do this.
+    },
     profile = {
         showChat = true,
         confirmFlight = false
@@ -145,9 +148,10 @@ do
 
                     if db.global[playerFaction][self.taxiSrcName] then
                         if db.global[playerFaction][self.taxiSrcName][self.taxiDestName] then
-                            Debug("Send Event: InFlight_Taxi_Start -- Duration:", SecondsToTime(db.global[playerFaction][self.taxiSrcName][self.taxiDestName]))
-                            addonCore:SendMessage("InFlight_Taxi_Start", self.taxiSrcName, self.taxiDestName, db.global[playerFaction][self.taxiSrcName][self.taxiDestName], false)
-                            addonCore:ChatMessage(L["On Taxi:"], self.taxiSrcName, self.taxiDestName, "--", L["Flight Time:"], SecondsToTime(db.global[playerFaction][self.taxiSrcName][self.taxiDestName]))
+                            local flightDurationFromDB = db.global[playerFaction][self.taxiSrcName][self.taxiDestName] --for Readablity.
+                            Debug("Send Event: InFlight_Taxi_Start -- Duration:", SecondsToTime(flightDurationFromDB))
+                            addonCore:SendMessage("InFlight_Taxi_Start", self.taxiSrcName, self.taxiDestName, flightDurationFromDB, false)
+                            addonCore:ChatMessage(L["On Taxi:"], self.taxiSrcName, self.taxiDestName, "--", L["Flight Time:"], SecondsToTime(flightDurationFromDB))
                         else
                             Debug("Send Event: InFlight_Taxi_Start -- Unknown Duration")
                             addonCore:SendMessage("InFlight_Taxi_Start", self.taxiSrcName, self.taxiDestName, 0, true)
@@ -190,6 +194,71 @@ do
     )
 end
 
+-- function hooks to detect if we left a flight early
+hooksecurefunc(
+    "TaxiRequestEarlyLanding",
+    function()
+        taxiTimerFrame.earlyExit = "TaxiRequestEarlyLanding"
+    end
+)
+
+hooksecurefunc(
+    "AcceptBattlefieldPort",
+    function()
+        taxiTimerFrame.earlyExit = "AcceptBattlefieldPort"
+    end
+)
+
+hooksecurefunc(
+    C_SummonInfo,
+    "ConfirmSummon",
+    function()
+        taxiTimerFrame.earlyExit = "C_SummonInfo.ConfirmSummon"
+    end
+)
+
+---APIs
+function addonCore:GetFlightDuration(source, destination, faction)
+    local src = (source and (type(source) == "string")) and source:trim()
+    local dest = (source and (type(destination) == "string")) and destination:trim()
+    local fact = (faction and (type(faction) == "string")) and destination:trim() or playerFaction
+    if src and dest then
+        if db.global[fact][src] then
+            return db.global[fact][src][dest]
+        end
+    end
+end
+function addonCore:IsOnFlight()
+    if taxiTimerFrame and taxiTimerFrame:IsShown() then
+        if taxiTimerFrame.taxiSrcName and taxiTimerFrame.taxiDestName then
+            return true
+        end
+    end
+    return false
+end
+
+function addonCore:GetCurrentFlightDetail()
+    if self:IsOnFlight() then
+        return taxiTimerFrame.taxiSrcName, taxiTimerFrame.taxiDestName
+    end
+end
+
+function addonCore:GetCurrentFlightProgress()
+    --time on flight, time remaining, total duration
+    if not self:IsOnFlight() then
+        return
+    end
+    local timeOnFlight = GetTime() - taxiTimerFrame.taxiStartTime
+    local totalDuration = addonCore:GetFlightDuration(self:GetCurrentFlightDetail())
+    local timeRemaining
+    if totalDuration then
+        timeRemaining = totalDuration - timeOnFlight
+    end
+
+    return timeOnFlight, timeRemaining, totalDuration
+end
+---
+
 function addonCore:StartAFlight(source, destination)
     --there are no sanity Checks here -- use with care.
     taxiTimerFrame.taxiSrcName = source
@@ -221,7 +290,7 @@ do
         Debug("C_GossipInfo.SelectOption", option, ...)
         local gossipOptions = C_GossipInfo.GetOptions()
         local gossipSelection, gossipOptionID
-        for _,v in pairs(gossipOptions) do
+        for _, v in pairs(gossipOptions) do
             if v.gossipOptionID == option then
                 gossipOptionID = v.gossipOptionID
                 gossipSelection = v --used for debugging....
@@ -234,7 +303,7 @@ do
         end
         Debug(gossipOptionID, gossipSelection.name)
         if db.global.gossipTriggered[gossipOptionID] then
-            Debug( unpack(db.global.gossipTriggered[gossipOptionID]) )
+            Debug(unpack(db.global.gossipTriggered[gossipOptionID]))
             addonCore:StartAFlight(unpack(db.global.gossipTriggered[gossipOptionID]))
         end
 
@@ -263,11 +332,9 @@ function addonCore:SetOption(info, ...)
         db.profile[info[#info]].g = green
         db.profile[info[#info]].a = alpha
         Debug("SetColorOption:", info[#info], "to:", red, blue, green, alpha)
-
     else
         db.profile[info[#info]] = ...
         Debug("SetOption:", info[#info], "to:", ...)
-
     end
 end
 
