@@ -15,6 +15,7 @@ taxiSrcName --Full Proper name from API for where we started
 taxiDestName --Full Proper name from API for where we are going
 taxiDuration --Time in seconds from DB for how long the flight is.
     --if duration is 0 then we don't know how long it'll be--
+unknownFlight -- true if there is no duration
 
 InFlight_Taxi_Stop
 taxiSrcName --Full Proper name from API for where we started
@@ -37,7 +38,6 @@ addonCore = LibStub("AceAddon-3.0"):NewAddon(addonCore, "InFlight", "AceConsole-
 _G[addonName] = addonCore
 
 local L = LibStub("AceLocale-3.0"):GetLocale("InFlight")
---local LSM = LibStub("LibSharedMedia-3.0")
 
 local db, playerFaction
 local svDefaults = {
@@ -124,14 +124,14 @@ do
                     if db.global[playerFaction][self.taxiSrcName] then
                         if db.global[playerFaction][self.taxiSrcName][self.taxiDestName] then
                             Debug("Send Event: InFlight_Taxi_Start -- Duration:", SecondsToTime(db.global[playerFaction][self.taxiSrcName][self.taxiDestName]))
-                            addonCore:SendMessage("InFlight_Taxi_Start", self.taxiSrcName, self.taxiDestName, db.global[playerFaction][self.taxiSrcName][self.taxiDestName])
+                            addonCore:SendMessage("InFlight_Taxi_Start", self.taxiSrcName, self.taxiDestName, db.global[playerFaction][self.taxiSrcName][self.taxiDestName], false)
                         else
                             Debug("Send Event: InFlight_Taxi_Start -- Unknown Duration")
-                            addonCore:SendMessage("InFlight_Taxi_Start", self.taxiSrcName, self.taxiDestName, 0)
+                            addonCore:SendMessage("InFlight_Taxi_Start", self.taxiSrcName, self.taxiDestName, 0, true)
                         end
                     else
                         Debug("Send Event: InFlight_Taxi_Start -- Unknown Duration")
-                        addonCore:SendMessage("InFlight_Taxi_Start", self.taxiSrcName, self.taxiDestName, 0)
+                        addonCore:SendMessage("InFlight_Taxi_Start", self.taxiSrcName, self.taxiDestName, 0, true)
                     end
                 elseif (not self.taxiState) and (self.taxiStartTime) then
                     Debug("Off Taxi:", (not self.taxiState), date("%I:%M:%S %p"))
@@ -238,6 +238,37 @@ addonCore.configOptionsTable = {
                     name = L["Show Advanced Options"],
                     type = "toggle",
                     order = 100
+                }
+            }
+        },
+        testButtons = {
+            type = "group",
+            name = "Test Buttons",
+            order = 350,
+            args = {
+                ["testKnown"] = {
+                    type = "execute",
+                    name = "Test Known Flight",
+                    order = 1,
+                    func = function(info)
+                        addonCore:GetModule("StatusBarModule"):StartTimerBar("City1, Zone1", "City2, Zone2", 300)
+                    end,
+                },
+                ["testUnknown"] = {
+                    type = "execute",
+                    name = "Test Unknown Flight",
+                    order = 2,
+                    func = function(info)
+                        addonCore:GetModule("StatusBarModule"):StartTimerBar("Unknown1, Zone1", "Unknown2, Zone2",0,true)
+                    end,
+                },
+                ["stopTest"] = {
+                    type = "execute",
+                    name = "Stop Test",
+                    order = 3,
+                    func = function(info)
+                        addonCore:GetModule("StatusBarModule"):StopTimerBar()
+                    end,
                 }
             }
         },
