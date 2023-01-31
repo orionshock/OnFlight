@@ -39,11 +39,11 @@ _G[addonName] = addonCore
 
 local L = LibStub("AceLocale-3.0"):GetLocale("InFlight")
 
+local TaxiNodeName, GetNumRoutes, NumTaxiNodes, TaxiNodeGetType = TaxiNodeName, GetNumRoutes, NumTaxiNodes, TaxiNodeGetType
+
 local db, playerFaction
 local svDefaults = {
-    char = {
-        --resumed flight details from reloading UI or zoning, not sure i want to do this.
-    },
+    char = {},
     profile = {
         showChat = true,
         confirmFlight = false
@@ -57,15 +57,7 @@ local svDefaults = {
                 ["Booty Bay, Stranglethorn"] = 78
             }
         },
-        Alliance = {},
-        gossipTriggered = {
-            -- [gossipOptionID] = {startingPoint, endingPoint},
-            -- Gossip Triggered Flights get integrated in to main Horde/Alliance DB as they occur as any other flight
-            -- we set a start locatoin name and end location name here as it's not provided otherwise and is needed for the rest of it to work.
-            -- likely will be editable in the future via ADV Options pannel so people can and in more as desired / found.
-            [93033] = {"Sun's Reach Harbor", "The Sin'loren"},
-            [92694] = {"The Sin'loren", "Sun's Reach Harbor"}
-        }
+        Alliance = {}
     }
 }
 addonCore.svDefaults = svDefaults
@@ -88,6 +80,8 @@ function addonCore:OnEnable()
         Flight:Disable()
         Flight:UnregisterEvent("TAXIMAP_OPENED")
     end
+
+    self:RegisterEvent("TAXIMAP_OPENED")
 end
 
 function addonCore:OnDisable()
@@ -216,8 +210,123 @@ hooksecurefunc(
         taxiTimerFrame.earlyExit = "C_SummonInfo.ConfirmSummon"
     end
 )
+---Estimated Flight Times
+function InFlight_GetEstimatedTime(taxiDestSlot) -- estimates flight times based on hops
+    if not TaxiFrame:IsShown() then
+        return
+    end
+    taxiDestSlot = tonumber(taxiDestSlot)
+    if not taxiDestSlot then
+        return
+    end
+    local taxiSrcIndex
+    local taxiSrcName
+    local taxiDestName = TaxiNodeName(taxiDestSlot)
 
----APIs
+    local numRoutes = GetNumRoutes(taxiDestSlot)
+    if numRoutes < 2 then --if there are no hops between points then we cannot estimate anything.
+        return
+    end
+    --Find Current Index and Name (because no generic global variables for this stuff)
+    for index = 1, NumTaxiNodes() do
+        local nodeType = TaxiNodeGetType(index)
+        if nodeType == "CURRENT" then
+            taxiSrcIndex = index
+            taxiSrcName = TaxiNodeName(index)
+        end
+    end
+
+    local taxiNodes = {
+        [1] = taxiSrcName,
+        [numRoutes + 1] = taxiDestName
+    }
+
+    for hop = 2, numRoutes do
+        taxiNodes[hop] = TaxiNodeName(TaxiGetNodeSlot(taxiDestSlot, hop, true))
+    end
+
+    local vars = addonCore.db.global[playerFaction]
+    local etimes = {0}
+    local prevNode = {}
+    local nextNode = {}
+    local srcNode = 1
+    local dstNode = #taxiNodes - 1
+    --Debug("|cff208080New Route:|r", taxiSrcName, "-->", taxiNodes[#taxiNodes], "-", #taxiNodes, "hops")
+    while srcNode and srcNode < #taxiNodes do
+        while dstNode and dstNode > srcNode do
+            --Debug("|cff208080Node:|r", taxiNodes[srcNode], "-->", taxiNodes[dstNode])
+            if vars[taxiNodes[srcNode]] then
+                if not etimes[dstNode] and vars[taxiNodes[srcNode]][taxiNodes[dstNode]] then
+                    etimes[dstNode] = etimes[srcNode] + vars[taxiNodes[srcNode]][taxiNodes[dstNode]]
+                    --Debug(taxiNodes[dstNode], "time:", etimes[srcNode], "+", vars[taxiNodes[srcNode]][taxiNodes[dstNode]], "=", etimes[dstNode])
+
+                    nextNode[srcNode] = dstNode - 1
+                    prevNode[dstNode] = srcNode
+                    srcNode = dstNode
+                    dstNode = #taxiNodes
+                else
+                    dstNode = dstNode - 1
+                end
+            else
+                srcNode = prevNode[srcNode]
+                dstNode = nextNode[srcNode]
+            end
+        end
+
+        if not etimes[#taxiNodes] then
+            srcNode = prevNode[srcNode]
+            dstNode = nextNode[srcNode]
+        end
+    end
+    Debug("Eta:", taxiSrcName, "-->", taxiDestName, etimes[#taxiNodes])
+    return etimes[#taxiNodes]
+end
+
+function InFlight_TaxiFrame_TooltipHook(button) --This is the DefaultUI's Taxi Button, the ID needs to make sense.
+    if TaxiFrame:IsShown() and button:GetID() and (GameTooltip:GetOwner() == button) then
+        local id = button:GetID()
+        if TaxiNodeGetType(id) ~= "REACHABLE" then
+            return
+        end
+        local taxiSrcIndex, taxiSrcName
+        for index = 1, NumTaxiNodes() do
+            local nodeType = TaxiNodeGetType(index)
+            if nodeType == "CURRENT" then
+                taxiSrcIndex = index
+                taxiSrcName = TaxiNodeName(index)
+            end
+        end
+
+        local vars = addonCore.db.global[playerFaction]
+        local duration = vars[taxiSrcName] and vars[taxiSrcName][TaxiNodeName(id)]
+        if duration then
+            GameTooltip:AddDoubleLine(L["Duration:"], SecondsToTime(duration))
+        else
+            local eta = InFlight_GetEstimatedTime(id)
+            if eta then
+                GameTooltip:AddDoubleLine(L["Duration:"], "~" .. SecondsToTime(eta))
+            else
+                GameTooltip:AddDoubleLine(L["Duration:"], "Unknown")
+            end
+        end
+    end
+end
+
+function addonCore:TAXIMAP_OPENED(event, uiMapSystem, ...)
+    if TaxiFrame:IsShown() then
+        if (uiMapSystem == Enum.UIMapSystem.Taxi) then
+            for i = 1, NumTaxiNodes(), 1 do
+                local tb = _G["TaxiButton" .. i]
+                if tb and not tb.inflighted then
+                    tb:HookScript("OnEnter", InFlight_TaxiFrame_TooltipHook)
+                    tb.inflighted = true
+                end
+            end
+        end
+    end
+end
+
+---External / Internal APIs
 function addonCore:GetFlightDuration(source, destination, faction)
     local src = (source and (type(source) == "string")) and source:trim()
     local dest = (source and (type(destination) == "string")) and destination:trim()
@@ -275,7 +384,7 @@ do --Hoook Func
                 local taxiSrcName = TaxiNodeName(taxiIndex)
                 local taxiDestName = TaxiNodeName(slot)
                 if taxiSrcName and taxiDestName then
-                    addonCore:StartAFlight(source, destination)
+                    addonCore:StartAFlight(taxiSrcName, taxiDestName)
                     break
                 end
             end
@@ -287,7 +396,6 @@ end
 do
     local orig_C_GossipInfo_SelectOption = C_GossipInfo.SelectOption
     function C_GossipInfo.SelectOption(option, ...)
-        Debug("C_GossipInfo.SelectOption", option, ...)
         local gossipOptions = C_GossipInfo.GetOptions()
         local gossipSelection, gossipOptionID
         for _, v in pairs(gossipOptions) do
@@ -301,7 +409,7 @@ do
             orig_C_GossipInfo_SelectOption(option, ...)
             return
         end
-        Debug(gossipOptionID, gossipSelection.name)
+        Debug("Checking:", gossipOptionID, gossipSelection.name)
         if db.global.gossipTriggered[gossipOptionID] then
             Debug(unpack(db.global.gossipTriggered[gossipOptionID]))
             addonCore:StartAFlight(unpack(db.global.gossipTriggered[gossipOptionID]))
