@@ -28,7 +28,10 @@ taxiDestName --Full Proper name from API for where we are going
 reason -- why did we exit early
 
 ]]
---luacheck: globals LibStub InCombatLockdown
+--luacheck: no max line length
+--luacheck: globals LibStub InCombatLockdown LibEdrik_GetDebugFunction TaxiNodeName GetNumRoutes NumTaxiNodes TaxiNodeGetType
+--luacheck: globals UnitFactionGroup string UnitOnTaxi UnitInVehicle CreateFrame tostringall GetTime date SecondsToTime abs hooksecurefunc
+--luacheck: globals C_SummonInfo InFlight_GetEstimatedTime TaxiFrame TaxiGetNodeSlot InFlight_TaxiFrame_TooltipHook GameTooltip
 
 local Debug = LibEdrik_GetDebugFunction and LibEdrik_GetDebugFunction("|cff0040ffIn|cff00aaffFlight-C|r|r:", nil, nil, false) or function()
     end
@@ -39,7 +42,7 @@ _G[addonName] = addonCore
 
 local L = LibStub("AceLocale-3.0"):GetLocale("InFlight")
 
-local TaxiNodeName, GetNumRoutes, NumTaxiNodes, TaxiNodeGetType = TaxiNodeName, GetNumRoutes, NumTaxiNodes, TaxiNodeGetType
+local TaxiNodeName, GetNumRoutes, NumTaxiNodes, TaxiNodeGetType, TaxiGetNodeSlot = TaxiNodeName, GetNumRoutes, NumTaxiNodes, TaxiNodeGetType, TaxiGetNodeSlot
 
 local db, playerFaction
 local svDefaults = {
@@ -219,7 +222,7 @@ function InFlight_GetEstimatedTime(taxiDestSlot) -- estimates flight times based
     if not taxiDestSlot then
         return
     end
-    local taxiSrcIndex
+
     local taxiSrcName
     local taxiDestName = TaxiNodeName(taxiDestSlot)
 
@@ -231,7 +234,6 @@ function InFlight_GetEstimatedTime(taxiDestSlot) -- estimates flight times based
     for index = 1, NumTaxiNodes() do
         local nodeType = TaxiNodeGetType(index)
         if nodeType == "CURRENT" then
-            taxiSrcIndex = index
             taxiSrcName = TaxiNodeName(index)
         end
     end
@@ -288,11 +290,10 @@ function InFlight_TaxiFrame_TooltipHook(button) --This is the DefaultUI's Taxi B
         if TaxiNodeGetType(id) ~= "REACHABLE" then
             return
         end
-        local taxiSrcIndex, taxiSrcName
+        local taxiSrcName
         for index = 1, NumTaxiNodes() do
             local nodeType = TaxiNodeGetType(index)
             if nodeType == "CURRENT" then
-                taxiSrcIndex = index
                 taxiSrcName = TaxiNodeName(index)
             end
         end
@@ -312,7 +313,7 @@ function InFlight_TaxiFrame_TooltipHook(button) --This is the DefaultUI's Taxi B
     end
 end
 
-function addonCore:TAXIMAP_OPENED(event, uiMapSystem, ...)
+function addonCore:TAXIMAP_OPENED(event, uiMapSystem)
     if TaxiFrame:IsShown() then
         if (uiMapSystem == Enum.UIMapSystem.Taxi) then
             for i = 1, NumTaxiNodes(), 1 do
