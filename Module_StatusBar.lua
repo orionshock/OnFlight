@@ -70,12 +70,12 @@ end
 
 function statusBarModuleCore:InFlight_Taxi_Stop(event, taxiSrcName, taxiDestName, taxiDuration)
     Debug("E:", event, taxiSrcName, "-->", taxiDestName, "--Duration:", SecondsToTime(taxiDuration))
-    self:StopTimerBar()
+    self:StopTimerBar(event)
 end
 
 function statusBarModuleCore:InFlight_Taxi_EarlyExit(event, taxiSrcName, taxiDestName, exitReason)
     Debug("E:", event, taxiSrcName, "-->", taxiDestName, " --ExitReason: ", exitReason)
-    self:StopTimerBar()
+    self:StopTimerBar(event)
 end
 
 local function disp_time(time)
@@ -119,11 +119,8 @@ local function timerBarOnUpdate(self, elapsed)
         local sparkPosition = (self.timeRemaining / self.duration) * self.statusBar:GetWidth()
         self.spark:SetPoint("CENTER", self.statusBar, "LEFT", sparkPosition, 0)
     elseif self.timeRemaining <= 0 then
+        statusBarModuleCore:StopTimerBar("timerBarOnUpdate timedout")
         self:Hide()
-        self.timeRemaining = 0
-        self.duration = 0
-        self.text = ""
-        self.textObj:SetText("")
     end
 end
 
@@ -226,7 +223,7 @@ function statusBarModuleCore:SetupTimerBar()
 end
 
 function statusBarModuleCore:StartTimerBar(taxiSrcName, taxiDestName, duration, unknownFlight) --Bar Text and Duration in seconds--
-    Debug("StartTimerBar()", taxiSrcName, taxiDestName, duration, unknownFlight)
+    Debug("StartTimerBar()", taxiSrcName,"-->", taxiDestName,"--", duration, "-- ?:",unknownFlight)
     if not self.InFlightTimerFrame then
         Debug("No Timer Bar?")
         return
@@ -260,8 +257,8 @@ function statusBarModuleCore:StartTimerBar(taxiSrcName, taxiDestName, duration, 
     timerFrame:Show()
 end
 
-function statusBarModuleCore:StopTimerBar()
-    Debug("StopTimerBar()")
+function statusBarModuleCore:StopTimerBar(reason)
+    Debug("StopTimerBar()", reason)
     self.InFlightTimerFrame:Hide()
     self.InFlightTimerFrame.timeRemaining = 0
     self.InFlightTimerFrame.duration = 0
