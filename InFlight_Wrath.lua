@@ -66,6 +66,8 @@ function addonCore:OnInitialize()
 end
 
 function addonCore:OnEnable()
+    self.configOptionsTable.args.profiles = LibStub("AceDBOptions-3.0"):GetOptionsTable(self.db)
+    self.configOptionsTable.args.profiles.order = 800
     LibStub("AceConfig-3.0"):RegisterOptionsTable(addonName, self.configOptionsTable)
     self:RegisterChatCommand("inflight", "ChatCommand")
 
@@ -176,7 +178,7 @@ do
                         Debug("EarlyExit:", self.taxiSrcName, "-->", self.taxiDestName, " -- Reason: ", self.earlyExit)
                         addonCore:SendMessage("InFlight_Taxi_EarlyExit", self.taxiSrcName, self.taxiDestName, self.earlyExit)
                         addonCore:ChatMessage(L["Taxi Ended Early:"], self.earlyExit)
-                        return ResetInFlightTimer("End of Flight: "..self.earlyExit )
+                        return ResetInFlightTimer("End of Flight: " .. self.earlyExit)
                     end
                 end
             end
@@ -196,14 +198,18 @@ end
 hooksecurefunc(
     "TaxiRequestEarlyLanding",
     function()
-        taxiTimerFrame.earlyExit = L["Request Early Landing"]
+        if taxiTimerFrame and taxiTimerFrame:IsShown() then
+            taxiTimerFrame.earlyExit = L["Request Early Landing"]
+        end
     end
 )
 
 hooksecurefunc(
     "AcceptBattlefieldPort",
     function()
-        taxiTimerFrame.earlyExit = L["Battlefield Port"]
+        if taxiTimerFrame and taxiTimerFrame:IsShown() then
+            taxiTimerFrame.earlyExit = L["Battlefield Port"]
+        end
     end
 )
 
@@ -211,7 +217,9 @@ hooksecurefunc(
     C_SummonInfo,
     "ConfirmSummon",
     function()
-        taxiTimerFrame.earlyExit = L["Accepted Summon"]
+        if taxiTimerFrame and taxiTimerFrame:IsShown() then
+            taxiTimerFrame.earlyExit = L["Accepted Summon"]
+        end
     end
 )
 ---Estimated Flight Times - Transposed from origional code
@@ -282,7 +290,7 @@ end
 
 --This is the DefaultUI's Taxi Button, the ID needs to make sense.
 --Default UI just directly assumes the GameTooltip because there is no "OnTaxiNodeSet" type handler.
-function InFlight_TaxiFrame_TooltipHook(button) 
+function InFlight_TaxiFrame_TooltipHook(button)
     if TaxiFrame:IsShown() and button:GetID() and (GameTooltip:GetOwner() == button) then
         local id = button:GetID()
         if TaxiNodeGetType(id) ~= "REACHABLE" then
@@ -436,6 +444,123 @@ function addonCore:SetOption(info, ...)
     end
 end
 
+local gossipOptionTemplate = {
+    name = "",
+    type = "group",
+    inline = true,
+    args = {
+        name = {
+            order = 1,
+            name = "Gossip ID",
+            type = "input",
+            get = function(info)
+                return info[#info - 1]
+            end,
+            set = function()
+            end,
+            disabled = true
+        },
+        sourceName = {
+            order = 2,
+            type = "input",
+            name = "Source Name",
+            get = function(info)
+                local id = tonumber(info[#info - 1])
+                return db.global.gossipTriggered[id][1]
+            end,
+            set = function(info, value)
+                local id = tonumber(info[#info - 1])
+                db.global.gossipTriggered[id][1] = value
+            end
+        },
+        destinationName = {
+            order = 3,
+            type = "input",
+            name = "Destination Name",
+            get = function(info)
+                local id = tonumber(info[#info - 1])
+                return db.global.gossipTriggered[id][2]
+            end,
+            set = function(info, value)
+                local id = tonumber(info[#info - 1])
+                db.global.gossipTriggered[id][2] = value
+            end
+        },
+        remove = {
+            order = 4,
+            name = "Remove",
+            type = "execute",
+            func = function(info)
+                local id = tonumber(info[#info - 1])
+                db.global.gossipTriggered[id] = nil
+                addonCore:RefreshAdvOptions()
+            end
+        }
+    }
+}
+
+local addNew_Temp = {}
+local addNew_Temp_get = function(info)
+    return addNew_Temp[info[#info]]
+end
+local addNew_Temp_set = function(info, value)
+    addNew_Temp[info[#info]] = value
+end
+local gossipOptionTemplate_AddNew = {
+    name = "",
+    type = "group",
+    inline = true,
+    order = 999,
+    args = {
+        name = {
+            order = 1,
+            name = "Gossip ID",
+            type = "input",
+            get = addNew_Temp_get,
+            set = addNew_Temp_set
+        },
+        sourceName = {
+            order = 2,
+            type = "input",
+            name = "Source Name",
+            get = addNew_Temp_get,
+            set = addNew_Temp_set
+        },
+        destinationName = {
+            order = 3,
+            type = "input",
+            name = "Destination Name",
+            get = addNew_Temp_get,
+            set = addNew_Temp_set
+        },
+        addNew = {
+            order = 4,
+            name = "Add New",
+            type = "execute",
+            func = function(info)
+                local id = tonumber(addNew_Temp.name)
+                if not id then
+                    return
+                end
+                db.global.gossipTriggered[id] = {
+                    addNew_Temp.sourceName,
+                    addNew_Temp.destinationName
+                }
+                wipe(addNew_Temp)
+                addonCore:RefreshAdvOptions()
+            end
+        }
+    }
+}
+
+function addonCore:RefreshAdvOptions()
+    local opt = wipe(self.configOptionsTable.args.advancedOptions.args)
+    for k, v in pairs(db.global.gossipTriggered) do
+        opt[tostring(k)] = gossipOptionTemplate
+    end
+    opt.AddNewGossipID = gossipOptionTemplate_AddNew
+end
+
 addonCore.configOptionsTable = {
     type = "group",
     name = L["InFlight Options"],
@@ -462,7 +587,13 @@ addonCore.configOptionsTable = {
                 ADVANCED_OPTIONS = {
                     name = L["Show Advanced Options"],
                     type = "toggle",
-                    order = 100
+                    order = 100,
+                    set = function(info, option)
+                        db.profile.ADVANCED_OPTIONS = option
+                        if db.profile.ADVANCED_OPTIONS then
+                            addonCore:RefreshAdvOptions()
+                        end
+                    end
                 }
             }
         },
@@ -504,12 +635,7 @@ addonCore.configOptionsTable = {
             hidden = function()
                 return not db.profile.ADVANCED_OPTIONS
             end,
-            args = {
-                helpText = {
-                    name = "Not Implemented",
-                    type = "description"
-                }
-            }
+            args = {}
         }
     }
 }
