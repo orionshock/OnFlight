@@ -54,27 +54,27 @@ function statusBarModuleCore:OnEnable()
     self:SetupTimerBar()
     self:RegisterMessage("InFlight_Taxi_Start")
     self:RegisterMessage("InFlight_Taxi_Stop")
+    self:RegisterMessage("InFlight_Taxi_EarlyExit", "InFlight_Taxi_Stop")
     self:RegisterMessage("InFlight_Taxi_FAILED_ENTRY", "InFlight_Taxi_Stop")
 end
 
 function statusBarModuleCore:InFlight_Taxi_Start(event, taxiSrcName, taxiDestName, taxiDuration, unknownFlight)
-    Debug(event, " -- ", string.format("%s --> %s", taxiSrcName, taxiDestName), " -- Duration:", SecondsToTime(taxiDuration))
     if taxiDuration ~= 0 then
-        Debug("Star Timer Bar:", taxiSrcName, taxiDestName, "--Duration:", taxiDuration)
+        Debug("E:", event, taxiSrcName, taxiDestName, "--Duration:", SecondsToTime(taxiDuration))
         self:StartTimerBar(taxiSrcName, taxiDestName, taxiDuration)
     elseif unknownFlight then
-        Debug("Star Timer Bar", taxiSrcName, taxiDestName, "--Unknown Duration.")
+        Debug("E:", event, taxiSrcName, taxiDestName, "--Unknown Duration.")
         self:StartTimerBar(taxiSrcName, taxiDestName, 0, unknownFlight)
     end
 end
 
 function statusBarModuleCore:InFlight_Taxi_Stop(event, taxiSrcName, taxiDestName, taxiDuration)
-    Debug(event, " -- ", string.format("%s --> %s", taxiSrcName, taxiDestName), " -- Completed, Duration: ", SecondsToTime(taxiDuration))
+    Debug("E:", event, taxiSrcName, "-->", taxiDestName, "--Duration:", SecondsToTime(taxiDuration))
     self:StopTimerBar()
 end
 
 function statusBarModuleCore:InFlight_Taxi_EarlyExit(event, taxiSrcName, taxiDestName, exitReason)
-    Debug(event, " -- ", string.format("%s --> %s", taxiSrcName, taxiDestName), " -- ExitReason: ", exitReason)
+    Debug("E:", event, taxiSrcName, "-->", taxiDestName, " --ExitReason: ", exitReason)
     self:StopTimerBar()
 end
 
@@ -226,7 +226,7 @@ function statusBarModuleCore:SetupTimerBar()
 end
 
 function statusBarModuleCore:StartTimerBar(taxiSrcName, taxiDestName, duration, unknownFlight) --Bar Text and Duration in seconds--
-    Debug("StartTimerBar:", taxiSrcName, taxiDestName, duration, unknownFlight)
+    Debug("StartTimerBar()", taxiSrcName, taxiDestName, duration, unknownFlight)
     if not self.InFlightTimerFrame then
         Debug("No Timer Bar?")
         return
@@ -261,7 +261,7 @@ function statusBarModuleCore:StartTimerBar(taxiSrcName, taxiDestName, duration, 
 end
 
 function statusBarModuleCore:StopTimerBar()
-    Debug("StopTimerBar")
+    Debug("StopTimerBar()")
     self.InFlightTimerFrame:Hide()
     self.InFlightTimerFrame.timeRemaining = 0
     self.InFlightTimerFrame.duration = 0
