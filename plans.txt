@@ -1,0 +1,9 @@
+Unified Addon -- no more OnFlight_Load
+Refactor Code
+    -Remove Dropdown code and use AceConfig/GUI for it all
+    -Fix Hooks to use gossipOptionID now that we have that API
+    -Refactor Flight Detection
+
+Only Support Proper Flight/Taxi and Regular Reoccuring Flight Events
+ -No more one time quest taxi timers, sorry.
+ -Daily Quest flights still remain. (like SSO)
