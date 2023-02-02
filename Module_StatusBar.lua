@@ -69,7 +69,7 @@ function statusBarModuleCore:InFlight_Taxi_Start(event, taxiSrcName, taxiDestNam
 end
 
 function statusBarModuleCore:InFlight_Taxi_Stop(event, taxiSrcName, taxiDestName, taxiDuration)
-    Debug("E:", event, taxiSrcName, "-->", taxiDestName, "--Duration:", (taxiDuration and taxiDuration ~=0 ) and SecondsToTime(taxiDuration))
+    Debug("E:", event, taxiSrcName, "-->", taxiDestName, "--Duration:", (taxiDuration and taxiDuration ~= 0) and SecondsToTime(taxiDuration))
     self:StopTimerBar(event)
 end
 
@@ -112,7 +112,7 @@ local function timerBarOnUpdate(self, elapsed)
         end
 
         local ajdBarWidth = math.max(self.textObj:GetStringWidth() + 30, db.profile.barWidth) --dynamic size to min or make it bigger as needed
-        self:SetWidth( math.max(ajdBarWidth, self:GetWidth()) ) --make bar bigger only, don't shrink it.
+        self:SetWidth(math.max(ajdBarWidth, self:GetWidth())) --make bar bigger only, don't shrink it.
 
         self.statusBar:SetValue(self.timeRemaining)
         self.spark:Show()
@@ -193,12 +193,16 @@ function statusBarModuleCore:SetupTimerBar()
 
     ApplyLookAndFeel(InFlightTimerFrame)
 
-    -- InFlightTimerFrame:SetScript(
-    --     "OnMouseUp",
-    --     function(frame, button)
-    --         --I want to add a Shift Click here to announce... do it later tho
-    --     end
-    -- )
+    InFlightTimerFrame:SetScript(
+        "OnMouseUp",
+        function(frame, button)
+            if IsShiftKeyDown() then
+                if self.timeRemaining then
+                    ChatEdit_InsertLink(L["InFlight"] .. (": %s - %s"):format(self.shortText))
+                end
+            end
+        end
+    )
 
     InFlightTimerFrame:SetScript(
         "OnDragStart",
@@ -223,7 +227,7 @@ function statusBarModuleCore:SetupTimerBar()
 end
 
 function statusBarModuleCore:StartTimerBar(taxiSrcName, taxiDestName, duration, unknownFlight) --Bar Text and Duration in seconds--
-    Debug("StartTimerBar()", taxiSrcName,"-->", taxiDestName,"--", duration, "-- ?:",unknownFlight)
+    Debug("StartTimerBar()", taxiSrcName, "-->", taxiDestName, "--", duration, "-- ?:", unknownFlight)
     if not self.InFlightTimerFrame then
         Debug("No Timer Bar?")
         return
@@ -302,144 +306,135 @@ addonCore.configOptionsTable.plugins["StatusBarModule"] = {
         handler = statusBarModuleCore,
         get = "GetOption",
         set = "SetOption",
-        name = L["Bar Options"],
+        name = L["Flight Timer"],
         type = "group",
         order = 100,
         args = {
-            countUp = {
-                hidden = true,
-                desc = "Not Implemented",
-                name = L["Count Upwards"],
-                type = "toggle",
-                order = 10
-            },
-            fillUp = {
-                hidden = true,
-                desc = "Not Implemented",
-                name = L["Fill Upwards"],
-                type = "toggle",
-                order = 20
-            },
-            size = {
-                name = L["Bar Size"],
+            barOptions = {
                 type = "group",
-                order = 60,
+                name = "Bar Options",
                 inline = true,
+                order = 100,
                 args = {
-                    barHeight = {
-                        name = L["Height"],
-                        type = "range",
+                    size = {
+                        name = L["Bar Size"],
+                        type = "group",
                         order = 10,
-                        min = 10,
-                        max = 300,
-                        step = 1
+                        inline = true,
+                        args = {
+                            barHeight = {
+                                name = L["Height"],
+                                type = "range",
+                                order = 10,
+                                min = 10,
+                                max = 300,
+                                step = 1
+                            },
+                            barWidth = {
+                                name = L["Width"],
+                                type = "range",
+                                order = 20,
+                                min = 10,
+                                max = 1000,
+                                step = 10
+                            }
+                        }
                     },
-                    barWidth = {
-                        name = L["Width"],
-                        type = "range",
+                    LookFeel = {
+                        name = L["Look and Feel"],
+                        type = "group",
                         order = 20,
-                        min = 10,
-                        max = 1000,
-                        step = 10
+                        inline = true,
+                        width = "normal",
+                        args = {
+                            barTexture = {
+                                name = L["Bar Texture"],
+                                type = "select",
+                                order = 10,
+                                dialogControl = "LSM30_Statusbar",
+                                values = AceGUIWidgetLSMlists.statusbar,
+                                width = "full"
+                            },
+                            backgroundColor = {
+                                name = L["Background Color"],
+                                type = "color",
+                                order = 20
+                            },
+                            barColor = {
+                                name = L["Known Flight Color"],
+                                type = "color",
+                                order = 30
+                            },
+                            unknownFlightColor = {
+                                name = L["Unknown Flight Color"],
+                                type = "color",
+                                order = 40
+                            }
+                        }
+                    },
+                    borderSettings = {
+                        name = L["Border Settings"],
+                        type = "group",
+                        order = 30,
+                        inline = true,
+                        args = {
+                            borderTexture = {
+                                name = L["Border Texture"],
+                                type = "select",
+                                order = 10,
+                                dialogControl = "LSM30_Border",
+                                values = AceGUIWidgetLSMlists.border
+                            },
+                            borderColor = {
+                                name = L["Border Color"],
+                                type = "color",
+                                order = 20
+                            }
+                        }
                     }
                 }
             },
-            barSettings = {
-                name = L["Look and Feel"],
+            textOptions = {
+                name = L["Display"],
                 type = "group",
-                order = 70,
-                inline = true,
-                width = "normal",
+                order = 200,
                 args = {
-                    barTexture = {
-                        name = L["Bar Texture"],
-                        type = "select",
+                    compactMode = {
+                        name = L["Compact Mode"],
+                        type = "toggle",
+                        order = 9
+                    },
+                    shortNames = {
+                        name = L["Short Names"],
+                        type = "toggle",
                         order = 10,
-                        dialogControl = "LSM30_Statusbar",
-                        values = AceGUIWidgetLSMlists.statusbar
+                        disabled = function()
+                            return db.profile.compactMode
+                        end
                     },
-                    backgroundColor = {
-                        name = L["Background Color"],
-                        type = "color",
-                        order = 20
-                    },
-                    barColor = {
-                        name = L["Known Flight Color"],
-                        type = "color",
-                        order = 30
-                    },
-                    unknownFlightColor = {
-                        name = L["Unknown Flight Color"],
-                        type = "color",
-                        order = 40
-                    }
-                }
-            },
-            borderSettings = {
-                name = L["Border Settings"],
-                type = "group",
-                order = 80,
-                inline = true,
-                width = "normal",
-                args = {
-                    borderTexture = {
-                        name = L["Border Texture"],
-                        type = "select",
-                        order = 10,
-                        dialogControl = "LSM30_Border",
-                        values = AceGUIWidgetLSMlists.border
-                    },
-                    borderColor = {
-                        name = L["Border Color"],
-                        type = "color",
-                        order = 20
-                    }
-                }
-            }
-        }
-    },
-    textOptions = {
-        handler = statusBarModuleCore,
-        get = "GetOption",
-        set = "SetOption",
-        name = "Text Options",
-        type = "group",
-        order = 200,
-        args = {
-            compactMode = {
-                name = L["Compact Mode"],
-                type = "toggle",
-                order = 9
-            },
-            shortNames = {
-                name = L["Short Names"],
-                type = "toggle",
-                order = 10,
-                disabled = function()
-                    return db.profile.compactMode
-                end
-            },
-            fontOptions = {
-                name = L["Font Options"],
-                type = "group",
-                inline = true,
-                args = {
-                    fontName = {
-                        name = L["Font"],
-                        type = "select",
-                        dialogControl = "LSM30_Font",
-                        values = AceGUIWidgetLSMlists.font,
-                        order = 10
-                    },
-                    fontSize = {
-                        name = L["Font Size"],
-                        type = "input",
-                        order = 20
-                    },
-                    fontColor = {
-                        name = L["Font Color"],
-                        type = "color",
-                        order = 30
+                    fontOptions = {
+                        name = L["Font Options"],
+                        type = "group",
+                        inline = true,
+                        args = {
+                            fontName = {
+                                name = L["Font"],
+                                type = "select",
+                                dialogControl = "LSM30_Font",
+                                values = AceGUIWidgetLSMlists.font,
+                                order = 10
+                            },
+                            fontSize = {
+                                name = L["Font Size"],
+                                type = "input",
+                                order = 20
+                            },
+                            fontColor = {
+                                name = L["Font Color"],
+                                type = "color",
+                                order = 30
+                            }
+                        }
                     }
                 }
             }

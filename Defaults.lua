@@ -5,9 +5,17 @@ svDefaults.global["gossipTriggered"] = {
 	-- [gossipOptionID] = {startingPoint, endingPoint},
 	-- Gossip Triggered Flights get integrated in to main Horde/Alliance DB as they occur as any other flight
 	-- we set a start locatoin name and end location name here as it's not provided otherwise and is needed for the rest of it to work.
-	-- likely will be editable in the future via ADV Options pannel so people can add in more as desired / found.
+
 	[93033] = {"Sun's Reach Harbor", "The Sin'loren"},
-	[92694] = {"The Sin'loren", "Sun's Reach Harbor"}
+	[92694] = {"The Sin'loren", "Sun's Reach Harbor"},
+
+	--Wyrmrest Temple Gossip
+	[93559] = {"Bottom, Wyrmrest Temple", "Middle, Wyrmrest Temple"},
+	[93560] = {"Bottom, Wyrmrest Temple", "Top, Wyrmrest Temple"},
+	[93568] = {"Middle, Wyrmrest Temple", "Bottom, Wyrmrest Temple"},
+	[93569] = {"Middle, Wyrmrest Temple", "Top, Wyrmrest Temple"},
+	[93073] = {"Top, Wyrmrest Temple", "Middle, Wyrmrest Temple"},
+	[93074] = {"Top, Wyrmrest Temple", "Bottom, Wyrmrest Temple"},
 }
 
 svDefaults.global["Horde"] = {
