@@ -1,4 +1,4 @@
-Unified Addon -- no more InFlight_Load
+Unified Addon -- no more OnFlight_Load
 Refactor Code
     -Remove Dropdown code and use AceConfig/GUI for it all
     -Fix Hooks to use gossipOptionID now that we have that API

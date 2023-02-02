@@ -1,7 +1,7 @@
 --[[
     This Module's Entire Job is to handle the Status Bar
 ]]
-local Debug = LibEdrik_GetDebugFunction and LibEdrik_GetDebugFunction("|cff0040ffIn|cff00aaffFlight-SB|r|r:", nil, nil, false) or function()
+local Debug = LibEdrik_GetDebugFunction and LibEdrik_GetDebugFunction("|cff0040ffOn|cff00aaffFlight-SB|r|r:", nil, nil, false) or function()
     end
 
 local addonName, addonCore = ...
@@ -52,13 +52,16 @@ function statusBarModuleCore:OnInitialize()
 end
 function statusBarModuleCore:OnEnable()
     self:SetupTimerBar()
-    self:RegisterMessage("InFlight_Taxi_Start")
-    self:RegisterMessage("InFlight_Taxi_Stop")
-    self:RegisterMessage("InFlight_Taxi_EarlyExit", "InFlight_Taxi_Stop")
-    self:RegisterMessage("InFlight_Taxi_FAILED_ENTRY", "InFlight_Taxi_Stop")
+    self:RegisterMessage("OnFlight_Taxi_Start")
+    self:RegisterMessage("OnFlight_Taxi_Stop")
+    self:RegisterMessage("OnFlight_Taxi_EarlyExit", "OnFlight_Taxi_Stop")
+    self:RegisterMessage("OnFlight_Taxi_FAILED_ENTRY", "OnFlight_Taxi_Stop")
+end
+function statusBarModuleCore:OnDisable()
+    self:UnregisterAllMessages()
 end
 
-function statusBarModuleCore:InFlight_Taxi_Start(event, taxiSrcName, taxiDestName, taxiDuration, unknownFlight)
+function statusBarModuleCore:OnFlight_Taxi_Start(event, taxiSrcName, taxiDestName, taxiDuration, unknownFlight)
     if taxiDuration ~= 0 then
         Debug("E:", event, taxiSrcName, taxiDestName, "--Duration:", SecondsToTime(taxiDuration))
         self:StartTimerBar(taxiSrcName, taxiDestName, taxiDuration)
@@ -68,12 +71,12 @@ function statusBarModuleCore:InFlight_Taxi_Start(event, taxiSrcName, taxiDestNam
     end
 end
 
-function statusBarModuleCore:InFlight_Taxi_Stop(event, taxiSrcName, taxiDestName, taxiDuration)
+function statusBarModuleCore:OnFlight_Taxi_Stop(event, taxiSrcName, taxiDestName, taxiDuration)
     Debug("E:", event, taxiSrcName, "-->", taxiDestName, "--Duration:", (taxiDuration and taxiDuration ~= 0) and SecondsToTime(taxiDuration))
     self:StopTimerBar(event)
 end
 
-function statusBarModuleCore:InFlight_Taxi_EarlyExit(event, taxiSrcName, taxiDestName, exitReason)
+function statusBarModuleCore:OnFlight_Taxi_EarlyExit(event, taxiSrcName, taxiDestName, exitReason)
     Debug("E:", event, taxiSrcName, "-->", taxiDestName, " --ExitReason: ", exitReason)
     self:StopTimerBar(event)
 end
@@ -166,45 +169,45 @@ end
 
 function statusBarModuleCore:SetupTimerBar()
     local barLocation = db.profile.barLocation
-    local InFlightTimerFrame = CreateFrame("Frame", "InFlightTimerFrame", UIParent, "BackdropTemplate")
-    local statusBar = CreateFrame("StatusBar", "InFlightTimerFrameStatusBar", InFlightTimerFrame)
+    local OnFlightTimerFrame = CreateFrame("Frame", "OnFlightTimerFrame", UIParent, "BackdropTemplate")
+    local statusBar = CreateFrame("StatusBar", "OnFlightTimerFrameStatusBar", OnFlightTimerFrame)
     LowerFrameLevel(statusBar)
-    local textObj = InFlightTimerFrame:CreateFontString("InFlightTimerFrameText", nil, "GameFontHighlight")
-    InFlightTimerFrame:SetScript("OnUpdate", timerBarOnUpdate)
-    InFlightTimerFrame:Hide()
-    InFlightTimerFrame:SetWidth(db.profile.barWidth)
-    InFlightTimerFrame:SetHeight(db.profile.barHeight)
-    InFlightTimerFrame:SetPoint(barLocation.anchorPoint, UIParent, barLocation.relativePoint, barLocation.offsetX, barLocation.offsetY)
-    InFlightTimerFrame:SetMovable(true)
-    InFlightTimerFrame:EnableMouse(true)
-    InFlightTimerFrame:SetClampedToScreen(true)
-    InFlightTimerFrame:RegisterForDrag("LeftButton")
+    local textObj = OnFlightTimerFrame:CreateFontString("OnFlightTimerFrameText", nil, "GameFontHighlight")
+    OnFlightTimerFrame:SetScript("OnUpdate", timerBarOnUpdate)
+    OnFlightTimerFrame:Hide()
+    OnFlightTimerFrame:SetWidth(db.profile.barWidth)
+    OnFlightTimerFrame:SetHeight(db.profile.barHeight)
+    OnFlightTimerFrame:SetPoint(barLocation.anchorPoint, UIParent, barLocation.relativePoint, barLocation.offsetX, barLocation.offsetY)
+    OnFlightTimerFrame:SetMovable(true)
+    OnFlightTimerFrame:EnableMouse(true)
+    OnFlightTimerFrame:SetClampedToScreen(true)
+    OnFlightTimerFrame:RegisterForDrag("LeftButton")
 
-    InFlightTimerFrame.statusBar = statusBar
-    InFlightTimerFrame.textObj = textObj
+    OnFlightTimerFrame.statusBar = statusBar
+    OnFlightTimerFrame.textObj = textObj
 
     local spark = statusBar:CreateTexture(nil, "OVERLAY", nil, 7)
-    InFlightTimerFrame.spark = spark
+    OnFlightTimerFrame.spark = spark
     spark:Hide()
     spark:SetTexture("Interface\\CastingBar\\UI-CastingBar-Spark")
     spark:SetWidth(16)
     spark:SetHeight(16)
     spark:SetBlendMode("ADD")
 
-    ApplyLookAndFeel(InFlightTimerFrame)
+    ApplyLookAndFeel(OnFlightTimerFrame)
 
-    InFlightTimerFrame:SetScript(
+    OnFlightTimerFrame:SetScript(
         "OnMouseUp",
         function(frame, button)
             if IsShiftKeyDown() then
                 if self.timeRemaining then
-                    ChatEdit_InsertLink(L["InFlight"] .. (": %s - %s"):format(self.shortText))
+                    ChatEdit_InsertLink(L["OnFlight"] .. (": %s - %s"):format(self.shortText))
                 end
             end
         end
     )
 
-    InFlightTimerFrame:SetScript(
+    OnFlightTimerFrame:SetScript(
         "OnDragStart",
         function(frame)
             if IsShiftKeyDown() then
@@ -212,7 +215,7 @@ function statusBarModuleCore:SetupTimerBar()
             end
         end
     )
-    InFlightTimerFrame:SetScript(
+    OnFlightTimerFrame:SetScript(
         "OnDragStop",
         function(frame)
             frame:StopMovingOrSizing()
@@ -223,12 +226,12 @@ function statusBarModuleCore:SetupTimerBar()
             db.profile.barLocation.offsetY = offsetY
         end
     )
-    self.InFlightTimerFrame = InFlightTimerFrame
+    self.OnFlightTimerFrame = OnFlightTimerFrame
 end
 
 function statusBarModuleCore:StartTimerBar(taxiSrcName, taxiDestName, duration, unknownFlight) --Bar Text and Duration in seconds--
-    Debug("StartTimerBar()", taxiSrcName, "-->", taxiDestName, "--", duration, "-- ?:", unknownFlight)
-    if not self.InFlightTimerFrame then
+    Debug("StartTimerBar()", taxiSrcName, "-->", taxiDestName, "--Duration:", duration, "-- Unknown Flag:", unknownFlight)
+    if not self.OnFlightTimerFrame then
         Debug("No Timer Bar?")
         return
     end
@@ -237,7 +240,7 @@ function statusBarModuleCore:StartTimerBar(taxiSrcName, taxiDestName, duration, 
         return
     end
 
-    local timerFrame = self.InFlightTimerFrame
+    local timerFrame = self.OnFlightTimerFrame
 
     timerFrame.duration = duration
     timerFrame.timeRemaining = duration
@@ -256,20 +259,20 @@ function statusBarModuleCore:StartTimerBar(taxiSrcName, taxiDestName, duration, 
         statusBar:SetMinMaxValues(0, duration)
         statusBar:SetValue(duration)
     end
-    ApplyLookAndFeel(self.InFlightTimerFrame)
+    ApplyLookAndFeel(self.OnFlightTimerFrame)
 
     timerFrame:Show()
 end
 
 function statusBarModuleCore:StopTimerBar(reason)
     Debug("StopTimerBar()", reason)
-    self.InFlightTimerFrame:Hide()
-    self.InFlightTimerFrame.timeRemaining = 0
-    self.InFlightTimerFrame.duration = 0
-    self.InFlightTimerFrame.text = nil
-    self.InFlightTimerFrame.shortText = nil
-    self.InFlightTimerFrame.unknownFlight = false
-    self.InFlightTimerFrame.textObj:SetText("")
+    self.OnFlightTimerFrame:Hide()
+    self.OnFlightTimerFrame.timeRemaining = 0
+    self.OnFlightTimerFrame.duration = 0
+    self.OnFlightTimerFrame.text = nil
+    self.OnFlightTimerFrame.shortText = nil
+    self.OnFlightTimerFrame.unknownFlight = false
+    self.OnFlightTimerFrame.textObj:SetText("")
 end
 
 function statusBarModuleCore:GetOption(info)
@@ -297,7 +300,7 @@ function statusBarModuleCore:SetOption(info, ...)
         db.profile[info[#info]] = ...
         Debug("SetOption:", info[#info], "to:", ...)
     end
-    ApplyLookAndFeel(self.InFlightTimerFrame)
+    ApplyLookAndFeel(self.OnFlightTimerFrame)
 end
 
 addonCore.configOptionsTable.plugins = addonCore.configOptionsTable.plugins or {}

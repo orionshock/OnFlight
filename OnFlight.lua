@@ -1,43 +1,49 @@
 --[[
-    New InFlight System
+    New OnFlight System
     Main Addon handles the Flight System
         Hooks,
         Figuring out when we're on flights and get off them
         Send Events via AceEvent when things happen.
 
         StatusBarMdoule handles the display
-            Quartz also can handle the display
-            --Maybe LDB will later?
+        Quartz also can handle the display
+        --Maybe LDB will later?
 Events:
 
-InFlight_Taxi_Start
+OnFlight_Taxi_Start
 taxiSrcName --Full Proper name from API for where we started
 taxiDestName --Full Proper name from API for where we are going
 taxiDuration --Time in seconds from DB for how long the flight is.
-    --if duration is 0 then we don't know how long it'll be--
+    --if duration is 0 then it's an Unknown Flight--
 unknownFlight -- true if there is no duration
 
-InFlight_Taxi_Stop
+OnFlight_Taxi_Stop
 taxiSrcName --Full Proper name from API for where we started
 taxiDestName --Full Proper name from API for where we are going
 taxiDuration --Time in seconds from DB for how long the flight is.
 
-InFlight_Taxi_EarlyExit
+OnFlight_Taxi_EarlyExit
+--Fired when any condtion happens that would prematurly exit a flight
 taxiSrcName --Full Proper name from API for where we started
 taxiDestName --Full Proper name from API for where we are going
-reason -- why did we exit early
+reason -- why did we exit early, a Displayable Name
+
+OnFlight_Taxi_FAILED_ENTRY
+--Fired when we think we're about to get on a fligth but it dosn't work
+taxiSrcName --Full Proper name from API for where we started
+taxiDestName --Full Proper name from API for where we are going
 
 ]]
 --luacheck: no max line length
 --luacheck: globals LibStub InCombatLockdown LibEdrik_GetDebugFunction TaxiNodeName GetNumRoutes NumTaxiNodes TaxiNodeGetType
 --luacheck: globals UnitFactionGroup string UnitOnTaxi UnitInVehicle CreateFrame tostringall GetTime date SecondsToTime abs hooksecurefunc
---luacheck: globals C_SummonInfo InFlight_GetEstimatedTime TaxiFrame TaxiGetNodeSlot InFlight_TaxiFrame_TooltipHook GameTooltip
+--luacheck: globals C_SummonInfo OnFlight_GetEstimatedTime TaxiFrame TaxiGetNodeSlot OnFlight_TaxiFrame_TooltipHook GameTooltip
 
-local Debug = LibEdrik_GetDebugFunction and LibEdrik_GetDebugFunction("|cff0040ffIn|cff00aaffFlight-C|r|r:", nil, nil, false) or function()
+local Debug = LibEdrik_GetDebugFunction and LibEdrik_GetDebugFunction("|cff0040ffOn|cff00aaffFlight-C|r|r:", nil, nil, false) or function()
     end
 
 local addonName, addonCore = ...
-addonCore = LibStub("AceAddon-3.0"):NewAddon(addonCore, "InFlight", "AceConsole-3.0", "AceEvent-3.0")
+addonCore = LibStub("AceAddon-3.0"):NewAddon(addonCore, "OnFlight", "AceConsole-3.0", "AceEvent-3.0")
 _G[addonName] = addonCore
 
 local L = LibStub("AceLocale-3.0"):GetLocale(addonName)
@@ -60,7 +66,7 @@ addonCore.svDefaults = svDefaults
 
 function addonCore:OnInitialize()
     playerFaction = UnitFactionGroup("player")
-    self.db = LibStub("AceDB-3.0"):New("InFlightSV", svDefaults, true)
+    self.db = LibStub("AceDB-3.0"):New("OnFlightSV", svDefaults, true)
     db = self.db
     db.global[playerFaction] = db.global[playerFaction] or {}
     db.profile.ADVANCED_OPTIONS = false
@@ -70,7 +76,7 @@ function addonCore:OnInitialize()
 
     LibStub("AceConfig-3.0"):RegisterOptionsTable(addonName, self.configOptionsTable)
 
-    self:RegisterChatCommand("inflight", "ChatCommand")
+    self:RegisterChatCommand("OnFlight", "ChatCommand")
 
     --Hack to Q3 Flight Module for now--
     local Quartz3 = LibStub("AceAddon-3.0"):GetAddon("Quartz3", true)
@@ -95,7 +101,7 @@ function addonCore:ChatCommand(input)
     if not input or input:trim() == "" then
         LibStub("AceConfigDialog-3.0"):Open(addonName)
     else
-        LibStub("AceConfigCmd-3.0").HandleCommand(addonCore, "inflight", addonName, input)
+        LibStub("AceConfigCmd-3.0").HandleCommand(addonCore, "OnFlight", addonName, input)
     end
 end
 
@@ -114,19 +120,19 @@ local taxiTimerFrame = CreateFrame("frame")
 taxiTimerFrame:Hide()
 taxiTimerFrame.taxiState = false
 do
-    local function ResetInFlightTimer(reason)
+    local function ResetOnFlightTimer(reason)
         taxiTimerFrame.taxiSrcName = nil
         taxiTimerFrame.taxiDestName = nil
         taxiTimerFrame.taxiStartTime = nil
         taxiTimerFrame.elapsedNotOnFlight = nil
         taxiTimerFrame.earlyExit = nil
         taxiTimerFrame:Hide()
-        Debug("ResetInFlightTimer()", reason)
+        Debug("ResetOnFlightTimer()", reason)
     end
 
     function addonCore:StartAFlight(source, destination)
         --there are no sanity Checks here -- use with care.
-        ResetInFlightTimer("PreFlightReset")
+        ResetOnFlightTimer("PreFlightReset")
         taxiTimerFrame.taxiSrcName = source
         taxiTimerFrame.taxiDestName = destination
         taxiTimerFrame:Show()
@@ -141,7 +147,7 @@ do
 
             if (not self.taxiSrcName) or (not self.taxiDestName) then
                 Debug("OnUpdateMonitor - No Source or Destination. Reset & Exit")
-                return ResetInFlightTimer()
+                return ResetOnFlightTimer()
             end
 
             if (prevState ~= self.taxiState) then
@@ -153,17 +159,17 @@ do
                     if db.global[playerFaction][self.taxiSrcName] then
                         if db.global[playerFaction][self.taxiSrcName][self.taxiDestName] then
                             local flightDurationFromDB = db.global[playerFaction][self.taxiSrcName][self.taxiDestName] --for Readablity.
-                            Debug("TriggerEvent: InFlight_Taxi_Start -- Duration:", SecondsToTime(flightDurationFromDB))
-                            addonCore:SendMessage("InFlight_Taxi_Start", self.taxiSrcName, self.taxiDestName, flightDurationFromDB, false)
+                            Debug("TriggerEvent: OnFlight_Taxi_Start -- Duration:", SecondsToTime(flightDurationFromDB))
+                            addonCore:SendMessage("OnFlight_Taxi_Start", self.taxiSrcName, self.taxiDestName, flightDurationFromDB, false)
                             addonCore:ChatMessage(L["On Taxi:"], self.taxiSrcName, "-->", self.taxiDestName, "--", SecondsToTime(flightDurationFromDB))
                         else
-                            Debug("TriggerEvent: InFlight_Taxi_Start -- Unknown Duration")
-                            addonCore:SendMessage("InFlight_Taxi_Start", self.taxiSrcName, self.taxiDestName, 0, true)
+                            Debug("TriggerEvent: OnFlight_Taxi_Start -- Unknown Duration")
+                            addonCore:SendMessage("OnFlight_Taxi_Start", self.taxiSrcName, self.taxiDestName, 0, true)
                             addonCore:ChatMessage(L["On Taxi:"], self.taxiSrcName .. " --> " .. self.taxiDestName)
                         end
                     else
-                        Debug("TriggerEvent: InFlight_Taxi_Start -- Unknown Duration")
-                        addonCore:SendMessage("InFlight_Taxi_Start", self.taxiSrcName, self.taxiDestName, 0, true)
+                        Debug("TriggerEvent: OnFlight_Taxi_Start -- Unknown Duration")
+                        addonCore:SendMessage("OnFlight_Taxi_Start", self.taxiSrcName, self.taxiDestName, 0, true)
                         addonCore:ChatMessage(L["On Taxi:"], self.taxiSrcName .. " --> " .. self.taxiDestName)
                     end
                 elseif (not self.taxiState) and (self.taxiStartTime) then
@@ -173,15 +179,15 @@ do
                         local flightDuration = abs(GetTime() - self.taxiStartTime)
                         db.global[playerFaction][self.taxiSrcName] = db.global[playerFaction][self.taxiSrcName] or {}
                         db.global[playerFaction][self.taxiSrcName][self.taxiDestName] = math.floor(flightDuration)
-                        Debug("TriggerEvent: InFlight_Taxi_Stop", self.taxiSrcName, "-->", self.taxiDestName, "-- Duration:", SecondsToTime(flightDuration))
-                        addonCore:SendMessage("InFlight_Taxi_Stop", self.taxiSrcName, self.taxiDestName, flightDuration)
+                        Debug("TriggerEvent: OnFlight_Taxi_Stop", self.taxiSrcName, "-->", self.taxiDestName, "-- Duration:", SecondsToTime(flightDuration))
+                        addonCore:SendMessage("OnFlight_Taxi_Stop", self.taxiSrcName, self.taxiDestName, flightDuration)
                         addonCore:ChatMessage(L["Off Taxi:"], self.taxiSrcName .. " --> " .. self.taxiDestName, "--", SecondsToTime(flightDuration))
-                        return ResetInFlightTimer("End Of Normal Flight")
+                        return ResetOnFlightTimer("End Of Normal Flight")
                     elseif self.earlyExit then
                         Debug("EarlyExit:", self.taxiSrcName, "-->", self.taxiDestName, " -- Reason: ", self.earlyExit)
-                        addonCore:SendMessage("InFlight_Taxi_EarlyExit", self.taxiSrcName, self.taxiDestName, self.earlyExit)
+                        addonCore:SendMessage("OnFlight_Taxi_EarlyExit", self.taxiSrcName, self.taxiDestName, self.earlyExit)
                         addonCore:ChatMessage(L["Taxi Ended Early:"], self.earlyExit)
-                        return ResetInFlightTimer("End of Flight: " .. self.earlyExit)
+                        return ResetOnFlightTimer("End of Flight: " .. self.earlyExit)
                     end
                 end
             end
@@ -189,8 +195,8 @@ do
                 self.elapsedNotOnFlight = (self.elapsedNotOnFlight or 0) + elapsed
                 if self.elapsedNotOnFlight > 5 then
                     Debug("Failed Entry > 5sec, send Failed Entry Event and Reset?:", self.taxiSrcName, "-->", self.taxiDestName)
-                    addonCore:SendMessage("InFlight_Taxi_FAILED_ENTRY", self.taxiSrcName, self.taxiDestName)
-                    return ResetInFlightTimer("FAILED_ENTRY")
+                    addonCore:SendMessage("OnFlight_Taxi_FAILED_ENTRY", self.taxiSrcName, self.taxiDestName)
+                    return ResetOnFlightTimer("FAILED_ENTRY")
                 end
             end
         end
@@ -229,7 +235,7 @@ hooksecurefunc(
     end
 )
 ---Estimated Flight Times - Transposed from origional code
-function InFlight_GetEstimatedTime(taxiDestSlot)
+function OnFlight_GetEstimatedTime(taxiDestSlot)
     if not TaxiFrame:IsShown() then
         return
     end
@@ -296,7 +302,7 @@ end
 
 --This is the DefaultUI's Taxi Button, the ID needs to make sense.
 --Default UI just directly assumes the GameTooltip because there is no "OnTaxiNodeSet" type handler.
-function InFlight_TaxiFrame_TooltipHook(button)
+function OnFlight_TaxiFrame_TooltipHook(button)
     if TaxiFrame:IsShown() and button:GetID() and (GameTooltip:GetOwner() == button) then
         local id = button:GetID()
         if TaxiNodeGetType(id) ~= "REACHABLE" then
@@ -314,7 +320,7 @@ function InFlight_TaxiFrame_TooltipHook(button)
         if duration then
             GameTooltip:AddDoubleLine(L["Duration:"], SecondsToTime(duration))
         else
-            local eta = InFlight_GetEstimatedTime(id)
+            local eta = OnFlight_GetEstimatedTime(id)
             if eta then
                 GameTooltip:AddDoubleLine(L["Duration:"], "~" .. SecondsToTime(eta))
             else
@@ -329,9 +335,9 @@ function addonCore:TAXIMAP_OPENED(event, uiMapSystem)
         if (uiMapSystem == Enum.UIMapSystem.Taxi) then
             for i = 1, NumTaxiNodes(), 1 do
                 local tb = _G["TaxiButton" .. i]
-                if tb and not tb.inflighted then
-                    tb:HookScript("OnEnter", InFlight_TaxiFrame_TooltipHook)
-                    tb.inflighted = true
+                if tb and not tb.OnFlighted then
+                    tb:HookScript("OnEnter", OnFlight_TaxiFrame_TooltipHook)
+                    tb.OnFlighted = true
                 end
             end
         end
@@ -569,7 +575,7 @@ end
 
 addonCore.configOptionsTable = {
     type = "group",
-    name = L["InFlight Options"],
+    name = L["OnFlight Options"],
     handler = addonCore,
     get = "GetOption",
     set = "SetOption",

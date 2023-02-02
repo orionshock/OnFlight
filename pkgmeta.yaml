@@ -13,6 +13,3 @@ externals:
 
 ignore: 
     - README.md
-
-move-folders:
-  InFlight/InFlight_Load: InFlight_Load
