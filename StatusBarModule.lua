@@ -355,8 +355,7 @@ addonCore.configOptionsTable.plugins["StatusBarModule"] = {
                                 type = "select",
                                 order = 10,
                                 dialogControl = "LSM30_Statusbar",
-                                values = AceGUIWidgetLSMlists.statusbar,
-                                width = "full"
+                                values = AceGUIWidgetLSMlists.statusbar
                             },
                             backgroundColor = {
                                 name = L["Background Color"],
@@ -401,6 +400,7 @@ addonCore.configOptionsTable.plugins["StatusBarModule"] = {
                 name = L["Display"],
                 type = "group",
                 order = 200,
+                inline = true,
                 args = {
                     compactMode = {
                         name = L["Compact Mode"],

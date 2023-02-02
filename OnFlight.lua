@@ -75,16 +75,9 @@ function addonCore:OnInitialize()
     self.configOptionsTable.args.profiles.order = 800
 
     LibStub("AceConfig-3.0"):RegisterOptionsTable(addonName, self.configOptionsTable)
+    LibStub("AceConfigDialog-3.0"):SetDefaultSize(addonName, 770, 475)
 
     self:RegisterChatCommand("OnFlight", "ChatCommand")
-
-    --Hack to Q3 Flight Module for now--
-    local Quartz3 = LibStub("AceAddon-3.0"):GetAddon("Quartz3", true)
-    if Quartz3 then
-        local Flight = Quartz3:GetModule("Flight")
-        Flight:Disable()
-        Flight:UnregisterEvent("TAXIMAP_OPENED")
-    end
 end
 
 function addonCore:OnEnable()
@@ -590,11 +583,6 @@ addonCore.configOptionsTable = {
                     name = L["Show Chat Messages"],
                     type = "toggle",
                     order = 10
-                },
-                showDebug = {
-                    name = L["Debug"],
-                    type = "toggle",
-                    order = 99
                 },
                 ADVANCED_OPTIONS = {
                     name = L["Show Advanced Options"],
