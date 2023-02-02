@@ -59,16 +59,17 @@ local svDefaults = {
 addonCore.svDefaults = svDefaults
 
 function addonCore:OnInitialize()
+    playerFaction = UnitFactionGroup("player")
     self.db = LibStub("AceDB-3.0"):New("InFlightSV", svDefaults, true)
     db = self.db
-    playerFaction = UnitFactionGroup("player")
     db.global[playerFaction] = db.global[playerFaction] or {}
-end
+    db.profile.ADVANCED_OPTIONS = false
 
-function addonCore:OnEnable()
     self.configOptionsTable.args.profiles = LibStub("AceDBOptions-3.0"):GetOptionsTable(self.db)
     self.configOptionsTable.args.profiles.order = 800
+
     LibStub("AceConfig-3.0"):RegisterOptionsTable(addonName, self.configOptionsTable)
+
     self:RegisterChatCommand("inflight", "ChatCommand")
 
     --Hack to Q3 Flight Module for now--
@@ -78,7 +79,9 @@ function addonCore:OnEnable()
         Flight:Disable()
         Flight:UnregisterEvent("TAXIMAP_OPENED")
     end
+end
 
+function addonCore:OnEnable()
     self:RegisterEvent("TAXIMAP_OPENED")
 end
 
@@ -187,7 +190,7 @@ do
                 if self.elapsedNotOnFlight > 5 then
                     Debug("Failed Entry > 5sec, send Failed Entry Event and Reset?:", self.taxiSrcName, "-->", self.taxiDestName)
                     addonCore:SendMessage("InFlight_Taxi_FAILED_ENTRY", self.taxiSrcName, self.taxiDestName)
-                    return ResetInFlightTimer()
+                    return ResetInFlightTimer("FAILED_ENTRY")
                 end
             end
         end
@@ -200,6 +203,7 @@ hooksecurefunc(
     function()
         if taxiTimerFrame and taxiTimerFrame:IsShown() then
             taxiTimerFrame.earlyExit = L["Request Early Landing"]
+            Debug("Early Exit Trigger: TaxiRequestEarlyLanding")
         end
     end
 )
@@ -209,6 +213,7 @@ hooksecurefunc(
     function()
         if taxiTimerFrame and taxiTimerFrame:IsShown() then
             taxiTimerFrame.earlyExit = L["Battlefield Port"]
+            Debug("Early Exit Trigger: AcceptBattlefieldPort")
         end
     end
 )
@@ -219,6 +224,7 @@ hooksecurefunc(
     function()
         if taxiTimerFrame and taxiTimerFrame:IsShown() then
             taxiTimerFrame.earlyExit = L["Accepted Summon"]
+            Debug("Early Exit Trigger: ConfirmSummon")
         end
     end
 )
@@ -263,7 +269,7 @@ function InFlight_GetEstimatedTime(taxiDestSlot)
         while dstNode and dstNode > srcNode do
             if vars[taxiNodes[srcNode]] then
                 if not etimes[dstNode] and vars[taxiNodes[srcNode]][taxiNodes[dstNode]] then
-                    etimes[dstNode] = etimes[srcNode] + vars[taxiNodes[srcNode]][taxiNodes[dstNode]]
+                    etimes[dstNode] = (etimes[srcNode] or 0) + (vars[taxiNodes[srcNode]][taxiNodes[dstNode]] or 0)
                     nextNode[srcNode] = dstNode - 1
                     prevNode[dstNode] = srcNode
                     srcNode = dstNode
@@ -594,37 +600,38 @@ addonCore.configOptionsTable = {
                             addonCore:RefreshAdvOptions()
                         end
                     end
-                }
-            }
-        },
-        testButtons = {
-            type = "group",
-            name = "Test Buttons",
-            order = 350,
-            args = {
-                ["testKnown"] = {
-                    type = "execute",
-                    name = "Test Known Flight",
-                    order = 1,
-                    func = function(info)
-                        addonCore:GetModule("StatusBarModule"):StartTimerBar("City1, Zone1", "City2, Zone2", 300)
-                    end
                 },
-                ["testUnknown"] = {
-                    type = "execute",
-                    name = "Test Unknown Flight",
-                    order = 2,
-                    func = function(info)
-                        addonCore:GetModule("StatusBarModule"):StartTimerBar("Unknown1, Zone1", "Unknown2, Zone2", 0, true)
-                    end
-                },
-                ["stopTest"] = {
-                    type = "execute",
-                    name = "Stop Test",
-                    order = 3,
-                    func = function(info)
-                        addonCore:GetModule("StatusBarModule"):StopTimerBar()
-                    end
+                testButtons = {
+                    type = "group",
+                    inline = true,
+                    name = "Test Buttons",
+                    order = 350,
+                    args = {
+                        ["testKnown"] = {
+                            type = "execute",
+                            name = "Test Known Flight",
+                            order = 1,
+                            func = function(info)
+                                addonCore:GetModule("StatusBarModule"):StartTimerBar("City1, Zone1", "City2, Zone2", 300)
+                            end
+                        },
+                        ["testUnknown"] = {
+                            type = "execute",
+                            name = "Test Unknown Flight",
+                            order = 2,
+                            func = function(info)
+                                addonCore:GetModule("StatusBarModule"):StartTimerBar("Unknown1, Zone1", "Unknown2, Zone2", 0, true)
+                            end
+                        },
+                        ["stopTest"] = {
+                            type = "execute",
+                            name = "Stop Test",
+                            order = 3,
+                            func = function(info)
+                                addonCore:GetModule("StatusBarModule"):StopTimerBar()
+                            end
+                        }
+                    }
                 }
             }
         },

@@ -69,7 +69,7 @@ function statusBarModuleCore:InFlight_Taxi_Start(event, taxiSrcName, taxiDestNam
 end
 
 function statusBarModuleCore:InFlight_Taxi_Stop(event, taxiSrcName, taxiDestName, taxiDuration)
-    Debug("E:", event, taxiSrcName, "-->", taxiDestName, "--Duration:", SecondsToTime(taxiDuration))
+    Debug("E:", event, taxiSrcName, "-->", taxiDestName, "--Duration:", (taxiDuration and taxiDuration ~=0 ) and SecondsToTime(taxiDuration))
     self:StopTimerBar(event)
 end
 
@@ -111,8 +111,8 @@ local function timerBarOnUpdate(self, elapsed)
             end
         end
 
-        local ajdBarWidth = math.max(self.textObj:GetStringWidth() + 30, db.profile.barWidth)
-        self:SetWidth(ajdBarWidth)
+        local ajdBarWidth = math.max(self.textObj:GetStringWidth() + 30, db.profile.barWidth) --dynamic size to min or make it bigger as needed
+        self:SetWidth( math.max(ajdBarWidth, self:GetWidth()) ) --make bar bigger only, don't shrink it.
 
         self.statusBar:SetValue(self.timeRemaining)
         self.spark:Show()
