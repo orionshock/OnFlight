@@ -10,7 +10,7 @@ LibEdrik.lua
 embeds.xml
 locales\locales.xml
 OnFlight.lua
-Module_StatusBar.lua
+StatusBarModule.lua
 Defaults.lua
 
 AllTaxiRunner.lua

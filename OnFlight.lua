@@ -39,7 +39,7 @@ taxiDestName --Full Proper name from API for where we are going
 --luacheck: globals UnitFactionGroup string UnitOnTaxi UnitInVehicle CreateFrame tostringall GetTime date SecondsToTime abs hooksecurefunc
 --luacheck: globals C_SummonInfo OnFlight_GetEstimatedTime TaxiFrame TaxiGetNodeSlot OnFlight_TaxiFrame_TooltipHook GameTooltip
 
-local Debug = LibEdrik_GetDebugFunction and LibEdrik_GetDebugFunction("|cff0040ffOn|cff00aaffFlight-C|r|r:", nil, nil, false) or function()
+local Debug = LibEdrik_GetDebugFunction and LibEdrik_GetDebugFunction("|cff0040ffOn|cFF00FF00Flight|r|r", nil, nil, false) or function()
     end
 
 local addonName, addonCore = ...
@@ -112,7 +112,7 @@ function addonCore:ChatMessage(...)
     local msg = string.join(" ", tostringall(...))
     msg = msg:trim()
     if msg then
-        print("|cff0040ffIn|cff00aaffFlight|r|r:", msg)
+        print("|cff0040ffOn|cFF00FF00Flight|r|r:", msg)
     end
 end
 
