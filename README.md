@@ -2,7 +2,7 @@
 
 OnFlight is a simple taxi flight timer mod that lets you know how long it will take to get to your destination. 
 
-Inspired and Based on from InFlight by: totalpackage, Uitat, wildcard25 (https://www.wowinterface.com/downloads/info11178-InFlight.html)
+Inspired and Based on InFlight by: totalpackage, Uitat, wildcard25 (https://www.wowinterface.com/downloads/info11178-InFlight.html)
 
 Features:
 Most Northrend Flight times included.
