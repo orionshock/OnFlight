@@ -2,7 +2,7 @@
 ## Title: OnFlight
 ## Notes: Status bar timer Taxis and Flights. Complete Rewrite based on OnFlight by Wildcard_25, TotalPackage, Kalimash,
 ## Author: Orionshock
-## Version: 3.7
+## Version: v0.1
 ## SavedVariables: OnFlightSV
 
 LibEdrik.lua
