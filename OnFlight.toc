@@ -1,9 +1,10 @@
-## Interface: 30400
+## Interface: 30401
 ## Title: OnFlight
 ## Notes: Status bar timer Taxis and Flights. Complete Rewrite based on OnFlight by Wildcard_25, TotalPackage, Kalimash,
 ## Author: Orionshock
-## Version: v0.1
+## Version: @project-version@
 ## SavedVariables: OnFlightSV
+## OptionalDeps: Quartz
 
 LibEdrik.lua
 
