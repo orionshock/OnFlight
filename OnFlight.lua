@@ -40,7 +40,7 @@ local addonName, addonCore = ...
 addonCore = LibStub("AceAddon-3.0"):NewAddon(addonCore, "InFlight", "AceConsole-3.0", "AceEvent-3.0")
 _G[addonName] = addonCore
 
-local L = LibStub("AceLocale-3.0"):GetLocale("InFlight")
+local L = LibStub("AceLocale-3.0"):GetLocale(addonName)
 
 local TaxiNodeName, GetNumRoutes, NumTaxiNodes, TaxiNodeGetType, TaxiGetNodeSlot = TaxiNodeName, GetNumRoutes, NumTaxiNodes, TaxiNodeGetType, TaxiGetNodeSlot
 

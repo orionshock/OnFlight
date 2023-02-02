@@ -7,7 +7,7 @@ local Debug = LibEdrik_GetDebugFunction and LibEdrik_GetDebugFunction("|cff0040f
 local addonName, addonCore = ...
 local statusBarModuleCore = addonCore:NewModule("StatusBarModule", "AceEvent-3.0")
 
-local L = LibStub("AceLocale-3.0"):GetLocale("InFlight")
+local L = LibStub("AceLocale-3.0"):GetLocale(addonName)
 local LSM = LibStub("LibSharedMedia-3.0")
 
 local db
