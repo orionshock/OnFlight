@@ -1,7 +1,7 @@
 --[[
     This Module's Entire Job is to handle the Status Bar
 ]]
-local Debug = LibEdrik_GetDebugFunction and LibEdrik_GetDebugFunction("|cff0040ffOn|cff00aaffFlight-SB|r|r:", nil, nil, false) or function()
+local Debug = LibEdrik_GetDebugFunction and LibEdrik_GetDebugFunction("|cff0040ffOn|cFF00FF00Flight|r|r-SB:", nil, nil, false) or function()
     end
 
 local addonName, addonCore = ...
@@ -87,8 +87,6 @@ local function disp_time(time)
     return format("%d:%02d", minutes, seconds)
 end
 
-local onUpdateThrottle = 0
-local onUpdateInterval = 1
 local function timerBarOnUpdate(self, elapsed)
     if (self.unknownFlight) then
         if db.profile.shortNames then
@@ -197,11 +195,12 @@ function statusBarModuleCore:SetupTimerBar()
     ApplyLookAndFeel(OnFlightTimerFrame)
 
     OnFlightTimerFrame:SetScript(
-        "OnMouseUp",
-        function(frame, button)
+        "OnMouseDown",
+        function(frame)
             if IsShiftKeyDown() then
-                if self.timeRemaining then
-                    ChatEdit_InsertLink(L["OnFlight"] .. (": %s - %s"):format(self.shortText))
+                if frame.timeRemaining then
+                    ChatEdit_ActivateChat(DEFAULT_CHAT_FRAME.editBox)
+                    ChatEdit_InsertLink("[%s]: %s - %s"):format(L["OnFlight"], frame.shortText, disp_time(frame.timeRemaining))
                 end
             end
         end
@@ -210,16 +209,17 @@ function statusBarModuleCore:SetupTimerBar()
     OnFlightTimerFrame:SetScript(
         "OnDragStart",
         function(frame)
-            if IsShiftKeyDown() then
+            if IsControlKeyDown() then
                 frame:StartMoving()
             end
         end
     )
+
     OnFlightTimerFrame:SetScript(
         "OnDragStop",
         function(frame)
             frame:StopMovingOrSizing()
-            local anchorPoint, relativeToFrame, relativePoint, offsetX, offsetY = frame:GetPoint()
+            local anchorPoint, _, relativePoint, offsetX, offsetY = frame:GetPoint()
             db.profile.barLocation.anchorPoint = anchorPoint
             db.profile.barLocation.relativePoint = relativePoint
             db.profile.barLocation.offsetX = offsetX
@@ -309,10 +309,15 @@ addonCore.configOptionsTable.plugins["StatusBarModule"] = {
         handler = statusBarModuleCore,
         get = "GetOption",
         set = "SetOption",
-        name = L["Flight Timer"],
+        name = L["Flight Timer Bar"],
         type = "group",
         order = 100,
         args = {
+            desc = {
+                type = "description",
+                name = L["Shift Click on the Status Bar to send flight info to chat.\nControl Click and Drag to Move."],
+                order = 1,
+            },
             barOptions = {
                 type = "group",
                 name = "Bar Options",

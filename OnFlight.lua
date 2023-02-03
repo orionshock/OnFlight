@@ -39,7 +39,7 @@ taxiDestName --Full Proper name from API for where we are going
 --luacheck: globals UnitFactionGroup string UnitOnTaxi UnitInVehicle CreateFrame tostringall GetTime date SecondsToTime abs hooksecurefunc
 --luacheck: globals C_SummonInfo OnFlight_GetEstimatedTime TaxiFrame TaxiGetNodeSlot OnFlight_TaxiFrame_TooltipHook GameTooltip
 
-local Debug = LibEdrik_GetDebugFunction and LibEdrik_GetDebugFunction("|cff0040ffOn|cFF00FF00Flight|r|r", nil, nil, false) or function()
+local Debug = LibEdrik_GetDebugFunction and LibEdrik_GetDebugFunction("|cff0040ffOn|cFF00FF00Flight|r|r-C", nil, nil, false) or function()
     end
 
 local addonName, addonCore = ...
@@ -542,7 +542,7 @@ local gossipOptionTemplate_AddNew = {
             order = 4,
             name = "Add New",
             type = "execute",
-            func = function(info)
+            func = function()
                 local id = tonumber(addNew_Temp.name)
                 if not id then
                     return
@@ -560,7 +560,7 @@ local gossipOptionTemplate_AddNew = {
 
 function addonCore:RefreshAdvOptions()
     local opt = wipe(self.configOptionsTable.args.advancedOptions.args)
-    for k, v in pairs(db.global.gossipTriggered) do
+    for k, _ in pairs(db.global.gossipTriggered) do
         opt[tostring(k)] = gossipOptionTemplate
     end
     opt.AddNewGossipID = gossipOptionTemplate_AddNew
@@ -588,7 +588,7 @@ addonCore.configOptionsTable = {
                     name = L["Show Advanced Options"],
                     type = "toggle",
                     order = 100,
-                    set = function(info, option)
+                    set = function(_, option)
                         db.profile.ADVANCED_OPTIONS = option
                         if db.profile.ADVANCED_OPTIONS then
                             addonCore:RefreshAdvOptions()
@@ -605,7 +605,7 @@ addonCore.configOptionsTable = {
                             type = "execute",
                             name = "Test Known Flight",
                             order = 1,
-                            func = function(info)
+                            func = function()
                                 addonCore:GetModule("StatusBarModule"):StartTimerBar("City1, Zone1", "City2, Zone2", 300)
                             end
                         },
@@ -613,7 +613,7 @@ addonCore.configOptionsTable = {
                             type = "execute",
                             name = "Test Unknown Flight",
                             order = 2,
-                            func = function(info)
+                            func = function()
                                 addonCore:GetModule("StatusBarModule"):StartTimerBar("Unknown1, Zone1", "Unknown2, Zone2", 0, true)
                             end
                         },
@@ -621,7 +621,7 @@ addonCore.configOptionsTable = {
                             type = "execute",
                             name = "Stop Test",
                             order = 3,
-                            func = function(info)
+                            func = function()
                                 addonCore:GetModule("StatusBarModule"):StopTimerBar()
                             end
                         }
