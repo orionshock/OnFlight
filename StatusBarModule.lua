@@ -54,7 +54,7 @@ function statusBarModuleCore:OnEnable()
     self:SetupTimerBar()
     self:RegisterMessage("OnFlight_Taxi_Start")
     self:RegisterMessage("OnFlight_Taxi_Stop")
-    self:RegisterMessage("OnFlight_Taxi_EarlyExit", "OnFlight_Taxi_Stop")
+    self:RegisterMessage("OnFlight_Taxi_EarlyExit")
     self:RegisterMessage("OnFlight_Taxi_FAILED_ENTRY", "OnFlight_Taxi_Stop")
 end
 function statusBarModuleCore:OnDisable()
@@ -71,8 +71,8 @@ function statusBarModuleCore:OnFlight_Taxi_Start(event, taxiSrcName, taxiDestNam
     end
 end
 
-function statusBarModuleCore:OnFlight_Taxi_Stop(event, taxiSrcName, taxiDestName, taxiDuration)
-    Debug("E:", event, taxiSrcName, "-->", taxiDestName, "--Duration:", (taxiDuration and taxiDuration ~= 0) and SecondsToTime(taxiDuration))
+function statusBarModuleCore:OnFlight_Taxi_Stop(event, ...)
+    Debug("E:", event, ...)
     self:StopTimerBar(event)
 end
 
