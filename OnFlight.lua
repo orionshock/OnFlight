@@ -456,6 +456,7 @@ local gossipOptionTemplate = {
     name = "",
     type = "group",
     inline = true,
+    order = function(info) return tonumber(info[#info]) end,
     args = {
         name = {
             order = 1,
@@ -518,7 +519,7 @@ local gossipOptionTemplate_AddNew = {
     name = "",
     type = "group",
     inline = true,
-    order = 999,
+    order = -1,
     args = {
         name = {
             order = 1,
@@ -567,6 +568,7 @@ function addonCore:RefreshAdvOptions()
         opt[tostring(k)] = gossipOptionTemplate
     end
     opt.AddNewGossipID = gossipOptionTemplate_AddNew
+    LibStub("AceConfigRegistry-3.0"):NotifyChange(addonName)
 end
 
 addonCore.configOptionsTable = {

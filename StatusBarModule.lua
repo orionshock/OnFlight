@@ -230,7 +230,7 @@ function statusBarModuleCore:SetupTimerBar()
 end
 
 function statusBarModuleCore:StartTimerBar(taxiSrcName, taxiDestName, duration, unknownFlight) --Bar Text and Duration in seconds--
-    Debug("StartTimerBar()", taxiSrcName, "-->", taxiDestName, "--Duration:", duration, "-- Unknown Flag:", unknownFlight)
+    Debug("StartTimerBar()", taxiSrcName, "-->", taxiDestName, duration and "--Duration: "..SecondsToTime(duration) , unknownFlight and "-- Unknown Flag: true" )
     if not self.OnFlightTimerFrame then
         Debug("No Timer Bar?")
         return
