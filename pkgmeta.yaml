@@ -13,3 +13,5 @@ externals:
 
 ignore: 
     - README.md
+    - pkgmeta.yaml
+    
