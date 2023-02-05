@@ -2,6 +2,8 @@
 
 OnFlight is a simple taxi flight timer mod that lets you know how long it will take to get to where you are going.
 
+![Flight Timer Bar Examples](https://github.com/orionshock/OnFlight/blob/main/.github/flight%20bar%20full.png?raw=true)
+
 Support Taxies started by Gossip Options (and in game editor to add more as needed/desired)
 Learns New Flight times or updates existing flight times as they are taken.
 Flight times added to tooltip on flight map. (Comes with Horde Side flight times for Northrend, Outland, Azeroth for most flights)
