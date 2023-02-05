@@ -312,12 +312,15 @@ function OnFlight_TaxiFrame_TooltipHook(button)
         local duration = vars[taxiSrcName] and vars[taxiSrcName][TaxiNodeName(id)]
         if duration then
             GameTooltip:AddDoubleLine(L["Duration:"], SecondsToTime(duration))
+            GameTooltip:Show()
         else
             local eta = OnFlight_GetEstimatedTime(id)
             if eta then
                 GameTooltip:AddDoubleLine(L["Duration:"], "~" .. SecondsToTime(eta))
+                GameTooltip:Show()
             else
                 GameTooltip:AddDoubleLine(L["Duration:"], "Unknown")
+                GameTooltip:Show()
             end
         end
     end
