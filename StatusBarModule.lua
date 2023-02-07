@@ -56,6 +56,7 @@ function statusBarModuleCore:OnEnable()
     self:RegisterMessage("OnFlight_Taxi_Stop")
     self:RegisterMessage("OnFlight_Taxi_EarlyExit")
     self:RegisterMessage("OnFlight_Taxi_FAILED_ENTRY", "OnFlight_Taxi_Stop")
+    self:RegisterMessage("OnFlight_Taxi_RESUME")
 end
 function statusBarModuleCore:OnDisable()
     self:UnregisterAllMessages()
@@ -79,6 +80,11 @@ end
 function statusBarModuleCore:OnFlight_Taxi_EarlyExit(event, taxiSrcName, taxiDestName, exitReason)
     Debug("E:", event, taxiSrcName, "-->", taxiDestName, " --ExitReason: ", exitReason)
     self:StopTimerBar(event)
+end
+
+function statusBarModuleCore:OnFlight_Taxi_RESUME(event, taxiSrcName, taxiDestName, taxiDuration, timeRemaining)
+    Debug("E:", event, taxiSrcName, taxiDestName, taxiDuration, timeRemaining)
+    self:StartTimerBar(taxiSrcName, taxiDestName, taxiDuration, nil, timeRemaining)
 end
 
 local function disp_time(time)
@@ -229,8 +235,8 @@ function statusBarModuleCore:SetupTimerBar()
     self.OnFlightTimerFrame = OnFlightTimerFrame
 end
 
-function statusBarModuleCore:StartTimerBar(taxiSrcName, taxiDestName, duration, unknownFlight) --Bar Text and Duration in seconds--
-    Debug("StartTimerBar()", taxiSrcName, "-->", taxiDestName, duration and "--Duration: "..SecondsToTime(duration) , unknownFlight and "-- Unknown Flag: true" )
+function statusBarModuleCore:StartTimerBar(taxiSrcName, taxiDestName, duration, unknownFlight, timeRemaining) --Bar Text and Duration in seconds--
+    Debug("StartTimerBar()", taxiSrcName, "-->", taxiDestName, duration and "--Duration: " .. SecondsToTime(duration), unknownFlight and "-- Unknown Flag: true")
     if not self.OnFlightTimerFrame then
         Debug("No Timer Bar?")
         return
@@ -243,7 +249,8 @@ function statusBarModuleCore:StartTimerBar(taxiSrcName, taxiDestName, duration, 
     local timerFrame = self.OnFlightTimerFrame
 
     timerFrame.duration = duration
-    timerFrame.timeRemaining = duration
+    timerFrame.timeRemaining = timeRemaining or duration
+
     timerFrame.text = ("%s --> %s"):format(taxiSrcName, taxiDestName)
 
     local taxiSrcNameShort = taxiSrcName:gsub(L["DestParse"], "")
@@ -316,7 +323,7 @@ addonCore.configOptionsTable.plugins["StatusBarModule"] = {
             desc = {
                 type = "description",
                 name = L["Shift Click on the Status Bar to send flight info to chat.\nControl Click and Drag to Move."],
-                order = 1,
+                order = 1
             },
             barOptions = {
                 type = "group",

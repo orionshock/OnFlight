@@ -82,6 +82,8 @@ end
 
 function addonCore:OnEnable()
     self:RegisterEvent("TAXIMAP_OPENED")
+    self:RegisterEvent("PLAYER_ENTERING_WORLD")
+    self:RegisterEvent("PLAYER_LEAVING_WORLD")
 end
 
 function addonCore:OnDisable()
@@ -123,11 +125,15 @@ do
         Debug("ResetOnFlightTimer()", reason)
     end
 
-    function addonCore:StartAFlight(source, destination)
-        --there are no sanity Checks here -- use with care.
+    function addonCore:StartAFlight(source, destination, resumeTimeLeft)
+        Debug("StartAFlight()", source, destination, resumeTimeLeft)
         ResetOnFlightTimer("PreFlightReset")
         taxiTimerFrame.taxiSrcName = source
         taxiTimerFrame.taxiDestName = destination
+        taxiTimerFrame.resumeTimeLeft = resumeTimeLeft
+        if taxiTimerFrame.earlyExit then
+            taxiTimerFrame.earlyExit = db.char.earlyExit
+        end
         taxiTimerFrame:Show()
     end
 
@@ -140,30 +146,36 @@ do
 
             if (not self.taxiSrcName) or (not self.taxiDestName) then
                 Debug("OnUpdateMonitor - No Source or Destination. Reset & Exit")
-                return ResetOnFlightTimer()
+                return ResetOnFlightTimer("OnUpdateMonitor, no src or dest")
             end
 
             if (prevState ~= self.taxiState) then
                 Debug("State Changed, Prev:", prevState, "New:", self.taxiState)
                 if self.taxiState then
-                    self.taxiStartTime = GetTime()
+                    self.taxiStartTime = self.taxiStartTime or GetTime()
                     Debug("OnTaxi:", self.taxiSrcName, "-->", self.taxiDestName, " -- StartTime:", date("%I:%M:%S %p"))
 
-                    if db.global[playerFaction][self.taxiSrcName] then
-                        if db.global[playerFaction][self.taxiSrcName][self.taxiDestName] then
-                            local flightDurationFromDB = db.global[playerFaction][self.taxiSrcName][self.taxiDestName] --for Readablity.
+                    local flightDurationFromDB = addonCore:GetFlightDuration(self.taxiSrcName, self.taxiDestName)
+                    if flightDurationFromDB then
+                        if taxiTimerFrame.resumeTimeLeft then
+                            Debug("TriggerEvent: OnFlight_Taxi_RESUME -- TimeLeft:", self.resumeTimeLeft)
+                            addonCore:SendMessage("OnFlight_Taxi_RESUME", self.taxiSrcName, self.taxiDestName, flightDurationFromDB, self.resumeTimeLeft)
+                            addonCore:ChatMessage(L["Resume On Taxi:"], self.taxiSrcName, "-->", self.taxiDestName)
+                        else
                             Debug("TriggerEvent: OnFlight_Taxi_Start -- Duration:", SecondsToTime(flightDurationFromDB))
                             addonCore:SendMessage("OnFlight_Taxi_Start", self.taxiSrcName, self.taxiDestName, flightDurationFromDB, false)
                             addonCore:ChatMessage(L["On Taxi:"], self.taxiSrcName, "-->", self.taxiDestName, "--", SecondsToTime(flightDurationFromDB))
+                        end
+                    else
+                        if taxiTimerFrame.resumeTimeLeft then
+                            Debug("TriggerEvent: OnFlight_Taxi_RESUME -- TimeLeft:", self.resumeTimeLeft)
+                            addonCore:SendMessage("OnFlight_Taxi_RESUME", self.taxiSrcName, self.taxiDestName, 0, self.resumeTimeLeft)
+                            addonCore:ChatMessage(L["Resume On Taxi:"], self.taxiSrcName, "-->", self.taxiDestName)
                         else
                             Debug("TriggerEvent: OnFlight_Taxi_Start -- Unknown Duration")
                             addonCore:SendMessage("OnFlight_Taxi_Start", self.taxiSrcName, self.taxiDestName, 0, true)
                             addonCore:ChatMessage(L["On Taxi:"], self.taxiSrcName .. " --> " .. self.taxiDestName)
                         end
-                    else
-                        Debug("TriggerEvent: OnFlight_Taxi_Start -- Unknown Duration")
-                        addonCore:SendMessage("OnFlight_Taxi_Start", self.taxiSrcName, self.taxiDestName, 0, true)
-                        addonCore:ChatMessage(L["On Taxi:"], self.taxiSrcName .. " --> " .. self.taxiDestName)
                     end
                 elseif (not self.taxiState) and (self.taxiStartTime) then
                     Debug("Off Taxi at:", date("%I:%M:%S %p"))
@@ -340,6 +352,37 @@ function addonCore:TAXIMAP_OPENED(event, uiMapSystem)
     end
 end
 
+function addonCore:PLAYER_ENTERING_WORLD(event, isInitialLogin, isReloadingUi)
+    Debug(event, "-- isInitialLogin:", isInitialLogin, "-- isInitialLogin:", isReloadingUi)
+    Debug(db.char.taxiSrcName, "--", db.char.taxiDestName, "--", db.char.taxiStartTime)
+    if db.char.taxiSrcName and db.char.taxiDestName and db.char.taxiStartTime then
+        local duration = self:GetFlightDuration(db.char.taxiSrcName, db.char.taxiDestName)
+        if duration then
+            local segment = db.char.exitingWorld - db.char.taxiStartTime
+            local timeOutOfWorld = GetTime() - db.char.exitingWorld
+            local timeRemaining = duration - (segment + timeOutOfWorld)
+            Debug("elements:", segment, timeOutOfWorld, duration )
+            Debug("Known:StartAFlight(", timeRemaining, ")")
+            self:StartAFlight(db.char.taxiSrcName, db.char.taxiDestName, timeRemaining)
+        else
+            Debug("Uknown:StartAFlight(true)")
+            self:StartAFlight(db.char.taxiSrcName, db.char.taxiDestName)
+        end
+        wipe(db.char)
+    end
+end
+
+function addonCore:PLAYER_LEAVING_WORLD(event)
+    if self:IsOnFlight() then
+        db.char.taxiSrcName = taxiTimerFrame.taxiSrcName
+        db.char.taxiDestName = taxiTimerFrame.taxiDestName
+        db.char.taxiStartTime = taxiTimerFrame.taxiStartTime
+        db.char.elapsedNotOnFlight = taxiTimerFrame.elapsedNotOnFlight
+        db.char.earlyExit = "Player Leaving World"
+        db.char.exitingWorld = GetTime()
+    end
+end
+
 ---External / Internal APIs
 function addonCore:GetFlightDuration(source, destination, faction)
     local src = (source and (type(source) == "string")) and source:trim()
@@ -456,7 +499,9 @@ local gossipOptionTemplate = {
     name = "",
     type = "group",
     inline = true,
-    order = function(info) return tonumber(info[#info]) end,
+    order = function(info)
+        return tonumber(info[#info])
+    end,
     args = {
         name = {
             order = 1,
