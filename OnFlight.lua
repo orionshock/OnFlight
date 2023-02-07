@@ -158,6 +158,7 @@ do
                     local flightDurationFromDB = addonCore:GetFlightDuration(self.taxiSrcName, self.taxiDestName)
                     if flightDurationFromDB then
                         if taxiTimerFrame.resumeTimeLeft then
+                            self.earlyExit = self.earlyExit or "Resume"
                             Debug("TriggerEvent: OnFlight_Taxi_RESUME -- TimeLeft:", self.resumeTimeLeft)
                             addonCore:SendMessage("OnFlight_Taxi_RESUME", self.taxiSrcName, self.taxiDestName, flightDurationFromDB, self.resumeTimeLeft)
                             addonCore:ChatMessage(L["Resume On Taxi:"], self.taxiSrcName, "-->", self.taxiDestName)
@@ -168,6 +169,7 @@ do
                         end
                     else
                         if taxiTimerFrame.resumeTimeLeft then
+                            self.earlyExit = self.earlyExit or "Resume"
                             Debug("TriggerEvent: OnFlight_Taxi_RESUME -- TimeLeft:", self.resumeTimeLeft)
                             addonCore:SendMessage("OnFlight_Taxi_RESUME", self.taxiSrcName, self.taxiDestName, 0, self.resumeTimeLeft)
                             addonCore:ChatMessage(L["Resume On Taxi:"], self.taxiSrcName, "-->", self.taxiDestName)
