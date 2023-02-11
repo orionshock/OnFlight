@@ -14,5 +14,6 @@ locales\locales.xml
 OnFlight.lua
 StatusBarModule.lua
 Defaults.lua
-
+#@debug@
 AllTaxiRunner.lua
+#@end-debug@

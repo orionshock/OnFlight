@@ -206,7 +206,7 @@ function statusBarModuleCore:SetupTimerBar()
             if IsShiftKeyDown() then
                 if frame.timeRemaining then
                     ChatEdit_ActivateChat(DEFAULT_CHAT_FRAME.editBox)
-                    ChatEdit_InsertLink("[%s]: %s - %s"):format(L["OnFlight"], frame.shortText, disp_time(frame.timeRemaining))
+                    ChatEdit_InsertLink( ("[%s]: %s - %s"):format(L["OnFlight"], frame.shortText, disp_time(frame.timeRemaining)) )
                 end
             end
         end

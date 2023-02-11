@@ -39,7 +39,7 @@ taxiDestName --Full Proper name from API for where we are going
 --luacheck: globals UnitFactionGroup string UnitOnTaxi UnitInVehicle CreateFrame tostringall GetTime date SecondsToTime abs hooksecurefunc
 --luacheck: globals C_SummonInfo OnFlight_GetEstimatedTime TaxiFrame TaxiGetNodeSlot OnFlight_TaxiFrame_TooltipHook GameTooltip
 
-local Debug = LibEdrik_GetDebugFunction and LibEdrik_GetDebugFunction("|cff0040ffOn|cFF00FF00Flight|r|r-C", nil, nil, false) or function()
+local Debug = LibEdrik_GetDebugFunction and LibEdrik_GetDebugFunction("|cff0040ffOn|cFF00FF00Flight|r|r-C:", nil, nil, false) or function()
     end
 
 local addonName, addonCore = ...
@@ -355,15 +355,15 @@ function addonCore:TAXIMAP_OPENED(event, uiMapSystem)
 end
 
 function addonCore:PLAYER_ENTERING_WORLD(event, isInitialLogin, isReloadingUi)
-    Debug(event, "-- isInitialLogin:", isInitialLogin, "-- isInitialLogin:", isReloadingUi)
-    Debug(db.char.taxiSrcName, "--", db.char.taxiDestName, "--", db.char.taxiStartTime)
+    Debug(event, "-- isInitialLogin:", isInitialLogin, "-- isReloadingUi:", isReloadingUi)
     if db.char.taxiSrcName and db.char.taxiDestName and db.char.taxiStartTime then
+        Debug(db.char.taxiSrcName, "--", db.char.taxiDestName, "--", db.char.taxiStartTime)
         local duration = self:GetFlightDuration(db.char.taxiSrcName, db.char.taxiDestName)
         if duration then
             local segment = db.char.exitingWorld - db.char.taxiStartTime
             local timeOutOfWorld = GetTime() - db.char.exitingWorld
             local timeRemaining = duration - (segment + timeOutOfWorld)
-            Debug("elements:", segment, timeOutOfWorld, duration )
+            Debug("elements:", segment, timeOutOfWorld, duration)
             Debug("Known:StartAFlight(", timeRemaining, ")")
             self:StartAFlight(db.char.taxiSrcName, db.char.taxiDestName, timeRemaining)
         else
@@ -374,7 +374,8 @@ function addonCore:PLAYER_ENTERING_WORLD(event, isInitialLogin, isReloadingUi)
     end
 end
 
-function addonCore:PLAYER_LEAVING_WORLD(event)
+function addonCore:PLAYER_LEAVING_WORLD(event, ...)
+    Debug(event, ...)
     if self:IsOnFlight() then
         db.char.taxiSrcName = taxiTimerFrame.taxiSrcName
         db.char.taxiDestName = taxiTimerFrame.taxiDestName
@@ -460,7 +461,7 @@ do
             orig_C_GossipInfo_SelectOption(option, ...)
             return
         end
-        Debug("Checking:", gossipOptionID, gossipSelection.name)
+        Debug("C_GossipInfo.SelectOption:", gossipOptionID, gossipSelection.name)
         if db.global.gossipTriggered[gossipOptionID] then
             Debug(unpack(db.global.gossipTriggered[gossipOptionID]))
             addonCore:StartAFlight(unpack(db.global.gossipTriggered[gossipOptionID]))
