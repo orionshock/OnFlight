@@ -121,18 +121,19 @@ do
         taxiTimerFrame.taxiStartTime = nil
         taxiTimerFrame.elapsedNotOnFlight = nil
         taxiTimerFrame.earlyExit = nil
+        taxiTimerFrame.timeRmaining = nil
         taxiTimerFrame:Hide()
         Debug("ResetOnFlightTimer()", reason)
     end
 
-    function addonCore:StartAFlight(source, destination, resumeTimeLeft)
-        Debug("StartAFlight()", source, destination, resumeTimeLeft)
+    function addonCore:StartAFlight(source, destination, timeRmaining, forceEarlyExitState)
+        Debug("StartAFlight()", source, destination, timeRmaining)
         ResetOnFlightTimer("PreFlightReset")
         taxiTimerFrame.taxiSrcName = source
         taxiTimerFrame.taxiDestName = destination
-        taxiTimerFrame.resumeTimeLeft = resumeTimeLeft
-        if taxiTimerFrame.earlyExit then
-            taxiTimerFrame.earlyExit = db.char.earlyExit
+        taxiTimerFrame.timeRmaining = timeRmaining
+        if timeRmaining or forceEarlyExitState then
+            taxiTimerFrame.earlyExit = forceEarlyExitState
         end
         taxiTimerFrame:Show()
     end
@@ -157,10 +158,9 @@ do
 
                     local flightDurationFromDB = addonCore:GetFlightDuration(self.taxiSrcName, self.taxiDestName)
                     if flightDurationFromDB then
-                        if taxiTimerFrame.resumeTimeLeft then
-                            self.earlyExit = self.earlyExit or "Resume"
-                            Debug("TriggerEvent: OnFlight_Taxi_RESUME -- TimeLeft:", self.resumeTimeLeft)
-                            addonCore:SendMessage("OnFlight_Taxi_RESUME", self.taxiSrcName, self.taxiDestName, flightDurationFromDB, self.resumeTimeLeft)
+                        if taxiTimerFrame.timeRmaining then
+                            Debug("TriggerEvent: OnFlight_Taxi_RESUME -- TimeLeft:", self.timeRmaining)
+                            addonCore:SendMessage("OnFlight_Taxi_RESUME", self.taxiSrcName, self.taxiDestName, flightDurationFromDB, self.timeRmaining)
                             addonCore:ChatMessage(L["Resume On Taxi:"], self.taxiSrcName, "-->", self.taxiDestName)
                         else
                             Debug("TriggerEvent: OnFlight_Taxi_Start -- Duration:", SecondsToTime(flightDurationFromDB))
@@ -168,10 +168,9 @@ do
                             addonCore:ChatMessage(L["On Taxi:"], self.taxiSrcName, "-->", self.taxiDestName, "--", SecondsToTime(flightDurationFromDB))
                         end
                     else
-                        if taxiTimerFrame.resumeTimeLeft then
-                            self.earlyExit = self.earlyExit or "Resume"
-                            Debug("TriggerEvent: OnFlight_Taxi_RESUME -- TimeLeft:", self.resumeTimeLeft)
-                            addonCore:SendMessage("OnFlight_Taxi_RESUME", self.taxiSrcName, self.taxiDestName, 0, self.resumeTimeLeft)
+                        if taxiTimerFrame.timeRmaining then
+                            Debug("TriggerEvent: OnFlight_Taxi_RESUME -- TimeLeft:", self.timeRmaining)
+                            addonCore:SendMessage("OnFlight_Taxi_RESUME", self.taxiSrcName, self.taxiDestName, nil, nil, true)
                             addonCore:ChatMessage(L["Resume On Taxi:"], self.taxiSrcName, "-->", self.taxiDestName)
                         else
                             Debug("TriggerEvent: OnFlight_Taxi_Start -- Unknown Duration")
@@ -356,19 +355,19 @@ end
 
 function addonCore:PLAYER_ENTERING_WORLD(event, isInitialLogin, isReloadingUi)
     Debug(event, "-- isInitialLogin:", isInitialLogin, "-- isReloadingUi:", isReloadingUi)
-    if db.char.taxiSrcName and db.char.taxiDestName and db.char.taxiStartTime then
-        Debug(db.char.taxiSrcName, "--", db.char.taxiDestName, "--", db.char.taxiStartTime)
-        local duration = self:GetFlightDuration(db.char.taxiSrcName, db.char.taxiDestName)
-        if duration then
-            local segment = db.char.exitingWorld - db.char.taxiStartTime
-            local timeOutOfWorld = GetTime() - db.char.exitingWorld
-            local timeRemaining = duration - (segment + timeOutOfWorld)
-            Debug("elements:", segment, timeOutOfWorld, duration)
-            Debug("Known:StartAFlight(", timeRemaining, ")")
-            self:StartAFlight(db.char.taxiSrcName, db.char.taxiDestName, timeRemaining)
+    if db.char.taxiSrcName and db.char.taxiDestName and db.char.timeRemaining then
+        Debug("Resume Flight")
+        Debug("Taxi SrcName:", db.char.taxiSrcName)
+        Debug("Taxi DestName:", db.char.taxiDestName)
+        Debug("Taxi timeRemaining:", db.char.timeRemaining)
+
+        local flightDuration = self:GetFlightDuration(db.char.taxiSrcName, db.char.taxiDestName)
+        if flightDuration then
+            Debug("Known:StartAFlight(", db.char.taxiSrcName, db.char.taxiDestName, db.char.timeRemaining, db.char.earlyExit, ")")
+            self:StartAFlight(db.char.taxiSrcName, db.char.taxiDestName, db.char.timeRemaining, db.char.earlyExit )
         else
             Debug("Uknown:StartAFlight(true)")
-            self:StartAFlight(db.char.taxiSrcName, db.char.taxiDestName)
+            self:StartAFlight(db.char.taxiSrcName, db.char.taxiDestName, nil, db.char.earlyExit)
         end
         wipe(db.char)
     end
@@ -379,10 +378,10 @@ function addonCore:PLAYER_LEAVING_WORLD(event, ...)
     if self:IsOnFlight() then
         db.char.taxiSrcName = taxiTimerFrame.taxiSrcName
         db.char.taxiDestName = taxiTimerFrame.taxiDestName
-        db.char.taxiStartTime = taxiTimerFrame.taxiStartTime
-        db.char.elapsedNotOnFlight = taxiTimerFrame.elapsedNotOnFlight
         db.char.earlyExit = "Player Leaving World"
-        db.char.exitingWorld = GetTime()
+        local flightProgress = GetTime() - taxiTimerFrame.taxiStartTime
+        local flightDuration = self:GetFlightDuration(db.char.taxiSrcName, db.char.taxiDestName)
+        db.char.timeRemaining = flightDuration - flightProgress
     end
 end
 

@@ -68,7 +68,7 @@ function statusBarModuleCore:OnFlight_Taxi_Start(event, taxiSrcName, taxiDestNam
         self:StartTimerBar(taxiSrcName, taxiDestName, taxiDuration)
     elseif unknownFlight then
         Debug("E:", event, taxiSrcName, taxiDestName, "--Unknown Duration.")
-        self:StartTimerBar(taxiSrcName, taxiDestName, 0, unknownFlight)
+        self:StartTimerBar(taxiSrcName, taxiDestName, nil, nil, unknownFlight)
     end
 end
 
@@ -78,13 +78,13 @@ function statusBarModuleCore:OnFlight_Taxi_Stop(event, ...)
 end
 
 function statusBarModuleCore:OnFlight_Taxi_EarlyExit(event, taxiSrcName, taxiDestName, exitReason)
-    Debug("E:", event, taxiSrcName, "-->", taxiDestName, " --ExitReason: ", exitReason)
+    Debug("E:", event, "--Src:", taxiSrcName, "--Dest:", taxiDestName, "--ExitReason:", exitReason)
     self:StopTimerBar(event)
 end
 
-function statusBarModuleCore:OnFlight_Taxi_RESUME(event, taxiSrcName, taxiDestName, taxiDuration, timeRemaining)
-    Debug("E:", event, taxiSrcName, taxiDestName, taxiDuration, timeRemaining)
-    self:StartTimerBar(taxiSrcName, taxiDestName, taxiDuration, nil, timeRemaining)
+function statusBarModuleCore:OnFlight_Taxi_RESUME(event, taxiSrcName, taxiDestName, taxiDuration, timeRemaining, unknownFlight)
+    Debug("E:", event, "--Src:", taxiSrcName, "--Dest:", taxiDestName, "--Duration:", taxiDuration, "--TimeRemaining:", timeRemaining, "--UnknownFlight:", unknownFlight)
+    self:StartTimerBar(taxiSrcName, taxiDestName, taxiDuration, timeRemaining, unknownFlight)
 end
 
 local function disp_time(time)
@@ -206,7 +206,7 @@ function statusBarModuleCore:SetupTimerBar()
             if IsShiftKeyDown() then
                 if frame.timeRemaining then
                     ChatEdit_ActivateChat(DEFAULT_CHAT_FRAME.editBox)
-                    ChatEdit_InsertLink( ("[%s]: %s - %s"):format(L["OnFlight"], frame.shortText, disp_time(frame.timeRemaining)) )
+                    ChatEdit_InsertLink(("[%s]: %s - %s"):format(L["OnFlight"], frame.shortText, disp_time(frame.timeRemaining)))
                 end
             end
         end
@@ -235,7 +235,7 @@ function statusBarModuleCore:SetupTimerBar()
     self.OnFlightTimerFrame = OnFlightTimerFrame
 end
 
-function statusBarModuleCore:StartTimerBar(taxiSrcName, taxiDestName, duration, unknownFlight, timeRemaining) --Bar Text and Duration in seconds--
+function statusBarModuleCore:StartTimerBar(taxiSrcName, taxiDestName, duration, timeRemaining, unknownFlight) --Bar Text and Duration in seconds--
     Debug("StartTimerBar()", taxiSrcName, "-->", taxiDestName, duration and "--Duration: " .. SecondsToTime(duration), unknownFlight and "-- Unknown Flag: true")
     if not self.OnFlightTimerFrame then
         Debug("No Timer Bar?")
