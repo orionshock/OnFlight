@@ -127,7 +127,7 @@ do
     end
 
     function addonCore:StartAFlight(source, destination, timeRmaining, forceEarlyExitState)
-        Debug("StartAFlight()", source, destination, timeRmaining)
+        Debug("StartAFlight()`", source,"-->", destination, timeRmaining, forceEarlyExitState)
         ResetOnFlightTimer("PreFlightReset")
         taxiTimerFrame.taxiSrcName = source
         taxiTimerFrame.taxiDestName = destination
