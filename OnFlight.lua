@@ -127,7 +127,7 @@ do
     end
 
     function addonCore:StartAFlight(source, destination, timeRmaining, forceEarlyExitState)
-        Debug("StartAFlight()`", source,"-->", destination, timeRmaining, forceEarlyExitState)
+        Debug("StartAFlight()", source, "-->", destination, timeRmaining, forceEarlyExitState)
         ResetOnFlightTimer("PreFlightReset")
         taxiTimerFrame.taxiSrcName = source
         taxiTimerFrame.taxiDestName = destination
@@ -364,7 +364,7 @@ function addonCore:PLAYER_ENTERING_WORLD(event, isInitialLogin, isReloadingUi)
         local flightDuration = self:GetFlightDuration(db.char.taxiSrcName, db.char.taxiDestName)
         if flightDuration then
             Debug("Known:StartAFlight(", db.char.taxiSrcName, db.char.taxiDestName, db.char.timeRemaining, db.char.earlyExit, ")")
-            self:StartAFlight(db.char.taxiSrcName, db.char.taxiDestName, db.char.timeRemaining, db.char.earlyExit )
+            self:StartAFlight(db.char.taxiSrcName, db.char.taxiDestName, db.char.timeRemaining, db.char.earlyExit)
         else
             Debug("Uknown:StartAFlight(true)")
             self:StartAFlight(db.char.taxiSrcName, db.char.taxiDestName, nil, db.char.earlyExit)
@@ -445,29 +445,40 @@ do --Hoook Func
 end
 
 do
-    local orig_C_GossipInfo_SelectOption = C_GossipInfo.SelectOption
-    function C_GossipInfo.SelectOption(option, ...)
-        local gossipOptions = C_GossipInfo.GetOptions()
-        local gossipSelection, gossipOptionID
-        for _, v in pairs(gossipOptions) do
-            if v.gossipOptionID == option then
-                gossipOptionID = v.gossipOptionID
-                gossipSelection = v --used for debugging....
+    hooksecurefunc(
+        C_GossipInfo,
+        "SelectOption",
+        function(option, ...)
+            if db.global.gossipTriggered[option] then
+                Debug(unpack(db.global.gossipTriggered[option]))
+                addonCore:StartAFlight(unpack(db.global.gossipTriggered[option]))
             end
         end
-        if not gossipSelection then
-            --?? this should never really happen, but send back to game API and let it deal with it.
-            orig_C_GossipInfo_SelectOption(option, ...)
-            return
-        end
-        Debug("C_GossipInfo.SelectOption:", gossipOptionID, gossipSelection.name)
-        if db.global.gossipTriggered[gossipOptionID] then
-            Debug(unpack(db.global.gossipTriggered[gossipOptionID]))
-            addonCore:StartAFlight(unpack(db.global.gossipTriggered[gossipOptionID]))
-        end
+    )
 
-        orig_C_GossipInfo_SelectOption(option, ...)
-    end
+    hooksecurefunc(
+        GossipOptionButtonMixin,
+        "Setup",
+        function(self, optionInfo)
+            self:SetScript(
+                "OnEnter",
+                function(frame)
+                    if db and db.profile.showDebug then
+                        GameTooltip:SetOwner(frame, "ANCHOR_RIGHT")
+                        GameTooltip:AddLine("gossipOptionID: " .. frame:GetID())
+                        GameTooltip:Show()
+                    end
+                end
+            )
+            self:SetScript(
+                "OnLeave",
+                function(frame)
+                    GameTooltip:Hide()
+                end
+            )
+        end
+    )
+
 end
 
 ---Ace3 Config Table
@@ -635,6 +646,11 @@ addonCore.configOptionsTable = {
                     name = L["Show Chat Messages"],
                     type = "toggle",
                     order = 10
+                },
+                showDebug = {
+                    name = L["Show Debug"],
+                    type = "toggle",
+                    order = 90
                 },
                 ADVANCED_OPTIONS = {
                     name = L["Show Advanced Options"],
