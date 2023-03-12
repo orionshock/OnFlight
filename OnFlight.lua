@@ -240,6 +240,26 @@ hooksecurefunc(
         end
     end
 )
+
+hooksecurefunc(
+    "ReloadUI",
+    function()
+        if taxiTimerFrame and taxiTimerFrame:IsShown() then
+            taxiTimerFrame.earlyExit = L["Reloading UI"]
+            Debug("Early Exit Trigger: Reloading UI")
+        end
+    end
+)
+hooksecurefunc(
+    "Logout",
+    function()
+        if taxiTimerFrame and taxiTimerFrame:IsShown() then
+            taxiTimerFrame.earlyExit = L["Logout"]
+            Debug("Early Exit Trigger: Logout")
+        end
+    end
+)
+
 ---Estimated Flight Times - Transposed from origional code
 function OnFlight_GetEstimatedTime(taxiDestSlot)
     if not TaxiFrame:IsShown() then
@@ -355,7 +375,7 @@ end
 
 function addonCore:PLAYER_ENTERING_WORLD(event, isInitialLogin, isReloadingUi)
     Debug(event, "-- isInitialLogin:", isInitialLogin, "-- isReloadingUi:", isReloadingUi)
-    if db.char.taxiSrcName and db.char.taxiDestName and db.char.timeRemaining then
+    if db.char.taxiSrcName and db.char.taxiDestName then
         Debug("Resume Flight")
         Debug("Taxi SrcName:", db.char.taxiSrcName)
         Debug("Taxi DestName:", db.char.taxiDestName)
@@ -368,6 +388,9 @@ function addonCore:PLAYER_ENTERING_WORLD(event, isInitialLogin, isReloadingUi)
         else
             Debug("Uknown:StartAFlight(true)")
             self:StartAFlight(db.char.taxiSrcName, db.char.taxiDestName, nil, db.char.earlyExit)
+            if (not db.char.timeRemaining) and (not taxiTimerFrame.earlyExit) then
+                taxiTimerFrame.taxiStartTime = db.char.taxiStartTime
+            end
         end
         wipe(db.char)
     end
@@ -378,10 +401,15 @@ function addonCore:PLAYER_LEAVING_WORLD(event, ...)
     if self:IsOnFlight() then
         db.char.taxiSrcName = taxiTimerFrame.taxiSrcName
         db.char.taxiDestName = taxiTimerFrame.taxiDestName
-        db.char.earlyExit = "Player Leaving World"
+        db.char.earlyExit = taxiTimerFrame.earlyExit
         local flightProgress = GetTime() - taxiTimerFrame.taxiStartTime
         local flightDuration = self:GetFlightDuration(db.char.taxiSrcName, db.char.taxiDestName)
-        db.char.timeRemaining = flightDuration - flightProgress
+        if flightDuration then
+            db.char.timeRemaining = flightDuration - flightProgress
+        else
+            db.char.taxiStartTime = taxiTimerFrame.taxiStartTime
+        end
+
     end
 end
 
