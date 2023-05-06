@@ -86,10 +86,10 @@ function addonCore:OnEnable()
     self:RegisterEvent("PLAYER_LEAVING_WORLD")
 end
 
-function addonCore:OnDisable()
-end
+-- function addonCore:OnDisable()
+-- end
 
-function addonCore:ChatCommand(input)
+function addonCore.ChatCommand(_, input)
     if InCombatLockdown() then
         return
     end
@@ -126,7 +126,7 @@ do
         Debug("ResetOnFlightTimer()", reason)
     end
 
-    function addonCore:StartAFlight(source, destination, timeRmaining, forceEarlyExitState)
+    function addonCore.StartAFlight(_, source, destination, timeRmaining, forceEarlyExitState)
         Debug("StartAFlight()", source, "-->", destination, timeRmaining, forceEarlyExitState)
         ResetOnFlightTimer("PreFlightReset")
         taxiTimerFrame.taxiSrcName = source
@@ -359,7 +359,7 @@ function OnFlight_TaxiFrame_TooltipHook(button)
     end
 end
 
-function addonCore:TAXIMAP_OPENED(event, uiMapSystem)
+function addonCore.TAXIMAP_OPENED(_, event, uiMapSystem)
     if TaxiFrame:IsShown() then
         if (uiMapSystem == Enum.UIMapSystem.Taxi) then
             for i = 1, NumTaxiNodes(), 1 do
@@ -374,7 +374,12 @@ function addonCore:TAXIMAP_OPENED(event, uiMapSystem)
 end
 
 function addonCore:PLAYER_ENTERING_WORLD(event, isInitialLogin, isReloadingUi)
-    Debug(event, "-- isInitialLogin:", isInitialLogin, "-- isReloadingUi:", isReloadingUi)
+    Debug(event, "isLogin:", isInitialLogin, "isReload:", isReloadingUi)
+    if (taxiTimerFrame.taxiSrcName and taxiTimerFrame.taxiDestName) and (not taxiTimerFrame.earlyExit) then
+        Debug("taxiTimerFrame has setup but no early exit reason, show frame()")
+        taxiTimerFrame:Show()
+        return
+    end
     if db.char.taxiSrcName and db.char.taxiDestName then
         Debug("Resume Flight")
         Debug("Taxi SrcName:", db.char.taxiSrcName)
@@ -396,9 +401,17 @@ function addonCore:PLAYER_ENTERING_WORLD(event, isInitialLogin, isReloadingUi)
     end
 end
 
-function addonCore:PLAYER_LEAVING_WORLD(event, ...)
-    Debug(event, ...)
-    if self:IsOnFlight() then
+function addonCore:PLAYER_LEAVING_WORLD(event)
+    Debug(event, "IsOnFlight:", self:IsOnFlight(), "Early Exit?:", taxiTimerFrame.earlyExit)
+
+    if not self:IsOnFlight() then
+        return
+    end
+    if not taxiTimerFrame.earlyExit then
+        Debug(event, "But no early exit reason; hide frame")
+        taxiTimerFrame:Hide() --to keep the onUpdate after PLW from causing db to save
+        return
+    elseif taxiTimerFrame.earlyExit then
         db.char.taxiSrcName = taxiTimerFrame.taxiSrcName
         db.char.taxiDestName = taxiTimerFrame.taxiDestName
         db.char.earlyExit = taxiTimerFrame.earlyExit
@@ -409,7 +422,6 @@ function addonCore:PLAYER_LEAVING_WORLD(event, ...)
         else
             db.char.taxiStartTime = taxiTimerFrame.taxiStartTime
         end
-
     end
 end
 
@@ -506,7 +518,6 @@ do
             )
         end
     )
-
 end
 
 ---Ace3 Config Table
