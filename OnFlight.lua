@@ -91,6 +91,7 @@ end
 
 function addonCore.ChatCommand(_, input)
     if InCombatLockdown() then
+        addonCore.SendMessage("In Combat")
         return
     end
     if not input or input:trim() == "" then
