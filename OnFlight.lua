@@ -505,9 +505,13 @@ do
                 "OnEnter",
                 function(frame)
                     if db and db.profile.showDebug then
-                        GameTooltip:SetOwner(frame, "ANCHOR_RIGHT")
-                        GameTooltip:AddLine("gossipOptionID: " .. frame:GetID())
-                        GameTooltip:Show()
+                        if frame.GetData then
+                            local data = frame:GetData()
+                            local gossipID = data and data.info.gossipOptionID or "??"
+                            GameTooltip:SetOwner(frame, "ANCHOR_RIGHT")
+                            GameTooltip:AddLine("gossipOptionID: " .. gossipID)
+                            GameTooltip:Show()
+                        end
                     end
                 end
             )
