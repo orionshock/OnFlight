@@ -317,7 +317,7 @@ svDefaults.global["Horde"] = {
 		["Brackenwall Village, Dustwallow Marsh"] = 95
 	},
 	["Altar of Har'koa"] = {
-		["Altar of Quetz'lun"] = 1
+		["Altar of Quetz'lun"] = 130
 	},
 	["Grom'arsh Crash-Site, The Storm Peaks"] = {
 		["K3, The Storm Peaks"] = 87,
