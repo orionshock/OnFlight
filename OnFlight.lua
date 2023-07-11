@@ -37,7 +37,7 @@ taxiDestName --Full Proper name from API for where we are going
 --luacheck: no max line length
 --luacheck: globals LibStub InCombatLockdown LibEdrik_GetDebugFunction TaxiNodeName GetNumRoutes NumTaxiNodes TaxiNodeGetType
 --luacheck: globals UnitFactionGroup string UnitOnTaxi UnitInVehicle CreateFrame tostringall GetTime date SecondsToTime abs hooksecurefunc
---luacheck: globals C_SummonInfo OnFlight_GetEstimatedTime TaxiFrame TaxiGetNodeSlot OnFlight_TaxiFrame_TooltipHook GameTooltip
+--luacheck: globals C_SummonInfo OnFlight_GetEstimatedTime TaxiFrame TaxiGetNodeSlot OnFlight_TaxiFrame_TooltipHook GameTooltip wipe
 
 local Debug = LibEdrik_GetDebugFunction and LibEdrik_GetDebugFunction("|cff0040ffOn|cFF00FF00Flight|r|r-C:", nil, nil, false) or function()
     end
@@ -486,16 +486,36 @@ do --Hoook Func
 end
 
 do
+    Debug("Hooking Functions")
     hooksecurefunc(
         C_GossipInfo,
         "SelectOption",
         function(option, ...)
+            Debug("SelectOptionHook", option, type(option), ...)
             if db.global.gossipTriggered[option] then
-                Debug(unpack(db.global.gossipTriggered[option]))
+                Debug("SelectOptionHook, From:", db.global.gossipTriggered[option][1], " -> To:", db.global.gossipTriggered[option][2])
                 addonCore:StartAFlight(unpack(db.global.gossipTriggered[option]))
             end
         end
     )
+
+    local original_C_GossipInfo_SelectOptionByIndex = C_GossipInfo.SelectOptionByIndex
+
+    function C_GossipInfo.SelectOptionByIndex(...)
+        Debug("SelectOptionByIndexHook", ...)
+        local index = tonumber(...)
+        local options = C_GossipInfo.GetOptions()
+        if options[index + 1] then
+            local selectedGossipID = options[index + 1].gossipOptionID
+            Debug("SelectOptionByIndexHook, gossipOptionID:", selectedGossipID)
+
+            if db.global.gossipTriggered[selectedGossipID] then
+                Debug("SelectOptionByIndexHook, From:", db.global.gossipTriggered[selectedGossipID][1], " -> To:", db.global.gossipTriggered[selectedGossipID][2])
+                addonCore:StartAFlight(unpack(db.global.gossipTriggered[selectedGossipID]))
+            end
+        end
+        original_C_GossipInfo_SelectOptionByIndex(...)
+    end
 
     hooksecurefunc(
         GossipOptionButtonMixin,
