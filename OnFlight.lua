@@ -503,15 +503,18 @@ do
 
     function C_GossipInfo.SelectOptionByIndex(...)
         Debug("SelectOptionByIndexHook", ...)
-        local index = tonumber(...)
-        local options = C_GossipInfo.GetOptions()
-        if options[index + 1] then
-            local selectedGossipID = options[index + 1].gossipOptionID
-            Debug("SelectOptionByIndexHook, gossipOptionID:", selectedGossipID)
+        local selectedIndex = tonumber(...)
+        local gossipOptions = C_GossipInfo.GetOptions()
+        for _, optionData in ipairs(gossipOptions) do
+            if optionData.orderIndex == selectedIndex then
+                local selectedGossipID = optionData.gossipOptionID
+                Debug("SelectOptionByIndexHook, gossipOptionID:", selectedGossipID)
 
-            if db.global.gossipTriggered[selectedGossipID] then
-                Debug("SelectOptionByIndexHook, From:", db.global.gossipTriggered[selectedGossipID][1], " -> To:", db.global.gossipTriggered[selectedGossipID][2])
-                addonCore:StartAFlight(unpack(db.global.gossipTriggered[selectedGossipID]))
+                if db.global.gossipTriggered[selectedGossipID] then
+                    Debug("SelectOptionByIndexHook, From:", db.global.gossipTriggered[selectedGossipID][1], " -> To:", db.global.gossipTriggered[selectedGossipID][2])
+                    addonCore:StartAFlight(unpack(db.global.gossipTriggered[selectedGossipID]))
+                    break
+                end
             end
         end
         original_C_GossipInfo_SelectOptionByIndex(...)
