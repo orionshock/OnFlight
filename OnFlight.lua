@@ -39,8 +39,6 @@ taxiDestName --Full Proper name from API for where we are going
 --luacheck: globals UnitFactionGroup string UnitOnTaxi UnitInVehicle CreateFrame tostringall GetTime date SecondsToTime abs hooksecurefunc
 --luacheck: globals C_SummonInfo OnFlight_GetEstimatedTime TaxiFrame TaxiGetNodeSlot OnFlight_TaxiFrame_TooltipHook GameTooltip wipe
 
-local Debug = LibEdrik_GetDebugFunction and LibEdrik_GetDebugFunction("|cff0040ffOn|cFF00FF00Flight|r|r-C:", nil, nil, false) or function()
-    end
 
 local addonName, addonCore = ...
 addonCore = LibStub("AceAddon-3.0"):NewAddon(addonCore, "OnFlight", "AceConsole-3.0", "AceEvent-3.0")
@@ -48,9 +46,12 @@ _G[addonName] = addonCore
 
 local L = LibStub("AceLocale-3.0"):GetLocale(addonName)
 
-local TaxiNodeName, GetNumRoutes, NumTaxiNodes, TaxiNodeGetType, TaxiGetNodeSlot = TaxiNodeName, GetNumRoutes, NumTaxiNodes, TaxiNodeGetType, TaxiGetNodeSlot
+local TaxiNodeName, GetNumRoutes, NumTaxiNodes, TaxiNodeGetType, TaxiGetNodeSlot = TaxiNodeName, GetNumRoutes,
+    NumTaxiNodes, TaxiNodeGetType, TaxiGetNodeSlot
 
 local db, playerFaction
+local Debug = function() end
+
 local svDefaults = {
     char = {},
     profile = {
@@ -78,6 +79,19 @@ function addonCore:OnInitialize()
     LibStub("AceConfigDialog-3.0"):SetDefaultSize(addonName, 770, 475)
 
     self:RegisterChatCommand("OnFlight", "ChatCommand")
+
+    do
+        local LibE_Debug = LibEdrik_GetDebugFunction and
+        LibEdrik_GetDebugFunction("|cff0040ffOn|cFF00FF00Flight|r|r-C:", nil, nil, false)
+
+        Debug = function(...)
+            if db and db.profile.showDebug then
+                if LibE_Debug then
+                    LibE_Debug(...)
+                end
+            end
+        end
+    end
 end
 
 function addonCore:OnEnable()
@@ -161,17 +175,21 @@ do
                     if flightDurationFromDB then
                         if taxiTimerFrame.timeRmaining then
                             Debug("TriggerEvent: OnFlight_Taxi_RESUME -- TimeLeft:", self.timeRmaining)
-                            addonCore:SendMessage("OnFlight_Taxi_RESUME", self.taxiSrcName, self.taxiDestName, flightDurationFromDB, self.timeRmaining)
+                            addonCore:SendMessage("OnFlight_Taxi_RESUME", self.taxiSrcName, self.taxiDestName,
+                                flightDurationFromDB, self.timeRmaining)
                             addonCore:ChatMessage(L["Resume On Taxi:"], self.taxiSrcName, "-->", self.taxiDestName)
                         else
                             Debug("TriggerEvent: OnFlight_Taxi_Start -- Duration:", SecondsToTime(flightDurationFromDB))
-                            addonCore:SendMessage("OnFlight_Taxi_Start", self.taxiSrcName, self.taxiDestName, flightDurationFromDB, false)
-                            addonCore:ChatMessage(L["On Taxi:"], self.taxiSrcName, "-->", self.taxiDestName, "--", SecondsToTime(flightDurationFromDB))
+                            addonCore:SendMessage("OnFlight_Taxi_Start", self.taxiSrcName, self.taxiDestName,
+                                flightDurationFromDB, false)
+                            addonCore:ChatMessage(L["On Taxi:"], self.taxiSrcName, "-->", self.taxiDestName, "--",
+                                SecondsToTime(flightDurationFromDB))
                         end
                     else
                         if taxiTimerFrame.timeRmaining then
                             Debug("TriggerEvent: OnFlight_Taxi_RESUME -- TimeLeft:", self.timeRmaining)
-                            addonCore:SendMessage("OnFlight_Taxi_RESUME", self.taxiSrcName, self.taxiDestName, nil, nil, true)
+                            addonCore:SendMessage("OnFlight_Taxi_RESUME", self.taxiSrcName, self.taxiDestName, nil, nil,
+                                true)
                             addonCore:ChatMessage(L["Resume On Taxi:"], self.taxiSrcName, "-->", self.taxiDestName)
                         else
                             Debug("TriggerEvent: OnFlight_Taxi_Start -- Unknown Duration")
@@ -186,13 +204,16 @@ do
                         local flightDuration = abs(GetTime() - self.taxiStartTime)
                         db.global[playerFaction][self.taxiSrcName] = db.global[playerFaction][self.taxiSrcName] or {}
                         db.global[playerFaction][self.taxiSrcName][self.taxiDestName] = math.floor(flightDuration)
-                        Debug("TriggerEvent: OnFlight_Taxi_Stop", self.taxiSrcName, "-->", self.taxiDestName, "-- Duration:", SecondsToTime(flightDuration))
+                        Debug("TriggerEvent: OnFlight_Taxi_Stop", self.taxiSrcName, "-->", self.taxiDestName,
+                            "-- Duration:", SecondsToTime(flightDuration))
                         addonCore:SendMessage("OnFlight_Taxi_Stop", self.taxiSrcName, self.taxiDestName, flightDuration)
-                        addonCore:ChatMessage(L["Off Taxi:"], self.taxiSrcName .. " --> " .. self.taxiDestName, "--", SecondsToTime(flightDuration))
+                        addonCore:ChatMessage(L["Off Taxi:"], self.taxiSrcName .. " --> " .. self.taxiDestName, "--",
+                            SecondsToTime(flightDuration))
                         return ResetOnFlightTimer("End Of Normal Flight")
                     elseif self.earlyExit then
                         Debug("EarlyExit:", self.taxiSrcName, "-->", self.taxiDestName, " -- Reason: ", self.earlyExit)
-                        addonCore:SendMessage("OnFlight_Taxi_EarlyExit", self.taxiSrcName, self.taxiDestName, self.earlyExit)
+                        addonCore:SendMessage("OnFlight_Taxi_EarlyExit", self.taxiSrcName, self.taxiDestName,
+                            self.earlyExit)
                         addonCore:ChatMessage(L["Taxi Ended Early:"], self.earlyExit)
                         return ResetOnFlightTimer("End of Flight: " .. self.earlyExit)
                     end
@@ -201,7 +222,8 @@ do
             if (not self.taxiState) then
                 self.elapsedNotOnFlight = (self.elapsedNotOnFlight or 0) + elapsed
                 if self.elapsedNotOnFlight > 5 then
-                    Debug("Failed Entry > 5sec, send Failed Entry Event and Reset?:", self.taxiSrcName, "-->", self.taxiDestName)
+                    Debug("Failed Entry > 5sec, send Failed Entry Event and Reset?:", self.taxiSrcName, "-->",
+                        self.taxiDestName)
                     addonCore:SendMessage("OnFlight_Taxi_FAILED_ENTRY", self.taxiSrcName, self.taxiDestName)
                     return ResetOnFlightTimer("FAILED_ENTRY")
                 end
@@ -389,7 +411,8 @@ function addonCore:PLAYER_ENTERING_WORLD(event, isInitialLogin, isReloadingUi)
 
         local flightDuration = self:GetFlightDuration(db.char.taxiSrcName, db.char.taxiDestName)
         if flightDuration then
-            Debug("Known:StartAFlight(", db.char.taxiSrcName, db.char.taxiDestName, db.char.timeRemaining, db.char.earlyExit, ")")
+            Debug("Known:StartAFlight(", db.char.taxiSrcName, db.char.taxiDestName, db.char.timeRemaining,
+                db.char.earlyExit, ")")
             self:StartAFlight(db.char.taxiSrcName, db.char.taxiDestName, db.char.timeRemaining, db.char.earlyExit)
         else
             Debug("Uknown:StartAFlight(true)")
@@ -437,6 +460,7 @@ function addonCore:GetFlightDuration(source, destination, faction)
         end
     end
 end
+
 function addonCore:IsOnFlight()
     if taxiTimerFrame and taxiTimerFrame:IsShown() then
         if taxiTimerFrame.taxiSrcName and taxiTimerFrame.taxiDestName then
@@ -466,6 +490,7 @@ function addonCore:GetCurrentFlightProgress()
 
     return timeOnFlight, timeRemaining, totalDuration
 end
+
 ---
 
 do --Hoook Func
@@ -493,7 +518,8 @@ do
         function(option, ...)
             Debug("SelectOptionHook", option, type(option), ...)
             if db.global.gossipTriggered[option] then
-                Debug("SelectOptionHook, From:", db.global.gossipTriggered[option][1], " -> To:", db.global.gossipTriggered[option][2])
+                Debug("SelectOptionHook, From:", db.global.gossipTriggered[option][1], " -> To:",
+                    db.global.gossipTriggered[option][2])
                 addonCore:StartAFlight(unpack(db.global.gossipTriggered[option]))
             end
         end
@@ -511,7 +537,8 @@ do
                 Debug("SelectOptionByIndexHook, gossipOptionID:", selectedGossipID)
 
                 if db.global.gossipTriggered[selectedGossipID] then
-                    Debug("SelectOptionByIndexHook, From:", db.global.gossipTriggered[selectedGossipID][1], " -> To:", db.global.gossipTriggered[selectedGossipID][2])
+                    Debug("SelectOptionByIndexHook, From:", db.global.gossipTriggered[selectedGossipID][1], " -> To:",
+                        db.global.gossipTriggered[selectedGossipID][2])
                     addonCore:StartAFlight(unpack(db.global.gossipTriggered[selectedGossipID]))
                     break
                 end
@@ -554,12 +581,14 @@ function addonCore:GetOption(info)
         if db.profile[info[#info]] then
             return db.profile[info[#info]].r, db.profile[info[#info]].b, db[info[#info]].g, db.profile[info[#info]].a
         else
-            return math.random(0, 100) / 100, math.random(0, 100) / 100, math.random(0, 100) / 100, math.random(0, 100) / 100
+            return math.random(0, 100) / 100, math.random(0, 100) / 100, math.random(0, 100) / 100,
+                math.random(0, 100) / 100
         end
     else
         return db.profile[info[#info]]
     end
 end
+
 function addonCore:SetOption(info, ...)
     if info.type == "color" then
         local red, green, blue, alpha = ...
@@ -749,7 +778,8 @@ addonCore.configOptionsTable = {
                             name = "Test Unknown Flight",
                             order = 2,
                             func = function()
-                                addonCore:GetModule("StatusBarModule"):StartTimerBar("Unknown1, Zone1", "Unknown2, Zone2", 0, true)
+                                addonCore:GetModule("StatusBarModule"):StartTimerBar("Unknown1, Zone1", "Unknown2, Zone2",
+                                    0, true)
                             end
                         },
                         ["stopTest"] = {
