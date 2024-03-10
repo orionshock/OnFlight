@@ -1,8 +1,7 @@
 --[[
     This Module's Entire Job is to handle the Status Bar
 ]]
-local Debug = LibEdrik_GetDebugFunction and LibEdrik_GetDebugFunction("|cff0040ffOn|cFF00FF00Flight|r|r-SB:", nil, nil, false) or function()
-    end
+local Debug = function() end
 
 local addonName, addonCore = ...
 local statusBarModuleCore = addonCore:NewModule("StatusBarModule", "AceEvent-3.0")
@@ -17,24 +16,24 @@ local svDefaults = {
         countUp = false,
         fillUp = false,
         --Bar Background Color
-        backgroundColor = {r = 0.1, g = 0.1, b = 0.1, a = 0.6},
+        backgroundColor = { r = 0.1, g = 0.1, b = 0.1, a = 0.6 },
         --Bar Size Settings
         barHeight = 30,
         barWidth = 300,
         --Bar Settings
         barTexture = "Blizzard",
-        barColor = {r = 0.5, g = 0.5, b = 0.8, a = 1.0},
-        unknownFlightColor = {r = 0.2, g = 0.2, b = 0.4, a = 1.0},
+        barColor = { r = 0.5, g = 0.5, b = 0.8, a = 1.0 },
+        unknownFlightColor = { r = 0.2, g = 0.2, b = 0.4, a = 1.0 },
         --Border Settings
         borderTexture = "Blizzard Dialog",
-        borderColor = {r = 0.6, g = 0.6, b = 0.6, a = 1},
+        borderColor = { r = 0.6, g = 0.6, b = 0.6, a = 1 },
         --Basic Text Options
         compactMode = false,
         shortNames = true,
         --Font Options
         fontName = "2002 Bold",
         fontSize = "15",
-        fontColor = {r = 1, g = 1, b = 1, a = 1},
+        fontColor = { r = 1, g = 1, b = 1, a = 1 },
         --Bar Location
         barLocation = {
             offsetX = 0,
@@ -49,7 +48,20 @@ statusBarModuleCore.svDefaults = svDefaults
 function statusBarModuleCore:OnInitialize()
     self.db = addonCore.db:RegisterNamespace("StatusBarModule", svDefaults)
     db = self.db
+
+    do
+        local LibE_Debug = LibEdrik_GetDebugFunction and
+            LibEdrik_GetDebugFunction("|cff0040ffOn|cFF00FF00Flight|r|r-SB:", nil, nil, false)
+        if LibE_Debug then
+            Debug = function(...)
+                if db and db.profile.showDebug then
+                    LibE_Debug(...)
+                end
+            end
+        end
+    end
 end
+
 function statusBarModuleCore:OnEnable()
     self:SetupTimerBar()
     self:RegisterMessage("OnFlight_Taxi_Start")
@@ -58,6 +70,7 @@ function statusBarModuleCore:OnEnable()
     self:RegisterMessage("OnFlight_Taxi_FAILED_ENTRY", "OnFlight_Taxi_Stop")
     self:RegisterMessage("OnFlight_Taxi_RESUME")
 end
+
 function statusBarModuleCore:OnDisable()
     self:UnregisterAllMessages()
 end
@@ -82,8 +95,10 @@ function statusBarModuleCore:OnFlight_Taxi_EarlyExit(event, taxiSrcName, taxiDes
     self:StopTimerBar(event)
 end
 
-function statusBarModuleCore:OnFlight_Taxi_RESUME(event, taxiSrcName, taxiDestName, taxiDuration, timeRemaining, unknownFlight)
-    Debug("E:", event, "--Src:", taxiSrcName, "--Dest:", taxiDestName, "--Duration:", taxiDuration, "--TimeRemaining:", timeRemaining, "--UnknownFlight:", unknownFlight)
+function statusBarModuleCore:OnFlight_Taxi_RESUME(event, taxiSrcName, taxiDestName, taxiDuration, timeRemaining,
+                                                  unknownFlight)
+    Debug("E:", event, "--Src:", taxiSrcName, "--Dest:", taxiDestName, "--Duration:", taxiDuration, "--TimeRemaining:",
+        timeRemaining, "--UnknownFlight:", unknownFlight)
     self:StartTimerBar(taxiSrcName, taxiDestName, taxiDuration, timeRemaining, unknownFlight)
 end
 
@@ -119,7 +134,7 @@ local function timerBarOnUpdate(self, elapsed)
         end
 
         local ajdBarWidth = math.max(self.textObj:GetStringWidth() + 30, db.profile.barWidth) --dynamic size to min or make it bigger as needed
-        self:SetWidth(math.max(ajdBarWidth, self:GetWidth())) --make bar bigger only, don't shrink it.
+        self:SetWidth(math.max(ajdBarWidth, self:GetWidth()))                                 --make bar bigger only, don't shrink it.
 
         self.statusBar:SetValue(self.timeRemaining)
         self.spark:Show()
@@ -131,7 +146,7 @@ local function timerBarOnUpdate(self, elapsed)
     end
 end
 
-local bdrop = {edgeSize = 16, insets = {left = 4, right = 4, top = 4, bottom = 4}}
+local bdrop = { edgeSize = 16, insets = { left = 4, right = 4, top = 4, bottom = 4 } }
 local function ApplyLookAndFeel(self) --self is the baseFrame
     local barTexture = LSM:Fetch("statusbar", db.profile.barTexture)
     bdrop.bgFile = barTexture
@@ -142,13 +157,16 @@ local function ApplyLookAndFeel(self) --self is the baseFrame
     self:SetHeight(db.profile.barHeight)
     self:ClearBackdrop()
     self:SetBackdrop(bdrop)
-    self:SetBackdropColor(db.profile.backgroundColor.r, db.profile.backgroundColor.g, db.profile.backgroundColor.b, db.profile.backgroundColor.a)
-    self:SetBackdropBorderColor(db.profile.borderColor.r, db.profile.borderColor.g, db.profile.borderColor.b, db.profile.borderColor.a)
+    self:SetBackdropColor(db.profile.backgroundColor.r, db.profile.backgroundColor.g, db.profile.backgroundColor.b,
+        db.profile.backgroundColor.a)
+    self:SetBackdropBorderColor(db.profile.borderColor.r, db.profile.borderColor.g, db.profile.borderColor.b,
+        db.profile.borderColor.a)
 
     --Set Status Bar Settings
     local statusBar = self.statusBar
     statusBar:SetStatusBarTexture(barTexture)
-    statusBar:SetStatusBarColor(db.profile.barColor.r, db.profile.barColor.g, db.profile.barColor.b, db.profile.barColor.a)
+    statusBar:SetStatusBarColor(db.profile.barColor.r, db.profile.barColor.g, db.profile.barColor.b,
+        db.profile.barColor.a)
     statusBar:ClearAllPoints()
     statusBar:SetPoint("TOPLEFT", self, "TOPLEFT", 6, -6)
     statusBar:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", -6, 6)
@@ -165,9 +183,11 @@ local function ApplyLookAndFeel(self) --self is the baseFrame
     textObj:SetTextColor(db.profile.fontColor.r, db.profile.fontColor.g, db.profile.fontColor.b, db.profile.fontColor.a)
 
     if self.unknownFlight then
-        statusBar:SetStatusBarColor(db.profile.unknownFlightColor.r, db.profile.unknownFlightColor.g, db.profile.unknownFlightColor.b, db.profile.unknownFlightColor.a)
+        statusBar:SetStatusBarColor(db.profile.unknownFlightColor.r, db.profile.unknownFlightColor.g,
+            db.profile.unknownFlightColor.b, db.profile.unknownFlightColor.a)
     else
-        statusBar:SetStatusBarColor(db.profile.barColor.r, db.profile.barColor.g, db.profile.barColor.b, db.profile.barColor.a)
+        statusBar:SetStatusBarColor(db.profile.barColor.r, db.profile.barColor.g, db.profile.barColor.b,
+            db.profile.barColor.a)
     end
 end
 
@@ -181,7 +201,8 @@ function statusBarModuleCore:SetupTimerBar()
     OnFlightTimerFrame:Hide()
     OnFlightTimerFrame:SetWidth(db.profile.barWidth)
     OnFlightTimerFrame:SetHeight(db.profile.barHeight)
-    OnFlightTimerFrame:SetPoint(barLocation.anchorPoint, UIParent, barLocation.relativePoint, barLocation.offsetX, barLocation.offsetY)
+    OnFlightTimerFrame:SetPoint(barLocation.anchorPoint, UIParent, barLocation.relativePoint, barLocation.offsetX,
+        barLocation.offsetY)
     OnFlightTimerFrame:SetMovable(true)
     OnFlightTimerFrame:EnableMouse(true)
     OnFlightTimerFrame:SetClampedToScreen(true)
@@ -206,7 +227,8 @@ function statusBarModuleCore:SetupTimerBar()
             if IsShiftKeyDown() then
                 if frame.timeRemaining then
                     ChatEdit_ActivateChat(DEFAULT_CHAT_FRAME.editBox)
-                    ChatEdit_InsertLink(("[%s]: %s - %s"):format(L["OnFlight"], frame.shortText, disp_time(frame.timeRemaining)))
+                    ChatEdit_InsertLink(("[%s]: %s - %s"):format(L["OnFlight"], frame.shortText,
+                        disp_time(frame.timeRemaining)))
                 end
             end
         end
@@ -236,7 +258,8 @@ function statusBarModuleCore:SetupTimerBar()
 end
 
 function statusBarModuleCore:StartTimerBar(taxiSrcName, taxiDestName, duration, timeRemaining, unknownFlight) --Bar Text and Duration in seconds--
-    Debug("StartTimerBar()", taxiSrcName, "-->", taxiDestName, duration and "--Duration: " .. SecondsToTime(duration), unknownFlight and "-- Unknown Flag: true")
+    Debug("StartTimerBar()", taxiSrcName, "-->", taxiDestName, duration and "--Duration: " .. SecondsToTime(duration),
+        unknownFlight and "-- Unknown Flag: true")
     if not self.OnFlightTimerFrame then
         Debug("No Timer Bar?")
         return
@@ -288,12 +311,14 @@ function statusBarModuleCore:GetOption(info)
         if t then
             return t.r, t.g, t.b, t.a
         else
-            return math.random(0, 100) / 100, math.random(0, 100) / 100, math.random(0, 100) / 100, math.random(0, 100) / 100
+            return math.random(0, 100) / 100, math.random(0, 100) / 100, math.random(0, 100) / 100,
+                math.random(0, 100) / 100
         end
     else
         return db.profile[info[#info]]
     end
 end
+
 function statusBarModuleCore:SetOption(info, ...)
     if info.type == "color" then
         local red, green, blue, alpha = ...

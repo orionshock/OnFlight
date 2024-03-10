@@ -56,7 +56,8 @@ local svDefaults = {
     char = {},
     profile = {
         showChat = true,
-        confirmFlight = false
+        confirmFlight = false,
+        showDebug = false,
     },
     global = {
         Horde = {},
@@ -78,15 +79,19 @@ function addonCore:OnInitialize()
     LibStub("AceConfig-3.0"):RegisterOptionsTable(addonName, self.configOptionsTable)
     LibStub("AceConfigDialog-3.0"):SetDefaultSize(addonName, 770, 475)
 
+    self.optionFrames = {
+        mainPannel = { LibStub("AceConfigDialog-3.0"):AddToBlizOptions(addonName, "On Flight") }
+    }
+
     self:RegisterChatCommand("OnFlight", "ChatCommand")
 
     do
         local LibE_Debug = LibEdrik_GetDebugFunction and
-        LibEdrik_GetDebugFunction("|cff0040ffOn|cFF00FF00Flight|r|r-C:", nil, nil, false)
+            LibEdrik_GetDebugFunction("|cff0040ffOn|cFF00FF00Flight|r|r-C:", nil, nil, false)
 
-        Debug = function(...)
-            if db and db.profile.showDebug then
-                if LibE_Debug then
+        if LibE_Debug then
+            Debug = function(...)
+                if db and db.profile.showDebug then
                     LibE_Debug(...)
                 end
             end
