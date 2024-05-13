@@ -1,8 +1,6 @@
 --[[
     This Module's Entire Job is to handle the Status Bar
 ]]
-local Debug = function() end
-
 local addonName, addonCore = ...
 local statusBarModuleCore = addonCore:NewModule("StatusBarModule", "AceEvent-3.0")
 
@@ -65,28 +63,22 @@ end
 
 function statusBarModuleCore:OnFlight_Taxi_Start(event, taxiSrcName, taxiDestName, taxiDuration, unknownFlight)
     if taxiDuration ~= 0 then
-        Debug("E:", event, taxiSrcName, taxiDestName, "--Duration:", SecondsToTime(taxiDuration))
         self:StartTimerBar(taxiSrcName, taxiDestName, taxiDuration)
     elseif unknownFlight then
-        Debug("E:", event, taxiSrcName, taxiDestName, "--Unknown Duration.")
         self:StartTimerBar(taxiSrcName, taxiDestName, nil, nil, unknownFlight)
     end
 end
 
 function statusBarModuleCore:OnFlight_Taxi_Stop(event, ...)
-    Debug("E:", event, ...)
     self:StopTimerBar(event)
 end
 
 function statusBarModuleCore:OnFlight_Taxi_EarlyExit(event, taxiSrcName, taxiDestName, exitReason)
-    Debug("E:", event, "--Src:", taxiSrcName, "--Dest:", taxiDestName, "--ExitReason:", exitReason)
     self:StopTimerBar(event)
 end
 
 function statusBarModuleCore:OnFlight_Taxi_RESUME(event, taxiSrcName, taxiDestName, taxiDuration, timeRemaining,
                                                   unknownFlight)
-    Debug("E:", event, "--Src:", taxiSrcName, "--Dest:", taxiDestName, "--Duration:", taxiDuration, "--TimeRemaining:",
-        timeRemaining, "--UnknownFlight:", unknownFlight)
     self:StartTimerBar(taxiSrcName, taxiDestName, taxiDuration, timeRemaining, unknownFlight)
 end
 
@@ -247,14 +239,10 @@ end
 
 function statusBarModuleCore:StartTimerBar(taxiSrcName, taxiDestName, duration, timeRemaining, unknownFlight) --Bar Text and Duration in seconds--
     if not self:IsEnabled() then return end
-    Debug("StartTimerBar()", taxiSrcName, "-->", taxiDestName, duration and "--Duration: " .. SecondsToTime(duration),
-        unknownFlight and "-- Unknown Flag: true")
     if not self.OnFlightTimerFrame then
-        Debug("No Timer Bar?")
         return
     end
     if ((not taxiSrcName) or (not taxiDestName)) then
-        Debug("No Src or Dest? ", taxiSrcName, taxiDestName)
         return
     end
 
@@ -285,7 +273,6 @@ end
 
 function statusBarModuleCore:StopTimerBar(reason)
     if not self:IsEnabled() then return end
-    Debug("StopTimerBar()", reason)
     self.OnFlightTimerFrame:Hide()
     self.OnFlightTimerFrame.timeRemaining = 0
     self.OnFlightTimerFrame.duration = 0
@@ -317,10 +304,8 @@ function statusBarModuleCore:SetOption(info, ...)
         db.profile[info[#info]].g = green
         db.profile[info[#info]].b = blue
         db.profile[info[#info]].a = alpha
-        Debug("SetColorOption:", info[#info], "to:", red, blue, green, alpha)
     else
         db.profile[info[#info]] = ...
-        Debug("SetOption:", info[#info], "to:", ...)
     end
     ApplyLookAndFeel(self.OnFlightTimerFrame)
 end
@@ -340,7 +325,8 @@ addonCore.configOptionsTable.plugins["StatusBarModule"] = {
         args = {
             desc = {
                 type = "description",
-                name = L[" Shift Click on the Status Bar to send flight info to chat.\n  Control Click & Drag to Move It."],
+                name = L
+                    [" Shift Click on the Status Bar to send flight info to chat.\n  Control Click & Drag to Move It."],
                 order = 1
             },
             barOptions = {

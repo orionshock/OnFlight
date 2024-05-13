@@ -35,7 +35,7 @@ taxiDestName --Full Proper name from API for where we are going
 
 ]]
 --luacheck: no max line length
---luacheck: globals LibStub InCombatLockdown LibEdrik_GetDebugFunction TaxiNodeName GetNumRoutes NumTaxiNodes TaxiNodeGetType
+--luacheck: globals LibStub InCombatLockdown TaxiNodeName GetNumRoutes NumTaxiNodes TaxiNodeGetType
 --luacheck: globals UnitFactionGroup string UnitOnTaxi UnitInVehicle CreateFrame tostringall GetTime date SecondsToTime abs hooksecurefunc
 --luacheck: globals C_SummonInfo OnFlight_GetEstimatedTime TaxiFrame TaxiGetNodeSlot OnFlight_TaxiFrame_TooltipHook GameTooltip wipe
 
@@ -50,13 +50,12 @@ local TaxiNodeName, GetNumRoutes, NumTaxiNodes, TaxiNodeGetType, TaxiGetNodeSlot
     NumTaxiNodes, TaxiNodeGetType, TaxiGetNodeSlot
 
 local db, playerFaction
-local Debug = function() end
 
 local svDefaults = {
     char = {},
     profile = {
         showChat = true,
-        showDebug = false,
+        gossipConfig = false,
         moduleState = {
             StatusBarModule = true,
             FlightListWindow = true,
@@ -74,7 +73,6 @@ function addonCore:OnInitialize()
     self.db = LibStub("AceDB-3.0"):New("OnFlightSV", svDefaults, true)
     db = self.db
     db.global[playerFaction] = db.global[playerFaction] or {}
-    db.profile.ADVANCED_OPTIONS = false
 
     self.configOptionsTable.args.profiles = LibStub("AceDBOptions-3.0"):GetOptionsTable(self.db)
     self.configOptionsTable.args.profiles.order = 800
@@ -139,11 +137,9 @@ do
         taxiTimerFrame.earlyExit = nil
         taxiTimerFrame.timeRmaining = nil
         taxiTimerFrame:Hide()
-        Debug("ResetOnFlightTimer()", reason)
     end
 
     function addonCore.StartAFlight(_, source, destination, timeRmaining, forceEarlyExitState)
-        Debug("StartAFlight()", source, "-->", destination, timeRmaining, forceEarlyExitState)
         ResetOnFlightTimer("PreFlightReset")
         taxiTimerFrame.taxiSrcName = source
         taxiTimerFrame.taxiDestName = destination
@@ -162,25 +158,19 @@ do
             self.taxiState = UnitOnTaxi("player") or UnitInVehicle("player")
 
             if (not self.taxiSrcName) or (not self.taxiDestName) then
-                Debug("OnUpdateMonitor - No Source or Destination. Reset & Exit")
                 return ResetOnFlightTimer("OnUpdateMonitor, no src or dest")
             end
 
             if (prevState ~= self.taxiState) then
-                Debug("State Changed, Prev:", prevState, "New:", self.taxiState)
                 if self.taxiState then
                     self.taxiStartTime = self.taxiStartTime or GetTime()
-                    Debug("OnTaxi:", self.taxiSrcName, "-->", self.taxiDestName, " -- StartTime:", date("%I:%M:%S %p"))
-
                     local flightDurationFromDB = addonCore:GetFlightDuration(self.taxiSrcName, self.taxiDestName)
                     if flightDurationFromDB then
                         if taxiTimerFrame.timeRmaining then
-                            Debug("TriggerEvent: OnFlight_Taxi_RESUME -- TimeLeft:", self.timeRmaining)
                             addonCore:SendMessage("OnFlight_Taxi_RESUME", self.taxiSrcName, self.taxiDestName,
                                 flightDurationFromDB, self.timeRmaining)
                             addonCore:ChatMessage(L["Resume On Taxi:"], self.taxiSrcName, "-->", self.taxiDestName)
                         else
-                            Debug("TriggerEvent: OnFlight_Taxi_Start -- Duration:", SecondsToTime(flightDurationFromDB))
                             addonCore:SendMessage("OnFlight_Taxi_Start", self.taxiSrcName, self.taxiDestName,
                                 flightDurationFromDB, false)
                             addonCore:ChatMessage(L["On Taxi:"], self.taxiSrcName, "-->", self.taxiDestName, "--",
@@ -188,31 +178,24 @@ do
                         end
                     else
                         if taxiTimerFrame.timeRmaining then
-                            Debug("TriggerEvent: OnFlight_Taxi_RESUME -- TimeLeft:", self.timeRmaining)
                             addonCore:SendMessage("OnFlight_Taxi_RESUME", self.taxiSrcName, self.taxiDestName, nil, nil,
                                 true)
                             addonCore:ChatMessage(L["Resume On Taxi:"], self.taxiSrcName, "-->", self.taxiDestName)
                         else
-                            Debug("TriggerEvent: OnFlight_Taxi_Start -- Unknown Duration")
                             addonCore:SendMessage("OnFlight_Taxi_Start", self.taxiSrcName, self.taxiDestName, 0, true)
                             addonCore:ChatMessage(L["On Taxi:"], self.taxiSrcName .. " --> " .. self.taxiDestName)
                         end
                     end
                 elseif (not self.taxiState) and (self.taxiStartTime) then
-                    Debug("Off Taxi at:", date("%I:%M:%S %p"))
                     if not self.earlyExit then
-                        Debug("No Early Exit")
                         local flightDuration = abs(GetTime() - self.taxiStartTime)
                         db.global[playerFaction][self.taxiSrcName] = db.global[playerFaction][self.taxiSrcName] or {}
                         db.global[playerFaction][self.taxiSrcName][self.taxiDestName] = math.floor(flightDuration)
-                        Debug("TriggerEvent: OnFlight_Taxi_Stop", self.taxiSrcName, "-->", self.taxiDestName,
-                            "-- Duration:", SecondsToTime(flightDuration))
                         addonCore:SendMessage("OnFlight_Taxi_Stop", self.taxiSrcName, self.taxiDestName, flightDuration)
                         addonCore:ChatMessage(L["Off Taxi:"], self.taxiSrcName .. " --> " .. self.taxiDestName, "--",
                             SecondsToTime(flightDuration))
                         return ResetOnFlightTimer("End Of Normal Flight")
                     elseif self.earlyExit then
-                        Debug("EarlyExit:", self.taxiSrcName, "-->", self.taxiDestName, " -- Reason: ", self.earlyExit)
                         addonCore:SendMessage("OnFlight_Taxi_EarlyExit", self.taxiSrcName, self.taxiDestName,
                             self.earlyExit)
                         addonCore:ChatMessage(L["Taxi Ended Early:"], self.earlyExit)
@@ -223,8 +206,6 @@ do
             if (not self.taxiState) then
                 self.elapsedNotOnFlight = (self.elapsedNotOnFlight or 0) + elapsed
                 if self.elapsedNotOnFlight > 5 then
-                    Debug("Failed Entry > 5sec, send Failed Entry Event and Reset?:", self.taxiSrcName, "-->",
-                        self.taxiDestName)
                     addonCore:SendMessage("OnFlight_Taxi_FAILED_ENTRY", self.taxiSrcName, self.taxiDestName)
                     return ResetOnFlightTimer("FAILED_ENTRY")
                 end
@@ -239,7 +220,6 @@ hooksecurefunc(
     function()
         if taxiTimerFrame and taxiTimerFrame:IsShown() then
             taxiTimerFrame.earlyExit = L["Request Early Landing"]
-            Debug("Early Exit Trigger: TaxiRequestEarlyLanding")
         end
     end
 )
@@ -249,7 +229,6 @@ hooksecurefunc(
     function()
         if taxiTimerFrame and taxiTimerFrame:IsShown() then
             taxiTimerFrame.earlyExit = L["Battlefield Port"]
-            Debug("Early Exit Trigger: AcceptBattlefieldPort")
         end
     end
 )
@@ -260,7 +239,6 @@ hooksecurefunc(
     function()
         if taxiTimerFrame and taxiTimerFrame:IsShown() then
             taxiTimerFrame.earlyExit = L["Accepted Summon"]
-            Debug("Early Exit Trigger: ConfirmSummon")
         end
     end
 )
@@ -270,7 +248,6 @@ hooksecurefunc(
     function()
         if taxiTimerFrame and taxiTimerFrame:IsShown() then
             taxiTimerFrame.earlyExit = L["Reloading UI"]
-            Debug("Early Exit Trigger: Reloading UI")
         end
     end
 )
@@ -279,7 +256,6 @@ hooksecurefunc(
     function()
         if taxiTimerFrame and taxiTimerFrame:IsShown() then
             taxiTimerFrame.earlyExit = L["Logout"]
-            Debug("Early Exit Trigger: Logout")
         end
     end
 )
@@ -344,9 +320,6 @@ function OnFlight_GetEstimatedTime(taxiDestSlot)
             dstNode = nextNode[srcNode]
         end
     end
-    if etimes[#taxiNodes] then
-        Debug("Eta:", taxiSrcName, "-->", taxiDestName, etimes[#taxiNodes])
-    end
     return etimes[#taxiNodes]
 end
 
@@ -398,25 +371,15 @@ function addonCore.TAXIMAP_OPENED(_, event, uiMapSystem)
 end
 
 function addonCore:PLAYER_ENTERING_WORLD(event, isInitialLogin, isReloadingUi)
-    Debug(event, "isLogin:", isInitialLogin, "isReload:", isReloadingUi)
     if (taxiTimerFrame.taxiSrcName and taxiTimerFrame.taxiDestName) and (not taxiTimerFrame.earlyExit) then
-        Debug("taxiTimerFrame has setup but no early exit reason, show frame()")
         taxiTimerFrame:Show()
         return
     end
     if db.char.taxiSrcName and db.char.taxiDestName then
-        Debug("Resume Flight")
-        Debug("Taxi SrcName:", db.char.taxiSrcName)
-        Debug("Taxi DestName:", db.char.taxiDestName)
-        Debug("Taxi timeRemaining:", db.char.timeRemaining)
-
         local flightDuration = self:GetFlightDuration(db.char.taxiSrcName, db.char.taxiDestName)
         if flightDuration then
-            Debug("Known:StartAFlight(", db.char.taxiSrcName, db.char.taxiDestName, db.char.timeRemaining,
-                db.char.earlyExit, ")")
             self:StartAFlight(db.char.taxiSrcName, db.char.taxiDestName, db.char.timeRemaining, db.char.earlyExit)
         else
-            Debug("Uknown:StartAFlight(true)")
             self:StartAFlight(db.char.taxiSrcName, db.char.taxiDestName, nil, db.char.earlyExit)
             if (not db.char.timeRemaining) and (not taxiTimerFrame.earlyExit) then
                 taxiTimerFrame.taxiStartTime = db.char.taxiStartTime
@@ -427,13 +390,10 @@ function addonCore:PLAYER_ENTERING_WORLD(event, isInitialLogin, isReloadingUi)
 end
 
 function addonCore:PLAYER_LEAVING_WORLD(event)
-    Debug(event, "IsOnFlight:", self:IsOnFlight(), "Early Exit?:", taxiTimerFrame.earlyExit)
-
     if not self:IsOnFlight() then
         return
     end
     if not taxiTimerFrame.earlyExit then
-        Debug(event, "But no early exit reason; hide frame")
         taxiTimerFrame:Hide() --to keep the onUpdate after PLW from causing db to save
         return
     elseif taxiTimerFrame.earlyExit then
@@ -478,7 +438,6 @@ function addonCore:GetCurrentFlightDetail()
 end
 
 function addonCore:GetCurrentFlightProgress()
-    --time on flight, time remaining, total duration
     if not self:IsOnFlight() then
         return
     end
@@ -492,9 +451,7 @@ function addonCore:GetCurrentFlightProgress()
     return timeOnFlight, timeRemaining, totalDuration
 end
 
----
-
-do --Hoook Func
+do --Direct Hoook Funcs
     local oldTakeTaxiNode = TakeTaxiNode
     TakeTaxiNode = function(slot, ...)
         for taxiIndex = 1, NumTaxiNodes(), 1 do
@@ -512,15 +469,11 @@ do --Hoook Func
 end
 
 do
-    Debug("Hooking Functions")
     hooksecurefunc(
         C_GossipInfo,
         "SelectOption",
         function(option, ...)
-            Debug("SelectOptionHook", option, type(option), ...)
             if db.global.gossipTriggered[option] then
-                Debug("SelectOptionHook, From:", db.global.gossipTriggered[option][1], " -> To:",
-                    db.global.gossipTriggered[option][2])
                 addonCore:StartAFlight(unpack(db.global.gossipTriggered[option]))
             end
         end
@@ -529,17 +482,12 @@ do
     local original_C_GossipInfo_SelectOptionByIndex = C_GossipInfo.SelectOptionByIndex
 
     function C_GossipInfo.SelectOptionByIndex(...)
-        Debug("SelectOptionByIndexHook", ...)
         local selectedIndex = tonumber(...)
         local gossipOptions = C_GossipInfo.GetOptions()
         for _, optionData in ipairs(gossipOptions) do
             if optionData.orderIndex == selectedIndex then
                 local selectedGossipID = optionData.gossipOptionID
-                Debug("SelectOptionByIndexHook, gossipOptionID:", selectedGossipID)
-
                 if db.global.gossipTriggered[selectedGossipID] then
-                    Debug("SelectOptionByIndexHook, From:", db.global.gossipTriggered[selectedGossipID][1], " -> To:",
-                        db.global.gossipTriggered[selectedGossipID][2])
                     addonCore:StartAFlight(unpack(db.global.gossipTriggered[selectedGossipID]))
                     break
                 end
@@ -555,7 +503,7 @@ do
             self:SetScript(
                 "OnEnter",
                 function(frame)
-                    if db and db.profile.showDebug then
+                    if db and db.profile.showGossipConfig then
                         if frame.GetData then
                             local data = frame:GetData()
                             local gossipID = data and data.info.gossipOptionID or "??"
@@ -598,10 +546,8 @@ function addonCore:SetOption(info, ...)
         db.profile[info[#info]].b = blue
         db.profile[info[#info]].g = green
         db.profile[info[#info]].a = alpha
-        Debug("SetColorOption:", info[#info], "to:", red, blue, green, alpha)
     else
         db.profile[info[#info]] = ...
-        Debug("SetOption:", info[#info], "to:", ...)
     end
 end
 
@@ -731,7 +677,7 @@ function addonCore:SetModuleStatus(info, value)
 end
 
 function addonCore:RefreshAdvOptions()
-    local opt = wipe(self.configOptionsTable.args.advancedOptions.args)
+    local opt = wipe(self.configOptionsTable.args.gossipConfigTab.args)
     for k, _ in pairs(db.global.gossipTriggered) do
         opt[tostring(k)] = gossipOptionTemplate
     end
@@ -758,14 +704,17 @@ addonCore.configOptionsTable = {
                     type = "toggle",
                     order = 10
                 },
-                ADVANCED_OPTIONS = {
+                showGossipConfig = {
                     name = L["Show Gossip Config"],
                     desc = L["Show Gossip Config Pannel to add or remove Gossip Initated Travel"],
                     type = "toggle",
                     order = 100,
+                    get = function(info)
+                        return db.profile.showGossipConfig
+                    end,
                     set = function(_, option)
-                        db.profile.ADVANCED_OPTIONS = option
-                        if db.profile.ADVANCED_OPTIONS then
+                        db.profile.showGossipConfig = option
+                        if db.profile.showGossipConfig then
                             addonCore:RefreshAdvOptions()
                         end
                     end
@@ -797,12 +746,12 @@ addonCore.configOptionsTable = {
                 }
             }
         },
-        advancedOptions = {
-            name = "Advanced Options",
+        gossipConfigTab = {
+            name = "Gossip Configuration",
             type = "group",
             order = 900,
             hidden = function()
-                return not db.profile.ADVANCED_OPTIONS
+                return not db.profile.showGossipConfig
             end,
             args = {}
         }

@@ -2,11 +2,8 @@ local addonName, addonCore = ...
 local module = addonCore:NewModule("FlightListWindow", "AceEvent-3.0")
 local AceGUI = LibStub("AceGUI-3.0")
 
-
 local TaxiNodeName, GetNumRoutes, NumTaxiNodes, TaxiNodeGetType, TaxiGetNodeSlot = TaxiNodeName, GetNumRoutes,
     NumTaxiNodes, TaxiNodeGetType, TaxiGetNodeSlot
-
-local Debug = function() end
 
 function module:OnInitialize()
 end
@@ -72,7 +69,6 @@ function module:UpdateTaxiDestinations()
         else
             countSitesTotal = countSitesTotal + 1
         end
-        
     end
     for zName in pairs(zoneDictionary) do --Send Dict to List
         table.insert(zoneList, zName)
@@ -81,22 +77,22 @@ function module:UpdateTaxiDestinations()
 
     for zoneIndex, zoneName in ipairs(zoneList) do
         zoneList[zoneName] = zoneIndex --Make Reverse Lookup for zone List
-        
+
         --Add Each Zone in it's proper place, avoids sorting this later
         table.insert(masterTree, {
             value = zoneName,
-            text = ((currentZoneTag == zoneName) and "*"..zoneName.."*") or (zoneName),
+            text = ((currentZoneTag == zoneName) and "*" .. zoneName .. "*") or (zoneName),
         })
     end
 
     for zoneName, zoneData in pairs(zoneDictionary) do
         for siteName, taxiNodeIndex in pairs(zoneData) do
             if TaxiNodeGetType(taxiNodeIndex) == "DISTANT" then
-                masterTree[ zoneList[zoneName] ].icon = 134400
+                masterTree[zoneList[zoneName]].icon = 134400
             end
         end
     end
-    masterTree[ zoneList["Special"] ].icon = 132172
+    masterTree[zoneList["Special"]].icon = 132172
     return masterTree
 end
 
@@ -180,7 +176,7 @@ local function OnTreeGroupSelected(widget, event, selectedKey)
                         button:SetCallback("OnClick", flightButton_OnClick)
                         button:SetCallback("OnEnter", flightButton_OnEnter)
                         button:SetCallback("OnLeave", flightButton_OnLeave)
-            
+
                         local taxiNodeType = TaxiNodeGetType(taxiNodeIndex)
                         if taxiNodeType == "DISTANT" then
                             button:SetText(nodeName)
