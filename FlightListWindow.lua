@@ -2,6 +2,12 @@ local addonName, addonCore = ...
 local module = addonCore:NewModule("FlightListWindow", "AceEvent-3.0")
 local AceGUI = LibStub("AceGUI-3.0")
 
+
+local TaxiNodeName, GetNumRoutes, NumTaxiNodes, TaxiNodeGetType, TaxiGetNodeSlot = TaxiNodeName, GetNumRoutes,
+    NumTaxiNodes, TaxiNodeGetType, TaxiGetNodeSlot
+
+local Debug = function() end
+
 function module:OnInitialize()
 end
 
@@ -11,17 +17,19 @@ function module:OnEnable()
 end
 
 function module:OnDisable()
+    self:UnregisterEvent("TAXIMAP_OPENED")
+    self:RegisteUnregisterEventrEvent("TAXIMAP_CLOSED")
 end
 
 local zoneDictionary = {}
 local zoneList = {}
 local masterTree = {}
-local countSitesKnown, countSitesUnknown = 0, 0
+local countSitesTotal, countSitesUnknown = 0, 0
 local specialZoneAdditions = {
     ["Orgrimmar, Durotar"] = true,
     ["Thunder Bluff, Mulgore"] = true,
-    ["Undercity, Tristfall Glades"] = true,
-    ["Silvermoon City, Eversong Woods"] = true,
+    ["Undercity, Tristfall"] = true,
+    ["Silvermoon City"] = true,
 
     ["Stormwind, Elwynn"] = true,
     ["Ironforge, Dun Morogh"] = true,
@@ -39,7 +47,7 @@ function module:UpdateTaxiDestinations()
     zoneDictionary["Special"] = {}
     wipe(zoneList)
     wipe(masterTree)
-    countSitesKnown, countSitesUnknown = 0, 0
+    countSitesTotal, countSitesUnknown = 0, 0
     local currentZoneTag
 
     for taxiNodeIndex = 1, NumTaxiNodes(), 1 do
@@ -57,11 +65,12 @@ function module:UpdateTaxiDestinations()
         local taxiNodeType = TaxiNodeGetType(taxiNodeIndex)
         if taxiNodeType == "DISTANT" then
             countSitesUnknown = countSitesUnknown + 1
+            countSitesTotal = countSitesTotal + 1
         elseif taxiNodeType == "CURRENT" then
-            countSitesKnown = countSitesKnown + 1
+            countSitesTotal = countSitesTotal + 1
             currentZoneTag = zoneName or "Special"
         else
-            countSitesKnown = countSitesKnown + 1
+            countSitesTotal = countSitesTotal + 1
         end
         
     end
@@ -81,15 +90,13 @@ function module:UpdateTaxiDestinations()
     end
 
     for zoneName, zoneData in pairs(zoneDictionary) do
-        --masterTree[ zoneList[zoneName] ].icon = 134400
         for siteName, taxiNodeIndex in pairs(zoneData) do
             if TaxiNodeGetType(taxiNodeIndex) == "DISTANT" then
-                masterTree[ zoneList[zoneName] ].icon = nil
+                masterTree[ zoneList[zoneName] ].icon = 134400
             end
         end
     end
     masterTree[ zoneList["Special"] ].icon = 132172
-
     return masterTree
 end
 
@@ -196,25 +203,25 @@ end
 
 function module:BuildandShowGUI(treeOptions)
     local mainFrame = AceGUI:Create("Frame")
+    mainFrame:SetHeight(430)
+    mainFrame:SetWidth(430)
     mainFrame:SetTitle("Flight Destinations")
-    mainFrame:SetStatusText(("Total Taxi Sites: %d -- Total Unknown Sites: %d"):format(countSitesKnown, countSitesUnknown))
-    mainFrame:SetCallback("OnClose", mainFrame_OnClose)
+    mainFrame:SetStatusText(("Total Taxi Sites: %d -- Total Unknown Sites: %d"):format(countSitesTotal, countSitesUnknown))
     mainFrame:SetLayout("Fill")
-
     mainFrame:SetPoint("TOPLEFT", TaxiFrame, "TOPRIGHT", -32, -10)
+    mainFrame:SetCallback("OnClose", mainFrame_OnClose)
+
 
     local treeGroup = AceGUI:Create("TreeGroup")
+    treeGroup:SetLayout("List")
     treeGroup:SetTree(treeOptions)
     treeGroup:SetCallback("OnGroupSelected", OnTreeGroupSelected)
 
     mainFrame:AddChild(treeGroup)
     treeGroup:SelectByValue("Special")
-    treeGroup:SetLayout("List")
-    mainFrame:SetHeight(430)
-    mainFrame:SetWidth(430)
-    mainFrame:Show()
-    mainFrame:DoLayout()
 
+    mainFrame:Show()
+    mainFrame:ClearAllPoints()
     module.AceGuiFrame = mainFrame
 end
 
