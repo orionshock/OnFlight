@@ -48,18 +48,6 @@ statusBarModuleCore.svDefaults = svDefaults
 function statusBarModuleCore:OnInitialize()
     self.db = addonCore.db:RegisterNamespace("StatusBarModule", svDefaults)
     db = self.db
-
-    do
-        local LibE_Debug = LibEdrik_GetDebugFunction and
-            LibEdrik_GetDebugFunction("|cff0040ffOn|cFF00FF00Flight|r|r-SB:", nil, nil, false)
-        if LibE_Debug then
-            Debug = function(...)
-                if db and db.profile.showDebug then
-                    LibE_Debug(...)
-                end
-            end
-        end
-    end
 end
 
 function statusBarModuleCore:OnEnable()
