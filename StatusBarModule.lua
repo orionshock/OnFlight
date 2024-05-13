@@ -246,6 +246,7 @@ function statusBarModuleCore:SetupTimerBar()
 end
 
 function statusBarModuleCore:StartTimerBar(taxiSrcName, taxiDestName, duration, timeRemaining, unknownFlight) --Bar Text and Duration in seconds--
+    if not self:IsEnabled() then return end
     Debug("StartTimerBar()", taxiSrcName, "-->", taxiDestName, duration and "--Duration: " .. SecondsToTime(duration),
         unknownFlight and "-- Unknown Flag: true")
     if not self.OnFlightTimerFrame then
@@ -283,6 +284,7 @@ function statusBarModuleCore:StartTimerBar(taxiSrcName, taxiDestName, duration, 
 end
 
 function statusBarModuleCore:StopTimerBar(reason)
+    if not self:IsEnabled() then return end
     Debug("StopTimerBar()", reason)
     self.OnFlightTimerFrame:Hide()
     self.OnFlightTimerFrame.timeRemaining = 0
@@ -332,10 +334,13 @@ addonCore.configOptionsTable.plugins["StatusBarModule"] = {
         name = L["Flight Timer Bar"],
         type = "group",
         order = 100,
+        disabled = function(info)
+            return not statusBarModuleCore:IsEnabled()
+        end,
         args = {
             desc = {
                 type = "description",
-                name = L["Shift Click on the Status Bar to send flight info to chat.\nControl Click and Drag to Move."],
+                name = L[" Shift Click on the Status Bar to send flight info to chat.\n  Control Click & Drag to Move It."],
                 order = 1
             },
             barOptions = {
@@ -463,6 +468,39 @@ addonCore.configOptionsTable.plugins["StatusBarModule"] = {
                                 order = 30
                             }
                         }
+                    }
+                }
+            },
+            testButtons = {
+                type = "group",
+                inline = true,
+                name = L["Show/Test Flight Timer Bar"],
+                order = 350,
+                args = {
+                    ["testKnown"] = {
+                        type = "execute",
+                        name = L["Start Known Flight"],
+                        order = 1,
+                        func = function()
+                            statusBarModuleCore:StartTimerBar("City1, Zone1", "City2, Zone2", 300)
+                        end
+                    },
+                    ["testUnknown"] = {
+                        type = "execute",
+                        name = L["Start Unknown Flight"],
+                        order = 2,
+                        func = function()
+                            statusBarModuleCore:StartTimerBar("Unknown1, Zone1", "Unknown2, Zone2",
+                                nil, nil, true)
+                        end
+                    },
+                    ["stopTest"] = {
+                        type = "execute",
+                        name = L["Stop Flight"],
+                        order = 3,
+                        func = function()
+                            statusBarModuleCore:StopTimerBar()
+                        end
                     }
                 }
             }

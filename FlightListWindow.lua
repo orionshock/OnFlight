@@ -18,7 +18,7 @@ end
 
 function module:OnDisable()
     self:UnregisterEvent("TAXIMAP_OPENED")
-    self:RegisteUnregisterEventrEvent("TAXIMAP_CLOSED")
+    self:UnregisterEvent("TAXIMAP_CLOSED")
 end
 
 local zoneDictionary = {}
@@ -240,5 +240,14 @@ function module:TAXIMAP_CLOSED()
     if module.AceGuiFrame then
         AceGUI:Release(module.AceGuiFrame)
         module.AceGuiFrame = nil
+
+        for k, v in pairs(zoneDictionary) do
+            wipe(v)
+        end
+        wipe(zoneDictionary)
+        zoneDictionary["Special"] = {}
+        wipe(zoneList)
+        wipe(masterTree)
+        countSitesTotal, countSitesUnknown = 0, 0
     end
 end

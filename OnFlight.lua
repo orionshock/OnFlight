@@ -56,8 +56,11 @@ local svDefaults = {
     char = {},
     profile = {
         showChat = true,
-        confirmFlight = false,
         showDebug = false,
+        moduleState = {
+            StatusBarModule = true,
+            FlightListWindow = true,
+        }
     },
     global = {
         Horde = {},
@@ -82,8 +85,14 @@ function addonCore:OnInitialize()
     self.optionFrames = {
         mainPannel = { LibStub("AceConfigDialog-3.0"):AddToBlizOptions(addonName, "On Flight") }
     }
-
     self:RegisterChatCommand("OnFlight", "ChatCommand")
+    for name, module in self:IterateModules() do
+        if db.profile.moduleState[name] then
+            module:Enable()
+        else
+            module:Disable()
+        end
+    end
 end
 
 function addonCore:OnEnable()
@@ -708,6 +717,19 @@ local gossipOptionTemplate_AddNew = {
     }
 }
 
+function addonCore:GetModuleStatus(info)
+    return db.profile.moduleState[info[#info]]
+end
+
+function addonCore:SetModuleStatus(info, value)
+    db.profile.moduleState[info[#info]] = value
+    if value == true then
+        addonCore:EnableModule(info[#info])
+    else
+        addonCore:DisableModule(info[#info])
+    end
+end
+
 function addonCore:RefreshAdvOptions()
     local opt = wipe(self.configOptionsTable.args.advancedOptions.args)
     for k, _ in pairs(db.global.gossipTriggered) do
@@ -726,22 +748,19 @@ addonCore.configOptionsTable = {
     childGroups = "tab",
     args = {
         misc = {
-            name = L["Misc Options"],
+            name = L["Main Options"],
             type = "group",
-            order = 300,
+            order = 10,
             args = {
                 showChat = {
                     name = L["Show Chat Messages"],
+                    desc = L["Show Flight Status Messages in Chat Window"],
                     type = "toggle",
                     order = 10
                 },
-                showDebug = {
-                    name = L["Show Debug"],
-                    type = "toggle",
-                    order = 90
-                },
                 ADVANCED_OPTIONS = {
-                    name = L["Show Advanced Options"],
+                    name = L["Show Gossip Config"],
+                    desc = L["Show Gossip Config Pannel to add or remove Gossip Initated Travel"],
                     type = "toggle",
                     order = 100,
                     set = function(_, option)
@@ -751,36 +770,28 @@ addonCore.configOptionsTable = {
                         end
                     end
                 },
-                testButtons = {
+                moduleControl = {
+                    name = L["Module Control"],
                     type = "group",
                     inline = true,
-                    name = "Test Buttons",
-                    order = 350,
+                    order = 20,
                     args = {
-                        ["testKnown"] = {
-                            type = "execute",
-                            name = "Test Known Flight",
-                            order = 1,
-                            func = function()
-                                addonCore:GetModule("StatusBarModule"):StartTimerBar("City1, Zone1", "City2, Zone2", 300)
-                            end
+                        StatusBarModule = {
+                            name = L["Flight Timer Bar"],
+                            desc = L["The Built in Timer Bar that comes with OnFlight"],
+                            type = "toggle",
+                            width = "Full",
+                            get = "GetModuleStatus",
+                            set = "SetModuleStatus",
+
                         },
-                        ["testUnknown"] = {
-                            type = "execute",
-                            name = "Test Unknown Flight",
-                            order = 2,
-                            func = function()
-                                addonCore:GetModule("StatusBarModule"):StartTimerBar("Unknown1, Zone1", "Unknown2, Zone2",
-                                    0, true)
-                            end
-                        },
-                        ["stopTest"] = {
-                            type = "execute",
-                            name = "Stop Test",
-                            order = 3,
-                            func = function()
-                                addonCore:GetModule("StatusBarModule"):StopTimerBar()
-                            end
+                        FlightListWindow = {
+                            name = L["Flight Destinatoins"],
+                            desc = L["Companion Window to the Flight Master"],
+                            type = "toggle",
+                            width = "Full",
+                            get = "GetModuleStatus",
+                            set = "SetModuleStatus",
                         }
                     }
                 }

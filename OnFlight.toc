@@ -7,8 +7,6 @@
 ## OptionalDeps: Quartz
 ## X-Curse-Project-ID: 821247
 
-LibEdrik.lua
-
 embeds.xml
 locales\locales.xml
 OnFlight.lua
