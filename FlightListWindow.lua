@@ -132,8 +132,18 @@ local function flightButton_OnLeave(widget)
     end
 end
 
-local function treeGroup_OnButtonEnter(widget)
-
+local function treeGroup_OnButtonEnter(widget, event, path, frame)
+    local zoneData = zoneDictionary[path]
+    if zoneData then
+        for siteName, taxiNodeID in pairs(zoneData) do
+            for index = 1, NUM_TAXI_BUTTONS do
+                local button = _G["TaxiButton" .. index];
+                if taxiNodeID == button:GetID() then
+                    button:LockHighlight()
+                end
+            end
+        end
+    end
 end
 
 local function treeGroup_OnButtonLeave(widget)
@@ -228,6 +238,8 @@ function module:BuildandShowGUI(treeOptions)
     treeGroup:SetLayout("List")
     treeGroup:SetTree(treeOptions)
     treeGroup:SetCallback("OnGroupSelected", OnTreeGroupSelected)
+    treeGroup:SetCallback("OnButtonEnter", treeGroup_OnButtonEnter)
+    treeGroup:SetCallback("OnButtonLeave", treeGroup_OnButtonLeave)
 
     mainFrame:AddChild(treeGroup)
     treeGroup:SelectByValue("Special")
