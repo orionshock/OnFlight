@@ -12,109 +12,49 @@ Alliance Stats:
 ]]
 svDefaults.global["gossipTriggered"] = {
 	-- [gossipOptionID] = {startingPoint, endingPoint},
-	-- Gossip Triggered Flights get integrated in to main Horde/Alliance DB as they occur as any other flight
+	-- Gossip Triggered Flights get integrated in to main Horde/Alliance DB as they occur as any other flight.
+	-- Only Non-Quest Flights Included
 	-- we set a start locatoin name and end location name here as it's not provided otherwise and is needed to work.
 
-	[93559] = {
-		"Bottom, Wyrmrest Temple", -- [1]
-		"Middle, Wyrmrest Temple" -- [2]
-	},
-	[93565] = {
-		"Warsong Hold, Borean Tundra", -- [1]
-		"Garrosh's Landing" -- [2]
-	},
-	[93569] = {
-		"Middle, Wyrmrest Temple", -- [1]
-		"Top, Wyrmrest Temple" -- [2]
-	},
-	[93201] = {
-		"Altar of Har'koa", -- [1]
-		"Altar of Quetz'lun" -- [2]
-	},
-	[93265] = {
-		"Kamagua", -- [1]
-		"Scalawag Points" -- [2]
-	},
-	[92213] = {
-		"Skyguard Outpost", -- [1]
-		"Blackwind Landing" -- [2]
-	},
-	[92215] = {
-		"Blackwind Landing", -- [1]
-		"Skyguard Outpost" -- [2]
-	},
-	[94294] = {
-		"Dalaran", -- [1]
-		"Orgrim's Hammer" -- [2]
-	},
-	[93583] = {
-		"Scalawag Point", -- [1]
-		"Bael'gun's" -- [2]
-	},
-	[93560] = {
-		"Bottom, Wyrmrest Temple", -- [1]
-		"Top, Wyrmrest Temple" -- [2]
-	},
-	[92694] = {
-		"The Sin'loren", -- [1]
-		"Sun's Reach Harbor" -- [2]
-	},
-	[93564] = {
-		"Warsong Hold", -- [1]
-		"Garrosh's Landing" -- [2]
-	},
-	[93070] = {
-		"Frenzyheart Hill, Sholazar Basin", -- [1]
-		"Mistwhisper Refuge, Sholazar Basin" -- [2]
-	},
-	[93568] = {
-		"Middle, Wyrmrest Temple", -- [1]
-		"Bottom, Wyrmrest Temple" -- [2]
-	},
-	[93074] = {
-		"Top, Wyrmrest Temple", -- [1]
-		"Bottom, Wyrmrest Temple" -- [2]
-	},
-	[93395] = {
-		"Warsong Hold, Borean Tundra", -- [1]
-		"Ride to Taunka'le Village" -- [2]
-	},
-	[93707] = {
-		"Argent Tournament Grounds, Icecrown", -- [1]
-		"Get Kraken!" -- [2]
-	},
-	[93266] = {
-		"Kamagua", -- [1]
-		"Scalawag Point" -- [2]
-	},
-	[94291] = {
-		"Krasus' Landing, Dalaran", -- [1]
-		"Wildgrowth Mangal, Sholazar Basin" -- [2]
-	},
-	[93177] = {
-		"Voltarus", -- [1]
-		"Zul' Drak Tour" -- [2]
-	},
-	[93954] = {
-		"Bael'gun's", -- [1]
-		"Scalawag Point" -- [2]
-	},
-	[91907] = {
-		"Tanaris", -- [1]
-		"Caverns of Time" -- [2]
-	},
-	[94454] = {
-		"The Shadow Vault", -- [1]
-		"Seeds Of Chaos" -- [2]
-	},
-	[93033] = {
-		"Sun's Reach Harbor", -- [1]
-		"The Sin'loren" -- [2]
-	},
-	[93073] = {
-		"Top, Wyrmrest Temple", -- [1]
-		"Middle, Wyrmrest Temple" -- [2]
-	}
+	--Old World
+	[91907] = { "Tanaris", "Caverns of Time" },
+	--TBC
+	[92213] = { "Skyguard Outpost", "Blackwind Landing" },
+	[92215] = { "Blackwind Landing", "Skyguard Outpost" },
+	[92694] = { "The Sin'loren", "Sun's Reach Harbor" },
+	[93033] = { "Sun's Reach Harbor", "The Sin'loren" },
+	--Wrath
+	[93559] = { "Bottom, Wyrmrest Temple", "Middle, Wyrmrest Temple" },
+	[93560] = { "Bottom, Wyrmrest Temple", "Top, Wyrmrest Temple" },
+	[93568] = { "Middle, Wyrmrest Temple", "Bottom, Wyrmrest Temple" },
+	[93569] = { "Middle, Wyrmrest Temple", "Top, Wyrmrest Temple" },
+	[93074] = { "Top, Wyrmrest Temple", "Bottom, Wyrmrest Temple" },
+	[93073] = { "Top, Wyrmrest Temple", "Middle, Wyrmrest Temple" },
+	[93707] = { "Argent Tournament Grounds, Icecrown", "Get Kraken!" },
+	[94294] = { "Dalaran", "Orgrim's Hammer, Icecrown" },
+	[94293] = { "Dalaran", "Skybreaker, Icecrown" },
+	--Cata
+	[112430] = { "Orgrimmar Exchange", "Southern Terminus" },
+	[112431] = { "Orgrimmar Exchange", "Gallywix Exchange" },
+	[112432] = { "Orgrimmar Exchange", "Northern Exchange" },
+	[112433] = { "Orgrimmar Exchange", "North Terminus" },
+	[112434] = { "Southern Terminus", "Orgrimmar Exchange" },
+	[112435] = { "Southern Terminus", "Gallywix Exchange" },
+	[112436] = { "Southern Terminus", "Northern Exchange" },
+	[112437] = { "Southern Terminus", "North Terminus" },
+	[112439] = { "Gallywix Exchange", "Orgrimmar Exchange" },
+	[112440] = { "Gallywix Exchange", "Northern Exchange" },
+	[112441] = { "Gallywix Exchange", "Southern Terminus" },
+	[112442] = { "Gallywix Exchange", "North Terminus" },
+	[112443] = { "Northern Exchange", "North Terminus" },
+	[112444] = { "Northern Exchange", "Gallywix Exchange" },
+	[112445] = { "Northern Exchange", "Orgrimmar Exchange" },
+	[112446] = { "Northern Exchange", "Southern Terminus" },
+	[112447] = { "Southern Terminus", "Northern Exchange" },
+	[112448] = { "Southern Terminus", "Gallywix Exchange" },
+	[112449] = { "Southern Terminus", "Orgrimmar Exchange" },
+	[112450] = { "Southern Terminus", "Southern Terminus" },
+
 }
 
 svDefaults.global["Horde"] = {

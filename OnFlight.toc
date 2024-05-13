@@ -1,4 +1,4 @@
-## Interface: 30401
+## Interface: 40400
 ## Title: OnFlight
 ## Notes: Status bar timer Taxis and Flights.
 ## Author: Orionshock
@@ -14,6 +14,8 @@ locales\locales.xml
 OnFlight.lua
 StatusBarModule.lua
 Defaults.lua
+FlightListWindow.lua
+
 #@debug@
 AllTaxiRunner.lua
 #@end-debug@
