@@ -97,7 +97,10 @@ function module:UpdateTaxiDestinations()
 end
 
 local function mainFrame_OnClose(widget, event)
-    AceGUI:Release(widget)
+    if module.AceGuiFrame then
+        AceGUI:Release(module.AceGuiFrame)
+        module.AceGuiFrame = nil
+    end
 end
 
 local function flightButton_OnClick(widget, event, button, direction)
@@ -122,6 +125,18 @@ local function flightButton_OnEnter(widget, event, button, direction)
 end
 
 local function flightButton_OnLeave(widget)
+    GameTooltip:Hide()
+    for index = 1, NUM_TAXI_BUTTONS do
+        local button = _G["TaxiButton" .. index];
+        button:UnlockHighlight()
+    end
+end
+
+local function treeGroup_OnButtonEnter(widget)
+
+end
+
+local function treeGroup_OnButtonLeave(widget)
     GameTooltip:Hide()
     for index = 1, NUM_TAXI_BUTTONS do
         local button = _G["TaxiButton" .. index];
@@ -198,6 +213,7 @@ local function OnTreeGroupSelected(widget, event, selectedKey)
 end
 
 function module:BuildandShowGUI(treeOptions)
+    if module.AceGuiFrame then return end
     local mainFrame = AceGUI:Create("Frame")
     mainFrame:SetHeight(430)
     mainFrame:SetWidth(430)
@@ -236,14 +252,5 @@ function module:TAXIMAP_CLOSED()
     if module.AceGuiFrame then
         AceGUI:Release(module.AceGuiFrame)
         module.AceGuiFrame = nil
-
-        for k, v in pairs(zoneDictionary) do
-            wipe(v)
-        end
-        wipe(zoneDictionary)
-        zoneDictionary["Special"] = {}
-        wipe(zoneList)
-        wipe(masterTree)
-        countSitesTotal, countSitesUnknown = 0, 0
     end
 end
