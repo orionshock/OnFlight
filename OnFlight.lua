@@ -97,6 +97,7 @@ function addonCore:OnEnable()
     self:RegisterEvent("TAXIMAP_OPENED")
     self:RegisterEvent("PLAYER_ENTERING_WORLD")
     self:RegisterEvent("PLAYER_LEAVING_WORLD")
+    self:RegisterEvent("LFG_PROPOSAL_DONE")
 end
 
 -- function addonCore:OnDisable()
@@ -259,6 +260,15 @@ hooksecurefunc(
         end
     end
 )
+
+function addonCore:LFG_PROPOSAL_DONE(event, ...)
+    --if your in flight then there should be nothing preventing you from accepting a port
+    --however there might be some quest taxis that will prevent it as they are vehicles not flights.
+    DevTool:AddData({ ... }, event)
+    if taxiTimerFrame and taxiTimerFrame:IsShown() then
+        taxiTimerFrame.earlyExit = L["LFG Port"]
+    end
+end
 
 ---Estimated Flight Times - Transposed from origional code
 function OnFlight_GetEstimatedTime(taxiDestSlot)
