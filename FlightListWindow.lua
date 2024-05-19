@@ -33,6 +33,8 @@ local specialZoneAdditions = {
     ["Darnassus, Teldrassil"] = true,
     ["Exodar, Azuremyst, Isle"] = true,
 
+    ["Shattrath, Terokkar Forest"] = true,
+
     ["Dalaran"] = true
 }
 
