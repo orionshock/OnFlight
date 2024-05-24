@@ -54,23 +54,21 @@ function module:UpdateTaxiDestinations()
         local siteName, zoneName = string.split(",", nodeName)
         siteName = siteName and siteName:trim()
         zoneName = zoneName and zoneName:trim()
+
         if zoneName then                                              --Some Places Don't have zone names, will handle that with a "Special" section
             zoneDictionary[zoneName] = zoneDictionary[zoneName] or {} --Add Zone Name to Dictionary
-            zoneDictionary[zoneName][siteName] = taxiNodeIndex
+            zoneDictionary[zoneName][taxiNodeIndex] = siteName
         else
-            zoneDictionary["Special"][siteName] = taxiNodeIndex
+            zoneDictionary["Special"][taxiNodeIndex] = siteName
         end
 
         local taxiNodeType = TaxiNodeGetType(taxiNodeIndex)
         if taxiNodeType == "DISTANT" then
             countSitesUnknown = countSitesUnknown + 1
-            countSitesTotal = countSitesTotal + 1
         elseif taxiNodeType == "CURRENT" then
-            countSitesTotal = countSitesTotal + 1
             currentZoneTag = zoneName or "Special"
-        else
-            countSitesTotal = countSitesTotal + 1
         end
+        countSitesTotal = countSitesTotal + 1
     end
     for zName in pairs(zoneDictionary) do --Send Dict to List
         table.insert(zoneList, zName)
@@ -83,12 +81,12 @@ function module:UpdateTaxiDestinations()
         --Add Each Zone in it's proper place, avoids sorting this later
         table.insert(masterTree, {
             value = zoneName,
-            text = ((currentZoneTag == zoneName) and "*" .. zoneName .. "*") or (zoneName),
+            text = ((currentZoneTag == zoneName) and ("*%s*"):format(zoneName)) or (zoneName),
         })
     end
 
     for zoneName, zoneData in pairs(zoneDictionary) do
-        for siteName, taxiNodeIndex in pairs(zoneData) do
+        for taxiNodeIndex, siteName in pairs(zoneData) do
             if TaxiNodeGetType(taxiNodeIndex) == "DISTANT" then
                 masterTree[zoneList[zoneName]].icon = 134400
             end
@@ -137,7 +135,7 @@ end
 local function treeGroup_OnButtonEnter(widget, event, path, frame)
     local zoneData = zoneDictionary[path]
     if zoneData then
-        for siteName, taxiNodeID in pairs(zoneData) do
+        for taxiNodeID, siteName in pairs(zoneData) do
             for index = 1, NUM_TAXI_BUTTONS do
                 local button = _G["TaxiButton" .. index];
                 if taxiNodeID == button:GetID() then
@@ -160,22 +158,16 @@ local function OnTreeGroupSelected(widget, event, selectedKey)
     local zoneName = selectedKey
     if zoneDictionary[zoneName] then
         widget:ReleaseChildren()
-        local list = {}
-        for siteName, taxiNodeIndex in pairs(zoneDictionary[zoneName]) do
-            table.insert(list, siteName)
-        end
-        table.sort(list)
-        for index, siteName in ipairs(list) do
-            local siteID = zoneDictionary[zoneName][siteName]
+        for siteIndex, siteName in pairs(zoneDictionary[zoneName]) do
             local button = AceGUI:Create("Button")
 
-            button.frame:SetID(siteID)
-            button:SetUserData("taxiNodeID", siteID)
+            button.frame:SetID(siteIndex)
+            button:SetUserData("taxiNodeID", siteIndex)
             button:SetCallback("OnClick", flightButton_OnClick)
             button:SetCallback("OnEnter", flightButton_OnEnter)
             button:SetCallback("OnLeave", flightButton_OnLeave)
 
-            local taxiNodeType = TaxiNodeGetType(siteID)
+            local taxiNodeType = TaxiNodeGetType(siteIndex)
             if taxiNodeType == "DISTANT" then
                 button:SetText(siteName)
                 button:SetDisabled(true)
@@ -198,7 +190,7 @@ local function OnTreeGroupSelected(widget, event, selectedKey)
                     local nodeName = TaxiNodeName(taxiNodeIndex)
                     if nodeName == specialSite then
                         local button = AceGUI:Create("Button")
-                        button.frame:SetID(taxiNodeIndex)
+                        button.frame:SetID(taxiNodeIndex)       --Prolly Shouldn't do this with AceGUI - but as the taxi tooltip function is expecting it, we set it.
                         button:SetUserData("taxiNodeID", taxiNodeIndex)
                         button:SetCallback("OnClick", flightButton_OnClick)
                         button:SetCallback("OnEnter", flightButton_OnEnter)
@@ -227,7 +219,7 @@ end
 function module:BuildandShowGUI(treeOptions)
     if module.AceGuiFrame then return end
     local mainFrame = AceGUI:Create("Frame")
-    mainFrame:SetHeight(430)
+    mainFrame:SetHeight(450)
     mainFrame:SetWidth(430)
     mainFrame:SetTitle("Flight Destinations")
     mainFrame:SetStatusText(("Total Taxi Sites: %d -- Total Unknown Sites: %d"):format(countSitesTotal, countSitesUnknown))
