@@ -1,6 +1,7 @@
 local addonName, addonCore = ...
 local module = addonCore:NewModule("FlightListWindow", "AceEvent-3.0")
 local AceGUI = LibStub("AceGUI-3.0")
+local L = LibStub("AceLocale-3.0"):GetLocale(addonName)
 
 local TaxiNodeName, GetNumRoutes, NumTaxiNodes, TaxiNodeGetType, TaxiGetNodeSlot = TaxiNodeName, GetNumRoutes,
     NumTaxiNodes, TaxiNodeGetType, TaxiGetNodeSlot
@@ -104,7 +105,7 @@ local function mainFrame_OnClose(widget, event)
 end
 
 local function flightButton_OnClick(widget, event, button, direction)
-    TakeTaxiNode(widget:GetUserData("taxiNodeID"))
+    TakeTaxiNode(widget.frame:GetID())
 end
 
 local function flightButton_OnEnter(widget, event, button, direction)
@@ -120,6 +121,12 @@ local function flightButton_OnEnter(widget, event, button, direction)
             else
                 button:UnlockHighlight()
             end
+        end
+        local noteText = module:GetFlightPointNote(TaxiNodeName(widget.frame:GetID()))
+        if noteText then
+            GameTooltip:AddLine(" ")
+            GameTooltip:AddLine(string.join(" ", addonCore.OnFlightPrefixText, L["Note:"], noteText), nil, nil, nil, true)
+            GameTooltip:Show()
         end
     end
 end
@@ -162,7 +169,6 @@ local function OnTreeGroupSelected(widget, event, selectedKey)
             local button = AceGUI:Create("Button")
 
             button.frame:SetID(siteIndex)
-            button:SetUserData("taxiNodeID", siteIndex)
             button:SetCallback("OnClick", flightButton_OnClick)
             button:SetCallback("OnEnter", flightButton_OnEnter)
             button:SetCallback("OnLeave", flightButton_OnLeave)
@@ -190,7 +196,7 @@ local function OnTreeGroupSelected(widget, event, selectedKey)
                     local nodeName = TaxiNodeName(taxiNodeIndex)
                     if nodeName == specialSite then
                         local button = AceGUI:Create("Button")
-                        button.frame:SetID(taxiNodeIndex)       --Prolly Shouldn't do this with AceGUI - but as the taxi tooltip function is expecting it, we set it.
+                        button.frame:SetID(taxiNodeIndex) --Prolly Shouldn't do this with AceGUI - but as the taxi tooltip function is expecting it, we set it.
                         button:SetUserData("taxiNodeID", taxiNodeIndex)
                         button:SetCallback("OnClick", flightButton_OnClick)
                         button:SetCallback("OnEnter", flightButton_OnEnter)
@@ -259,4 +265,14 @@ function module:TAXIMAP_CLOSED()
         AceGUI:Release(module.AceGuiFrame)
         module.AceGuiFrame = nil
     end
+end
+
+local flightPointNotes = {
+    [L["Silver Tide Hollow, Vashj'ir"]] = L["Earthenring Quartermaster"],
+    [L["Bloodgulch, Twilight Highlands"]] = L["Dragonmaw Clan Quartermaster & Dailies"],
+    [L["Iron Summit, Searing Gorge"]] = L["Black Rock Mountain - Dungeons and Raids"]
+}
+
+function module:GetFlightPointNote(fullNodeName)
+    return flightPointNotes[fullNodeName]
 end

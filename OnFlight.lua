@@ -42,6 +42,7 @@ taxiDestName --Full Proper name from API for where we are going
 
 local addonName, addonCore = ...
 addonCore = LibStub("AceAddon-3.0"):NewAddon(addonCore, "OnFlight", "AceConsole-3.0", "AceEvent-3.0")
+addonCore.OnFlightPrefixText = "|cff0040ffOn|cFF00FF00Flight|r|r"
 _G[addonName] = addonCore
 
 local L = LibStub("AceLocale-3.0"):GetLocale(addonName)
@@ -122,7 +123,7 @@ function addonCore:ChatMessage(...)
     local msg = string.join(" ", tostringall(...))
     msg = msg:trim()
     if msg then
-        print("|cff0040ffOn|cFF00FF00Flight|r|r:", msg)
+        print(addonCore.OnFlightPrefixText, msg)
     end
 end
 
@@ -264,7 +265,6 @@ hooksecurefunc(
 function addonCore:LFG_PROPOSAL_DONE(event, ...)
     --if your in flight then there should be nothing preventing you from accepting a port
     --however there might be some quest taxis that will prevent it as they are vehicles not flights.
-    DevTool:AddData({ ... }, event)
     if taxiTimerFrame and taxiTimerFrame:IsShown() then
         taxiTimerFrame.earlyExit = L["LFG Port"]
     end

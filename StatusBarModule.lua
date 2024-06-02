@@ -135,6 +135,9 @@ local function ApplyLookAndFeel(self) --self is the baseFrame
     --Set Frame Settings
     self:SetWidth(db.profile.barWidth)
     self:SetHeight(db.profile.barHeight)
+    local barLocation = db.profile.barLocation
+    self:SetPoint(barLocation.anchorPoint, UIParent, barLocation.relativePoint, barLocation.offsetX,
+        barLocation.offsetY)
     self:ClearBackdrop()
     self:SetBackdrop(bdrop)
     self:SetBackdropColor(db.profile.backgroundColor.r, db.profile.backgroundColor.g, db.profile.backgroundColor.b,
