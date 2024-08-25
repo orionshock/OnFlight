@@ -276,3 +276,54 @@ local flightPointNotes = {
 function module:GetFlightPointNote(fullNodeName)
     return flightPointNotes[fullNodeName]
 end
+
+--Taxi Frame Toggle Button  taxiFrameToggleButton
+
+local taxiFrameToggleButton = CreateFrame("Button", "OnFlight_TaxiFrameToggleButton", TaxiFrame)
+taxiFrameToggleButton:SetFrameStrata("MEDIUM")
+taxiFrameToggleButton:SetWidth(32)
+taxiFrameToggleButton:SetHeight(32)
+taxiFrameToggleButton:SetFrameLevel(8)
+taxiFrameToggleButton:EnableMouse(true)
+taxiFrameToggleButton:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+taxiFrameToggleButton:SetPoint("CENTER", TaxiFrame, "TOPRIGHT", -55, -55)
+
+local taxiFrameToggleButtonIcon = taxiFrameToggleButton:CreateTexture(nil, "BACKGROUND")
+taxiFrameToggleButtonIcon:SetTexture(132172) -- Set the texture using the provided ID
+taxiFrameToggleButtonIcon:SetWidth(20)
+taxiFrameToggleButtonIcon:SetHeight(20)
+taxiFrameToggleButtonIcon:SetPoint("CENTER", taxiFrameToggleButton, "CENTER", 0, 0)
+
+local taxiFrameToggleButtonBorder = taxiFrameToggleButton:CreateTexture(nil, "OVERLAY")
+taxiFrameToggleButtonBorder:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
+taxiFrameToggleButtonBorder:SetWidth(54)
+taxiFrameToggleButtonBorder:SetHeight(54)
+taxiFrameToggleButtonBorder:SetPoint("TOPLEFT", taxiFrameToggleButton, "TOPLEFT")
+
+taxiFrameToggleButton:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_TOPRIGHT")
+    GameTooltip:SetText(L["Toggle Flight Destinations View"], 1, 1, 1)
+    GameTooltip:Show()
+end)
+
+taxiFrameToggleButton:SetScript("OnLeave", function(self)
+    GameTooltip:Hide()
+end)
+
+taxiFrameToggleButton:SetScript("OnClick", function(self, button)
+    print(self:GetName(), button)
+    if button == "LeftButton" then
+        if module.AceGuiFrame and module.AceGuiFrame:IsShown() then
+            module:TAXIMAP_CLOSED()
+        elseif not module.AceGuiFrame then
+            module:TAXIMAP_OPENED()
+        end
+    elseif button == "RightButton" then
+        if LibStub("AceConfigDialog-3.0").OpenFrames["OnFlight"] then
+            LibStub("AceConfigDialog-3.0"):Close("OnFlight")
+        else
+            module:TAXIMAP_CLOSED()
+            LibStub("AceConfigDialog-3.0"):Open("OnFlight")
+        end
+    end
+end)
