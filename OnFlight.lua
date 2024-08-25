@@ -58,8 +58,7 @@ local svDefaults = {
         showChat = true,
         gossipConfig = false,
         moduleState = {
-            StatusBarModule = true,
-            FlightListWindow = true,
+            ["*"] = true,
         }
     },
     global = {
@@ -85,13 +84,6 @@ function addonCore:OnInitialize()
         mainPannel = { LibStub("AceConfigDialog-3.0"):AddToBlizOptions(addonName, "On Flight") }
     }
     self:RegisterChatCommand("OnFlight", "ChatCommand")
-    for name, module in self:IterateModules() do
-        if db.profile.moduleState[name] then
-            module:Enable()
-        else
-            module:Disable()
-        end
-    end
 end
 
 function addonCore:OnEnable()
@@ -707,6 +699,7 @@ addonCore.configOptionsTable = {
             name = L["Main Options"],
             type = "group",
             order = 10,
+            width = "full",
             args = {
                 showChat = {
                     name = L["Show Chat Messages"],
@@ -718,7 +711,7 @@ addonCore.configOptionsTable = {
                     name = L["Show Gossip Config"],
                     desc = L["Show Gossip Config Pannel to add or remove Gossip Initated Travel"],
                     type = "toggle",
-                    order = 100,
+                    order = 20,
                     get = function(info)
                         return db.profile.showGossipConfig
                     end,
@@ -733,13 +726,12 @@ addonCore.configOptionsTable = {
                     name = L["Module Control"],
                     type = "group",
                     inline = true,
-                    order = 20,
+                    order = 100,
                     args = {
                         StatusBarModule = {
                             name = L["Flight Timer Bar"],
                             desc = L["The Built in Timer Bar that comes with OnFlight"],
                             type = "toggle",
-                            width = "Full",
                             get = "GetModuleStatus",
                             set = "SetModuleStatus",
 
@@ -748,7 +740,6 @@ addonCore.configOptionsTable = {
                             name = L["Flight Destinatoins"],
                             desc = L["Companion Window to the Flight Master"],
                             type = "toggle",
-                            width = "Full",
                             get = "GetModuleStatus",
                             set = "SetModuleStatus",
                         }

@@ -2,7 +2,8 @@
     This Module's Entire Job is to handle the Status Bar
 ]]
 local addonName, addonCore = ...
-local statusBarModuleCore = addonCore:NewModule("StatusBarModule", "AceEvent-3.0")
+local moduleName = "StatusBarModule"
+local statusBarModuleCore = addonCore:NewModule(moduleName, "AceEvent-3.0")
 
 local L = LibStub("AceLocale-3.0"):GetLocale(addonName)
 local LSM = LibStub("LibSharedMedia-3.0")
@@ -46,6 +47,10 @@ statusBarModuleCore.svDefaults = svDefaults
 function statusBarModuleCore:OnInitialize()
     self.db = addonCore.db:RegisterNamespace("StatusBarModule", svDefaults)
     db = self.db
+    self:SetEnabledState(addonCore.db.profile.moduleState[moduleName])
+
+    db.RegisterCallback(self,"OnProfileReset", "OnProfileUpdated")
+    db.RegisterCallback(self,"OnProfileChanged", "OnProfileUpdated")
 end
 
 function statusBarModuleCore:OnEnable()
@@ -285,6 +290,29 @@ function statusBarModuleCore:StopTimerBar(reason)
     self.OnFlightTimerFrame.textObj:SetText("")
 end
 
+---
+local optionsTable_SetPoint_Dictionary = {
+    ["TOPLEFT"] = "TOPLEFT",
+    ["TOP"] = "TOP",
+    ["TOPRIGHT"] = "TOPRIGHT",
+    ["LEFT"] = "LEFT",
+    ["CENTER"] = "CENTER",
+    ["RIGHT"] = "RIGHT",
+    ["BOTTOMLEFT"] = "BOTTOMLEFT",
+    ["BOTTOM"] = "BOTTOM",
+    ["BOTTOMRIGHT"] = "BOTTOMRIGHT",
+    
+}
+local optionsTable_SetPoint_SortedList = {
+    "TOPLEFT","TOP", "TOPRIGHT",
+    "LEFT", "CENTER", "RIGHT",
+    "BOTTOMLEFT", "BOTTOM", "BOTTOMRIGHT", }
+---
+
+function statusBarModuleCore:OnProfileUpdated()
+    ApplyLookAndFeel(self.OnFlightTimerFrame)
+end
+
 function statusBarModuleCore:GetOption(info)
     if info.type == "color" then
         local t = db.profile[info[#info]]
@@ -313,6 +341,15 @@ function statusBarModuleCore:SetOption(info, ...)
     ApplyLookAndFeel(self.OnFlightTimerFrame)
 end
 
+function statusBarModuleCore:GetBarLocation(info, ...)
+    return db.profile.barLocation[info[#info]]
+end
+
+function statusBarModuleCore:SetBarLocation(info, value)
+    db.profile.barLocation[info[#info]] = value
+    ApplyLookAndFeel(self.OnFlightTimerFrame)
+end
+
 addonCore.configOptionsTable.plugins = addonCore.configOptionsTable.plugins or {}
 addonCore.configOptionsTable.plugins["StatusBarModule"] = {
     barOptions = {
@@ -332,12 +369,67 @@ addonCore.configOptionsTable.plugins["StatusBarModule"] = {
                     [" Shift Click on the Status Bar to send flight info to chat.\n  Control Click & Drag to Move It."],
                 order = 1
             },
+            resetToDefaults = {
+                type = "execute",
+                name = L["Reset All Bar Options to Defaults"],
+                width = "full",
+                func = function(info) 
+                    db:ResetProfile(true)
+                end,
+                order = 1000,
+            },
             barOptions = {
                 type = "group",
                 name = "Bar Options",
                 inline = true,
                 order = 100,
                 args = {
+                    barLocation = {
+                        name = L["Bar Anchor"],
+                        type = "group",
+                        order = 9,
+                        inline = true,
+                        get = "GetBarLocation",
+                        set = "SetBarLocation",
+                        args = {
+                            anchorPoint = {
+                                type = "select",
+                                name = L["Anchor Point"],
+                                order = 20,
+                                values = optionsTable_SetPoint_Dictionary,
+                                sorting = optionsTable_SetPoint_SortedList,
+                            },
+                            relativePoint = {
+                                type = "select",
+                                name = "World Frame Anchor Point",
+                                order = 30,
+                                desc = L["Status Bar is Always anchored to World Frame"],
+                                values = optionsTable_SetPoint_Dictionary,
+                                sorting = optionsTable_SetPoint_SortedList,
+                            },
+                            breakFlow = { type = "description", name = " ", order = 39 },
+                            offsetX = {
+                                type = "range",
+                                name = "X Offset",
+                                order = 40,
+                                bigStep = 1,
+                                min = -1000,
+                                max = 1000,
+                                softMin = -300,
+                                softMax = 300,
+                            },
+                            offsetY = {
+                                type = "range",
+                                name = "Y Offset",
+                                order = 50,
+                                bigStep = 1,
+                                min = -1000,
+                                max = 1000,
+                                softMin = -300,
+                                softMax = 300,
+                            },
+                        }
+                    },
                     size = {
                         name = L["Bar Size"],
                         type = "group",

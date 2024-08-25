@@ -1,5 +1,6 @@
 local addonName, addonCore = ...
-local module = addonCore:NewModule("FlightListWindow", "AceEvent-3.0")
+local moduleName = "FlightListWindow"
+local module = addonCore:NewModule(moduleName, "AceEvent-3.0")
 local AceGUI = LibStub("AceGUI-3.0")
 local L = LibStub("AceLocale-3.0"):GetLocale(addonName)
 
@@ -7,6 +8,7 @@ local TaxiNodeName, GetNumRoutes, NumTaxiNodes, TaxiNodeGetType, TaxiGetNodeSlot
     NumTaxiNodes, TaxiNodeGetType, TaxiGetNodeSlot
 
 function module:OnInitialize()
+    self:SetEnabledState(addonCore.db.profile.moduleState[moduleName])
 end
 
 function module:OnEnable()
@@ -311,7 +313,6 @@ taxiFrameToggleButton:SetScript("OnLeave", function(self)
 end)
 
 taxiFrameToggleButton:SetScript("OnClick", function(self, button)
-    print(self:GetName(), button)
     if button == "LeftButton" then
         if module.AceGuiFrame and module.AceGuiFrame:IsShown() then
             module:TAXIMAP_CLOSED()
@@ -321,6 +322,9 @@ taxiFrameToggleButton:SetScript("OnClick", function(self, button)
     elseif button == "RightButton" then
         if LibStub("AceConfigDialog-3.0").OpenFrames["OnFlight"] then
             LibStub("AceConfigDialog-3.0"):Close("OnFlight")
+            if module:IsEnabled() then
+                module:TAXIMAP_OPENED()
+            end
         else
             module:TAXIMAP_CLOSED()
             LibStub("AceConfigDialog-3.0"):Open("OnFlight")
