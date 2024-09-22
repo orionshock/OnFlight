@@ -3,12 +3,37 @@ local moduleName = "FlightListWindow"
 local module = addonCore:NewModule(moduleName, "AceEvent-3.0")
 local AceGUI = LibStub("AceGUI-3.0")
 local L = LibStub("AceLocale-3.0"):GetLocale(addonName)
-
+local db
 local TaxiNodeName, GetNumRoutes, NumTaxiNodes, TaxiNodeGetType, TaxiGetNodeSlot = TaxiNodeName, GetNumRoutes,
     NumTaxiNodes, TaxiNodeGetType, TaxiGetNodeSlot
 
+local OnTreeGroupSelected   --because we use it in different places...
+
+
+local svDefaults = {
+    profile = {
+        --Dictionary List of Flight locations for Fav/Special Menu
+        --Defaults are the Major Faction Cities
+        ["Orgrimmar, Durotar"] = true,
+        ["Thunder Bluff, Mulgore"] = true,
+        ["Undercity, Tristfall"] = true,
+        ["Silvermoon City"] = true,
+
+        ["Stormwind, Elwynn"] = true,
+        ["Ironforge, Dun Morogh"] = true,
+        ["Darnassus, Teldrassil"] = true,
+        ["Exodar, Azuremyst, Isle"] = true,
+
+        ["Shattrath, Terokkar Forest"] = true,
+
+        ["Dalaran"] = true
+    }
+}
+
 function module:OnInitialize()
     self:SetEnabledState(addonCore.db.profile.moduleState[moduleName])
+    self.db = addonCore.db:RegisterNamespace(moduleName, svDefaults)
+    db = self.db
 end
 
 function module:OnEnable()
@@ -25,21 +50,6 @@ local zoneDictionary = {}
 local zoneList = {}
 local masterTree = {}
 local countSitesTotal, countSitesUnknown = 0, 0
-local specialZoneAdditions = {
-    ["Orgrimmar, Durotar"] = true,
-    ["Thunder Bluff, Mulgore"] = true,
-    ["Undercity, Tristfall"] = true,
-    ["Silvermoon City"] = true,
-
-    ["Stormwind, Elwynn"] = true,
-    ["Ironforge, Dun Morogh"] = true,
-    ["Darnassus, Teldrassil"] = true,
-    ["Exodar, Azuremyst, Isle"] = true,
-
-    ["Shattrath, Terokkar Forest"] = true,
-
-    ["Dalaran"] = true
-}
 
 function module:UpdateTaxiDestinations()
     for k, v in pairs(zoneDictionary) do
@@ -91,7 +101,7 @@ function module:UpdateTaxiDestinations()
     for zoneName, zoneData in pairs(zoneDictionary) do
         for taxiNodeIndex, siteName in pairs(zoneData) do
             if TaxiNodeGetType(taxiNodeIndex) == "DISTANT" then
-                masterTree[zoneList[zoneName]].icon = 134400
+                masterTree[zoneList[zoneName]].icon = 134400 --The Question Mark Icon
             end
         end
     end
@@ -107,7 +117,19 @@ local function mainFrame_OnClose(widget, event)
 end
 
 local function flightButton_OnClick(widget, event, button, direction)
-    TakeTaxiNode(widget.frame:GetID())
+    --button seems to always be left click...
+    DevTool:AddData(widget, event)
+    if IsShiftKeyDown() then
+        local siteName = TaxiNodeName( widget.frame:GetID() )
+        if db.profile[siteName] then
+            db.profile[siteName] = nil
+        else
+            db.profile[siteName] = true
+        end
+        OnTreeGroupSelected(widget.parent, "flightButton_OnClick", widget.parent.localstatus.selected)
+    else
+        TakeTaxiNode(widget.frame:GetID())
+    end
 end
 
 local function flightButton_OnEnter(widget, event, button, direction)
@@ -123,12 +145,6 @@ local function flightButton_OnEnter(widget, event, button, direction)
             else
                 button:UnlockHighlight()
             end
-        end
-        local noteText = module:GetFlightPointNote(TaxiNodeName(widget.frame:GetID()))
-        if noteText then
-            GameTooltip:AddLine(" ")
-            GameTooltip:AddLine(string.join(" ", addonCore.OnFlightPrefixText, L["Note:"], noteText), nil, nil, nil, true)
-            GameTooltip:Show()
         end
     end
 end
@@ -163,63 +179,57 @@ local function treeGroup_OnButtonLeave(widget)
     end
 end
 
-local function OnTreeGroupSelected(widget, event, selectedKey)
+local function StageFlightButton(widget, siteName, siteIndex, taxiNodeType)
+    widget.frame:SetID(siteIndex)
+    widget:SetCallback("OnClick", flightButton_OnClick)
+    widget:SetCallback("OnEnter", flightButton_OnEnter)
+    widget:SetCallback("OnLeave", flightButton_OnLeave)
+    if taxiNodeType == "DISTANT" then
+        widget:SetText(siteName)
+        widget:SetDisabled(true)
+    elseif taxiNodeType == "CURRENT" then
+        widget:SetText(("*%s*"):format(siteName))
+        widget:SetDisabled(true)
+    else
+        widget:SetText(siteName)
+        widget:SetDisabled(false)
+    end
+    widget.width = "fill"
+end
+
+function OnTreeGroupSelected(widget, event, selectedKey)
     local zoneName = selectedKey
     if zoneDictionary[zoneName] then
         widget:ReleaseChildren()
         for siteIndex, siteName in pairs(zoneDictionary[zoneName]) do
             local button = AceGUI:Create("Button")
-
-            button.frame:SetID(siteIndex)
-            button:SetCallback("OnClick", flightButton_OnClick)
-            button:SetCallback("OnEnter", flightButton_OnEnter)
-            button:SetCallback("OnLeave", flightButton_OnLeave)
-
             local taxiNodeType = TaxiNodeGetType(siteIndex)
-            if taxiNodeType == "DISTANT" then
-                button:SetText(siteName)
-                button:SetDisabled(true)
-            elseif taxiNodeType == "CURRENT" then
-                button:SetText(("*%s*"):format(siteName))
-                button:SetDisabled(true)
-            else
-                button:SetText(siteName)
-                button:SetDisabled(false)
-            end
-            button:SetAutoWidth(true)
+            StageFlightButton(button, siteName, siteIndex, taxiNodeType)
             widget:AddChild(button)
         end
         if zoneName == "Special" then
-            local seperator = AceGUI:Create("Label")
-            seperator:SetText("\n\nCommon Destinations:")
+
+            local seperator = AceGUI:Create("Heading")
+            seperator:SetText(L["Favorite Destinations"])
+            seperator.width = "fill"   --:SetWidth( widget.content:GetWidth() )
             widget:AddChild(seperator)
-            for specialSite in pairs(specialZoneAdditions) do
+
+            for specialSiteName in pairs(db.profile) do
                 for taxiNodeIndex = 1, NumTaxiNodes(), 1 do
                     local nodeName = TaxiNodeName(taxiNodeIndex)
-                    if nodeName == specialSite then
+                    if nodeName == specialSiteName then
                         local button = AceGUI:Create("Button")
-                        button.frame:SetID(taxiNodeIndex) --Prolly Shouldn't do this with AceGUI - but as the taxi tooltip function is expecting it, we set it.
-                        button:SetUserData("taxiNodeID", taxiNodeIndex)
-                        button:SetCallback("OnClick", flightButton_OnClick)
-                        button:SetCallback("OnEnter", flightButton_OnEnter)
-                        button:SetCallback("OnLeave", flightButton_OnLeave)
-
                         local taxiNodeType = TaxiNodeGetType(taxiNodeIndex)
-                        if taxiNodeType == "DISTANT" then
-                            button:SetText(nodeName)
-                            button:SetDisabled(true)
-                        elseif taxiNodeType == "CURRENT" then
-                            button:SetText(("*%s*"):format(nodeName))
-                            button:SetDisabled(true)
-                        else
-                            button:SetText(nodeName)
-                            button:SetDisabled(false)
-                        end
-                        button:SetAutoWidth(true)
+                        StageFlightButton(button, specialSiteName, taxiNodeIndex, taxiNodeType)
                         widget:AddChild(button)
                     end
                 end
             end
+            local header = AceGUI:Create("Label")
+            header:SetText("(Shift Click to Toggle)")
+            header.width = "fill"
+            header:SetJustifyH("CENTER")
+            widget:AddChild(header)
         end
     end
 end
@@ -228,7 +238,7 @@ function module:BuildandShowGUI(treeOptions)
     if module.AceGuiFrame then return end
     local mainFrame = AceGUI:Create("Frame")
     mainFrame:SetHeight(450)
-    mainFrame:SetWidth(430)
+    mainFrame:SetWidth(450)
     mainFrame:SetTitle("Flight Destinations")
     mainFrame:SetStatusText(("Total Taxi Sites: %d -- Total Unknown Sites: %d"):format(countSitesTotal, countSitesUnknown))
     mainFrame:SetLayout("Fill")
@@ -269,18 +279,7 @@ function module:TAXIMAP_CLOSED()
     end
 end
 
-local flightPointNotes = {
-    [L["Silver Tide Hollow, Vashj'ir"]] = L["Earthenring Quartermaster"],
-    [L["Bloodgulch, Twilight Highlands"]] = L["Dragonmaw Clan Quartermaster & Dailies"],
-    [L["Iron Summit, Searing Gorge"]] = L["Black Rock Mountain - Dungeons and Raids"]
-}
-
-function module:GetFlightPointNote(fullNodeName)
-    return flightPointNotes[fullNodeName]
-end
-
 --Taxi Frame Toggle Button  taxiFrameToggleButton
-
 local taxiFrameToggleButton = CreateFrame("Button", "OnFlight_TaxiFrameToggleButton", TaxiFrame)
 taxiFrameToggleButton:SetFrameStrata("MEDIUM")
 taxiFrameToggleButton:SetWidth(32)
