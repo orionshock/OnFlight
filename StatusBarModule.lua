@@ -45,7 +45,7 @@ local svDefaults = {
 statusBarModuleCore.svDefaults = svDefaults
 
 function statusBarModuleCore:OnInitialize()
-    self.db = addonCore.db:RegisterNamespace("StatusBarModule", svDefaults)
+    self.db = addonCore.db:RegisterNamespace(moduleName, svDefaults)
     db = self.db
     self:SetEnabledState(addonCore.db.profile.moduleState[moduleName])
 
