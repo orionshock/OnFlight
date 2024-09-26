@@ -7,8 +7,7 @@ local db
 local TaxiNodeName, GetNumRoutes, NumTaxiNodes, TaxiNodeGetType, TaxiGetNodeSlot = TaxiNodeName, GetNumRoutes,
     NumTaxiNodes, TaxiNodeGetType, TaxiGetNodeSlot
 
-local OnTreeGroupSelected   --because we use it in different places...
-
+local OnTreeGroupSelected --because we use it in different places...
 
 local svDefaults = {
     profile = {
@@ -16,7 +15,7 @@ local svDefaults = {
         --Defaults are the Major Faction Cities
         ["Orgrimmar, Durotar"] = true,
         ["Thunder Bluff, Mulgore"] = true,
-        ["Undercity, Tristfall"] = true,
+        ["Undercity, Tirisfal"] = true,
         ["Silvermoon City"] = true,
 
         ["Stormwind, Elwynn"] = true,
@@ -118,9 +117,8 @@ end
 
 local function flightButton_OnClick(widget, event, button, direction)
     --button seems to always be left click...
-    DevTool:AddData(widget, event)
     if IsShiftKeyDown() then
-        local siteName = TaxiNodeName( widget.frame:GetID() )
+        local siteName = TaxiNodeName(widget.frame:GetID())
         if db.profile[siteName] then
             db.profile[siteName] = nil
         else
@@ -201,18 +199,24 @@ function OnTreeGroupSelected(widget, event, selectedKey)
     local zoneName = selectedKey
     if zoneDictionary[zoneName] then
         widget:ReleaseChildren()
+
+        local zoneTitle = AceGUI:Create("Heading")
+        zoneTitle:SetText(zoneName)
+        zoneTitle.width = "fill" --:SetWidth( widget.content:GetWidth() )
+        widget:AddChild(zoneTitle)
+
         for siteIndex, siteName in pairs(zoneDictionary[zoneName]) do
             local button = AceGUI:Create("Button")
             local taxiNodeType = TaxiNodeGetType(siteIndex)
             StageFlightButton(button, siteName, siteIndex, taxiNodeType)
             widget:AddChild(button)
         end
-        if zoneName == "Special" then
 
-            local seperator = AceGUI:Create("Heading")
-            seperator:SetText(L["Favorite Destinations"])
-            seperator.width = "fill"   --:SetWidth( widget.content:GetWidth() )
-            widget:AddChild(seperator)
+        if zoneName == "Special" then
+            local specialZoneTitle = AceGUI:Create("Heading")
+            specialZoneTitle:SetText(L["Favorite Destinations"])
+            specialZoneTitle.width = "fill" --:SetWidth( widget.content:GetWidth() )
+            widget:AddChild(specialZoneTitle)
 
             for specialSiteName in pairs(db.profile) do
                 for taxiNodeIndex = 1, NumTaxiNodes(), 1 do
@@ -225,11 +229,11 @@ function OnTreeGroupSelected(widget, event, selectedKey)
                     end
                 end
             end
-            local header = AceGUI:Create("Label")
-            header:SetText("(Shift Click to Toggle)")
-            header.width = "fill"
-            header:SetJustifyH("CENTER")
-            widget:AddChild(header)
+            local instructionText = AceGUI:Create("Label")
+            instructionText:SetText("\n(Shift Click to Toggle)")
+            instructionText.width = "fill"
+            instructionText:SetJustifyH("CENTER")
+            widget:AddChild(instructionText)
         end
     end
 end
@@ -302,8 +306,14 @@ taxiFrameToggleButtonBorder:SetHeight(54)
 taxiFrameToggleButtonBorder:SetPoint("TOPLEFT", taxiFrameToggleButton, "TOPLEFT")
 
 taxiFrameToggleButton:SetScript("OnEnter", function(self)
-    GameTooltip:SetOwner(self, "ANCHOR_TOPRIGHT")
-    GameTooltip:SetText(L["Toggle Flight Destinations View"], 1, 1, 1)
+    GameTooltip:SetOwner(self, "ANCHOR_TOPLEFT")
+    if module:IsEnabled() then 
+        GameTooltip:AddLine(L["Left Click to Toggle Flight Destinations View"], 1, 1, 1)
+    else
+        GameTooltip:AddLine(L["Flight Destinations Module Disabled"], .5,.5,.5)
+    end
+    
+    GameTooltip:AddLine(L["Right Click to Toggle OnFlight Settings"], 1, 1, 1)
     GameTooltip:Show()
 end)
 
@@ -313,6 +323,7 @@ end)
 
 taxiFrameToggleButton:SetScript("OnClick", function(self, button)
     if button == "LeftButton" then
+        if not module:IsEnabled() then return end
         if module.AceGuiFrame and module.AceGuiFrame:IsShown() then
             module:TAXIMAP_CLOSED()
         elseif not module.AceGuiFrame then
