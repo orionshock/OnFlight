@@ -351,7 +351,7 @@ function statusBarModuleCore:SetBarLocation(info, value)
 end
 
 addonCore.configOptionsTable.plugins = addonCore.configOptionsTable.plugins or {}
-addonCore.configOptionsTable.plugins["StatusBarModule"] = {
+addonCore.configOptionsTable.plugins[moduleName] = {
     barOptions = {
         handler = statusBarModuleCore,
         get = "GetOption",

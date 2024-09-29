@@ -93,7 +93,8 @@ function module:UpdateTaxiDestinations()
         --Add Each Zone in it's proper place, avoids sorting this later
         table.insert(masterTree, {
             value = zoneName,
-            text = ((currentZoneTag == zoneName) and ("*%s*"):format(zoneName)) or (zoneName),
+            text = zoneName,
+            icon = ((currentZoneTag == zoneName) and 137033 or nil) --Green Taxi Icon
         })
     end
 
@@ -177,6 +178,7 @@ local function treeGroup_OnButtonLeave(widget)
     end
 end
 
+local currentLocationIcon = CreateSimpleTextureMarkup(137033, 16, 16)
 local function StageFlightButton(widget, siteName, siteIndex, taxiNodeType)
     widget.frame:SetID(siteIndex)
     widget:SetCallback("OnClick", flightButton_OnClick)
@@ -186,37 +188,38 @@ local function StageFlightButton(widget, siteName, siteIndex, taxiNodeType)
         widget:SetText(siteName)
         widget:SetDisabled(true)
     elseif taxiNodeType == "CURRENT" then
-        widget:SetText(("*%s*"):format(siteName))
+        widget:SetText(currentLocationIcon .. " " .. siteName)
         widget:SetDisabled(true)
     else
         widget:SetText(siteName)
         widget:SetDisabled(false)
     end
     widget.width = "fill"
+    return widget
 end
 
-function OnTreeGroupSelected(widget, event, selectedKey)
+function OnTreeGroupSelected(treeGroupWidget, event, selectedKey)
     local zoneName = selectedKey
     if zoneDictionary[zoneName] then
-        widget:ReleaseChildren()
+        treeGroupWidget:ReleaseChildren()
 
         local zoneTitle = AceGUI:Create("Heading")
         zoneTitle:SetText(zoneName)
-        zoneTitle.width = "fill" --:SetWidth( widget.content:GetWidth() )
-        widget:AddChild(zoneTitle)
+        zoneTitle.width = "fill"
+        treeGroupWidget:AddChild(zoneTitle)
 
         for siteIndex, siteName in pairs(zoneDictionary[zoneName]) do
             local button = AceGUI:Create("Button")
             local taxiNodeType = TaxiNodeGetType(siteIndex)
             StageFlightButton(button, siteName, siteIndex, taxiNodeType)
-            widget:AddChild(button)
+            treeGroupWidget:AddChild(button)
         end
 
         if zoneName == "Special" then
             local specialZoneTitle = AceGUI:Create("Heading")
             specialZoneTitle:SetText(L["Favorite Destinations"])
-            specialZoneTitle.width = "fill" --:SetWidth( widget.content:GetWidth() )
-            widget:AddChild(specialZoneTitle)
+            specialZoneTitle.width = "fill"
+            treeGroupWidget:AddChild(specialZoneTitle)
 
             for specialSiteName in pairs(db.profile) do
                 for taxiNodeIndex = 1, NumTaxiNodes(), 1 do
@@ -224,8 +227,8 @@ function OnTreeGroupSelected(widget, event, selectedKey)
                     if nodeName == specialSiteName then
                         local button = AceGUI:Create("Button")
                         local taxiNodeType = TaxiNodeGetType(taxiNodeIndex)
-                        StageFlightButton(button, specialSiteName, taxiNodeIndex, taxiNodeType)
-                        widget:AddChild(button)
+                        button = StageFlightButton(button, specialSiteName, taxiNodeIndex, taxiNodeType)
+                        treeGroupWidget:AddChild(button)
                     end
                 end
             end
@@ -233,7 +236,7 @@ function OnTreeGroupSelected(widget, event, selectedKey)
             instructionText:SetText("\n(Shift Click to Toggle)")
             instructionText.width = "fill"
             instructionText:SetJustifyH("CENTER")
-            widget:AddChild(instructionText)
+            treeGroupWidget:AddChild(instructionText)
         end
     end
 end
@@ -283,7 +286,7 @@ function module:TAXIMAP_CLOSED()
     end
 end
 
---Taxi Frame Toggle Button  taxiFrameToggleButton
+--Taxi Frame Toggle Button
 local taxiFrameToggleButton = CreateFrame("Button", "OnFlight_TaxiFrameToggleButton", TaxiFrame)
 taxiFrameToggleButton:SetFrameStrata("MEDIUM")
 taxiFrameToggleButton:SetWidth(32)
@@ -307,12 +310,12 @@ taxiFrameToggleButtonBorder:SetPoint("TOPLEFT", taxiFrameToggleButton, "TOPLEFT"
 
 taxiFrameToggleButton:SetScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_TOPLEFT")
-    if module:IsEnabled() then 
+    if module:IsEnabled() then
         GameTooltip:AddLine(L["Left Click to Toggle Flight Destinations View"], 1, 1, 1)
     else
-        GameTooltip:AddLine(L["Flight Destinations Module Disabled"], .5,.5,.5)
+        GameTooltip:AddLine(L["Flight Destinations Module Disabled"], .5, .5, .5)
     end
-    
+
     GameTooltip:AddLine(L["Right Click to Toggle OnFlight Settings"], 1, 1, 1)
     GameTooltip:Show()
 end)
@@ -341,3 +344,26 @@ taxiFrameToggleButton:SetScript("OnClick", function(self, button)
         end
     end
 end)
+
+
+addonCore.configOptionsTable.plugins = addonCore.configOptionsTable.plugins or {}
+addonCore.configOptionsTable.plugins[moduleName] = {
+    ["FlightListWindow"] = {
+        handler = module,
+        name = L["Flight Destinations"],
+        type = "group",
+        order = 200,
+        disabled = function(info)
+            return not module:IsEnabled()
+        end,
+        args = {
+            resetToDefaults = {
+                type = "execute",
+                name = L["Reset Favorite Destinations"],
+                func = function(info) 
+                    db:ResetProfile(true)
+                end,
+            },
+        }
+    }
+}
