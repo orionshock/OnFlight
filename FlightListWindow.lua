@@ -198,16 +198,35 @@ local function StageFlightButton(widget, siteName, siteIndex, taxiNodeType)
     return widget
 end
 
+local function GetCurrentlySelectedTreeIcon(widgetObject)
+    if widgetObject and widgetObject.type == "TreeGroup" then
+        for _, treeData in ipairs(widgetObject.tree) do
+            if treeData.value == widgetObject.localstatus.selected then
+                return treeData.icon
+            end
+        end
+    end
+end
+
 function OnTreeGroupSelected(treeGroupWidget, event, selectedKey)
     local zoneName = selectedKey
     if zoneDictionary[zoneName] then
         treeGroupWidget:ReleaseChildren()
 
+        ---Zone Title---
         local zoneTitle = AceGUI:Create("Heading")
-        zoneTitle:SetText(zoneName)
+        local zoneTitleIcon = GetCurrentlySelectedTreeIcon(treeGroupWidget)
+        if zoneTitleIcon then
+            local iconTextEscapeString = CreateSimpleTextureMarkup(zoneTitleIcon, 16, 16)
+            zoneTitle:SetText(iconTextEscapeString.." "..zoneName)
+        else
+            zoneTitle:SetText(zoneName)
+        end
         zoneTitle.width = "fill"
         treeGroupWidget:AddChild(zoneTitle)
-
+        ---
+        
+        ---Zone Buttons---
         for siteIndex, siteName in pairs(zoneDictionary[zoneName]) do
             local button = AceGUI:Create("Button")
             local taxiNodeType = TaxiNodeGetType(siteIndex)
@@ -215,12 +234,22 @@ function OnTreeGroupSelected(treeGroupWidget, event, selectedKey)
             treeGroupWidget:AddChild(button)
         end
 
+        ---Special Zone Handling, theis is where fav list is---
         if zoneName == "Special" then
+            ---Favorite Spacer Lable
+            local favSpacerLabel = AceGUI:Create("Label")
+            favSpacerLabel:SetText("\n")
+            favSpacerLabel.width = "fill"
+            favSpacerLabel:SetJustifyH("CENTER")
+            treeGroupWidget:AddChild(favSpacerLabel)
+
+            ---Fav Buttons Heading---
             local specialZoneTitle = AceGUI:Create("Heading")
             specialZoneTitle:SetText(L["Favorite Destinations"])
             specialZoneTitle.width = "fill"
             treeGroupWidget:AddChild(specialZoneTitle)
 
+            ---Fav Buttons---
             for specialSiteName in pairs(db.profile) do
                 for taxiNodeIndex = 1, NumTaxiNodes(), 1 do
                     local nodeName = TaxiNodeName(taxiNodeIndex)
@@ -232,6 +261,8 @@ function OnTreeGroupSelected(treeGroupWidget, event, selectedKey)
                     end
                 end
             end
+
+            ---Fav Instructions lable---
             local instructionText = AceGUI:Create("Label")
             instructionText:SetText("\n(Shift Click to Toggle)")
             instructionText.width = "fill"
@@ -360,7 +391,7 @@ addonCore.configOptionsTable.plugins[moduleName] = {
             resetToDefaults = {
                 type = "execute",
                 name = L["Reset Favorite Destinations"],
-                func = function(info) 
+                func = function(info)
                     db:ResetProfile(true)
                 end,
             },
