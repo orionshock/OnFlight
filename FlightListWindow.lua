@@ -94,14 +94,14 @@ function module:UpdateTaxiDestinations()
         table.insert(masterTree, {
             value = zoneName,
             text = zoneName,
-            icon = ((currentZoneTag == zoneName) and 137033 or nil) --Green Taxi Icon
+            icon = currentZoneTag == zoneName and 137033 --Green Taxi Icon
         })
     end
 
     for zoneName, zoneData in pairs(zoneDictionary) do
         for taxiNodeIndex, siteName in pairs(zoneData) do
             if TaxiNodeGetType(taxiNodeIndex) == "DISTANT" then
-                masterTree[zoneList[zoneName]].icon = 134400 --The Question Mark Icon
+                masterTree[zoneList[zoneName]].icon = masterTree[zoneList[zoneName]].icon or 134400 --The Question Mark Icon
             end
         end
     end

@@ -73,6 +73,7 @@ function addonCore:OnInitialize()
     self.db = LibStub("AceDB-3.0"):New("OnFlightSV", svDefaults, true)
     db = self.db
     db.global[playerFaction] = db.global[playerFaction] or {}
+    db.profile.gossipConfig = false
 
     self.configOptionsTable.args.profiles = LibStub("AceDBOptions-3.0"):GetOptionsTable(self.db)
     self.configOptionsTable.args.profiles.order = 800
