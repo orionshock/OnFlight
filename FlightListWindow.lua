@@ -101,7 +101,8 @@ function module:UpdateTaxiDestinations()
     for zoneName, zoneData in pairs(zoneDictionary) do
         for taxiNodeIndex, siteName in pairs(zoneData) do
             if TaxiNodeGetType(taxiNodeIndex) == "DISTANT" then
-                masterTree[zoneList[zoneName]].icon = masterTree[zoneList[zoneName]].icon or 134400 --The Question Mark Icon
+                masterTree[zoneList[zoneName]].icon = masterTree[zoneList[zoneName]].icon or
+                    134400 --The Question Mark Icon
             end
         end
     end
@@ -210,39 +211,40 @@ end
 
 function OnTreeGroupSelected(treeGroupWidget, event, selectedKey)
     local zoneName = selectedKey
+    treeGroupWidget:ReleaseChildren()
     if zoneDictionary[zoneName] then
-        treeGroupWidget:ReleaseChildren()
+        if next(zoneDictionary[zoneName]) then --only put stuff in if there is something to put in.
+            ---Zone Title---
+            local zoneTitle = AceGUI:Create("Heading")
+            local zoneTitleIcon = GetCurrentlySelectedTreeIcon(treeGroupWidget)
+            if zoneTitleIcon then
+                local iconTextEscapeString = CreateSimpleTextureMarkup(zoneTitleIcon, 16, 16)
+                zoneTitle:SetText(iconTextEscapeString .. " " .. zoneName)
+            else
+                zoneTitle:SetText(zoneName)
+            end
+            zoneTitle.width = "fill"
+            treeGroupWidget:AddChild(zoneTitle)
+            ---
 
-        ---Zone Title---
-        local zoneTitle = AceGUI:Create("Heading")
-        local zoneTitleIcon = GetCurrentlySelectedTreeIcon(treeGroupWidget)
-        if zoneTitleIcon then
-            local iconTextEscapeString = CreateSimpleTextureMarkup(zoneTitleIcon, 16, 16)
-            zoneTitle:SetText(iconTextEscapeString.." "..zoneName)
-        else
-            zoneTitle:SetText(zoneName)
-        end
-        zoneTitle.width = "fill"
-        treeGroupWidget:AddChild(zoneTitle)
-        ---
-        
-        ---Zone Buttons---
-        for siteIndex, siteName in pairs(zoneDictionary[zoneName]) do
-            local button = AceGUI:Create("Button")
-            local taxiNodeType = TaxiNodeGetType(siteIndex)
-            StageFlightButton(button, siteName, siteIndex, taxiNodeType)
-            treeGroupWidget:AddChild(button)
-        end
+            ---Zone Buttons---
+            for siteIndex, siteName in pairs(zoneDictionary[zoneName]) do
+                local button = AceGUI:Create("Button")
+                local taxiNodeType = TaxiNodeGetType(siteIndex)
+                StageFlightButton(button, siteName, siteIndex, taxiNodeType)
+                treeGroupWidget:AddChild(button)
+            end
 
-        ---Special Zone Handling, theis is where fav list is---
-        if zoneName == "Special" then
             ---Favorite Spacer Lable
             local favSpacerLabel = AceGUI:Create("Label")
             favSpacerLabel:SetText("\n")
             favSpacerLabel.width = "fill"
             favSpacerLabel:SetJustifyH("CENTER")
             treeGroupWidget:AddChild(favSpacerLabel)
+        end
 
+        ---Special Zone Handling, theis is where fav list is---
+        if zoneName == "Special" then
             ---Fav Buttons Heading---
             local specialZoneTitle = AceGUI:Create("Heading")
             specialZoneTitle:SetText(L["Favorite Destinations"])
