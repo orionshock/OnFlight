@@ -252,15 +252,13 @@ function OnTreeGroupSelected(treeGroupWidget, event, selectedKey)
             treeGroupWidget:AddChild(specialZoneTitle)
 
             ---Fav Buttons---
-            for specialSiteName in pairs(db.profile) do
-                for taxiNodeIndex = 1, NumTaxiNodes(), 1 do
-                    local nodeName = TaxiNodeName(taxiNodeIndex)
-                    if nodeName == specialSiteName then
-                        local button = AceGUI:Create("Button")
-                        local taxiNodeType = TaxiNodeGetType(taxiNodeIndex)
-                        button = StageFlightButton(button, specialSiteName, taxiNodeIndex, taxiNodeType)
-                        treeGroupWidget:AddChild(button)
-                    end
+            for taxiNodeIndex = 1, NumTaxiNodes(), 1 do
+                local nodeName = TaxiNodeName(taxiNodeIndex)
+                if db.profile[nodeName] then
+                    local button = AceGUI:Create("Button")
+                    local taxiNodeType = TaxiNodeGetType(taxiNodeIndex)
+                    button = StageFlightButton(button, nodeName, taxiNodeIndex, taxiNodeType)
+                    treeGroupWidget:AddChild(button)
                 end
             end
 
