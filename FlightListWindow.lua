@@ -1,3 +1,4 @@
+---@diagnostic disable: undefined-field, invisible
 local addonName, addonCore = ...
 local moduleName = "FlightListWindow"
 local module = addonCore:NewModule(moduleName, "AceEvent-3.0")
@@ -211,64 +212,66 @@ end
 
 function OnTreeGroupSelected(treeGroupWidget, event, selectedKey)
     local zoneName = selectedKey
+    local zoneList = zoneDictionary[zoneName]
     treeGroupWidget:ReleaseChildren()
-    if zoneDictionary[zoneName] then
-        if next(zoneDictionary[zoneName]) then --only put stuff in if there is something to put in.
-            ---Zone Title---
-            local zoneTitle = AceGUI:Create("Heading")
-            local zoneTitleIcon = GetCurrentlySelectedTreeIcon(treeGroupWidget)
-            if zoneTitleIcon then
-                local iconTextEscapeString = CreateSimpleTextureMarkup(zoneTitleIcon, 16, 16)
-                zoneTitle:SetText(iconTextEscapeString .. " " .. zoneName)
-            else
-                zoneTitle:SetText(zoneName)
-            end
-            zoneTitle.width = "fill"
-            treeGroupWidget:AddChild(zoneTitle)
-            ---
+    if (zoneList) and (type(zoneList) == "table") and next(zoneList) then
+        ---Zone Title---
+        local zoneTitle = AceGUI:Create("Heading")
+        local zoneTitleIcon = GetCurrentlySelectedTreeIcon(treeGroupWidget)
+        if zoneTitleIcon then
+            local iconTextEscapeString = CreateSimpleTextureMarkup(zoneTitleIcon, 16, 16)
+            zoneTitle:SetText(iconTextEscapeString .. " " .. zoneName)
+        else
+            zoneTitle:SetText(zoneName)
+        end
+        zoneTitle.width = "fill"
+        treeGroupWidget:AddChild(zoneTitle)
+        ---
 
-            ---Zone Buttons---
-            for siteIndex, siteName in pairs(zoneDictionary[zoneName]) do
+        ---Zone Buttons---
+        for siteIndex = 1, NumTaxiNodes(), 1 do
+            local siteName = zoneList[siteIndex]
+            if siteName then
                 local button = AceGUI:Create("Button")
                 local taxiNodeType = TaxiNodeGetType(siteIndex)
                 StageFlightButton(button, siteName, siteIndex, taxiNodeType)
                 treeGroupWidget:AddChild(button)
             end
-
-            ---Favorite Spacer Lable
-            local favSpacerLabel = AceGUI:Create("Label")
-            favSpacerLabel:SetText("\n")
-            favSpacerLabel.width = "fill"
-            favSpacerLabel:SetJustifyH("CENTER")
-            treeGroupWidget:AddChild(favSpacerLabel)
         end
 
-        ---Special Zone Handling, theis is where fav list is---
-        if zoneName == "Special" then
-            ---Fav Buttons Heading---
-            local specialZoneTitle = AceGUI:Create("Heading")
-            specialZoneTitle:SetText(L["Favorite Destinations"])
-            specialZoneTitle.width = "fill"
-            treeGroupWidget:AddChild(specialZoneTitle)
+        ---Favorite Spacer Lable
+        local favSpacerLabel = AceGUI:Create("Label")
+        favSpacerLabel:SetText("\n")
+        favSpacerLabel.width = "fill"
+        favSpacerLabel:SetJustifyH("CENTER")
+        treeGroupWidget:AddChild(favSpacerLabel)
+    end
 
-            ---Fav Buttons---
-            for taxiNodeIndex = 1, NumTaxiNodes(), 1 do
-                local nodeName = TaxiNodeName(taxiNodeIndex)
-                if db.profile[nodeName] then
-                    local button = AceGUI:Create("Button")
-                    local taxiNodeType = TaxiNodeGetType(taxiNodeIndex)
-                    button = StageFlightButton(button, nodeName, taxiNodeIndex, taxiNodeType)
-                    treeGroupWidget:AddChild(button)
-                end
+    ---Special Zone Handling, theis is where fav list is---
+    if zoneName == "Special" then
+        ---Fav Buttons Heading---
+        local specialZoneTitle = AceGUI:Create("Heading")
+        specialZoneTitle:SetText(L["Favorite Destinations"])
+        specialZoneTitle.width = "fill"
+        treeGroupWidget:AddChild(specialZoneTitle)
+
+        ---Fav Buttons---
+        for taxiNodeIndex = 1, NumTaxiNodes(), 1 do
+            local nodeName = TaxiNodeName(taxiNodeIndex)
+            if db.profile[nodeName] then
+                local button = AceGUI:Create("Button")
+                local taxiNodeType = TaxiNodeGetType(taxiNodeIndex)
+                button = StageFlightButton(button, nodeName, taxiNodeIndex, taxiNodeType)
+                treeGroupWidget:AddChild(button)
             end
-
-            ---Fav Instructions lable---
-            local instructionText = AceGUI:Create("Label")
-            instructionText:SetText("\n(Shift Click to Toggle)")
-            instructionText.width = "fill"
-            instructionText:SetJustifyH("CENTER")
-            treeGroupWidget:AddChild(instructionText)
         end
+
+        ---Fav Instructions lable---
+        local instructionText = AceGUI:Create("Label")
+        instructionText:SetText("\n(Shift Click to Toggle)")
+        instructionText.width = "fill"
+        instructionText:SetJustifyH("CENTER")
+        treeGroupWidget:AddChild(instructionText)
     end
 end
 

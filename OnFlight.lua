@@ -57,6 +57,7 @@ local svDefaults = {
     profile = {
         showChat = true,
         gossipConfig = false,
+        gossipdebug = false,
         moduleState = {
             ["*"] = true,
         }
@@ -506,7 +507,7 @@ do
             self:SetScript(
                 "OnEnter",
                 function(frame)
-                    if db and db.profile.showGossipConfig then
+                    if db and (db.profile.showGossipConfig or db.profile.gossipdebug) then
                         if frame.GetData then
                             local data = frame:GetData()
                             local gossipID = data and data.info.gossipOptionID or "??"
