@@ -56,7 +56,7 @@ function module:UpdateTaxiDestinations()
         wipe(v)
     end
     wipe(zoneDictionary)
-    zoneDictionary["Special"] = {}
+    zoneDictionary[L["Special"]] = {}
     wipe(zoneList)
     wipe(masterTree)
     countSitesTotal, countSitesUnknown = 0, 0
@@ -72,14 +72,14 @@ function module:UpdateTaxiDestinations()
             zoneDictionary[zoneName] = zoneDictionary[zoneName] or {} --Add Zone Name to Dictionary
             zoneDictionary[zoneName][taxiNodeIndex] = siteName
         else
-            zoneDictionary["Special"][taxiNodeIndex] = siteName
+            zoneDictionary[L["Special"]][taxiNodeIndex] = siteName
         end
 
         local taxiNodeType = TaxiNodeGetType(taxiNodeIndex)
         if taxiNodeType == "DISTANT" then
             countSitesUnknown = countSitesUnknown + 1
         elseif taxiNodeType == "CURRENT" then
-            currentZoneTag = zoneName or "Special"
+            currentZoneTag = zoneName or L["Special"]
         end
         countSitesTotal = countSitesTotal + 1
     end
@@ -107,7 +107,7 @@ function module:UpdateTaxiDestinations()
             end
         end
     end
-    masterTree[zoneList["Special"]].icon = 132172
+    masterTree[zoneList[L["Special"]]].icon = 132172
     return masterTree
 end
 
@@ -248,7 +248,7 @@ function OnTreeGroupSelected(treeGroupWidget, event, selectedKey)
     end
 
     ---Special Zone Handling, theis is where fav list is---
-    if zoneName == "Special" then
+    if zoneName == L["Special"] then
         ---Fav Buttons Heading---
         local specialZoneTitle = AceGUI:Create("Heading")
         specialZoneTitle:SetText(L["Favorite Destinations"])
@@ -295,7 +295,7 @@ function module:BuildandShowGUI(treeOptions)
     treeGroup:SetCallback("OnButtonLeave", treeGroup_OnButtonLeave)
 
     mainFrame:AddChild(treeGroup)
-    treeGroup:SelectByValue("Special")
+    treeGroup:SelectByValue(L["Special"])
 
     mainFrame:Show()
     mainFrame:ClearAllPoints()
