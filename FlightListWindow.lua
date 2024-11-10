@@ -50,6 +50,7 @@ local zoneDictionary = {}
 local zoneList = {}
 local masterTree = {}
 local countSitesTotal, countSitesUnknown = 0, 0
+local favIcon = CreateSimpleTextureMarkup(134411, 16, 16)
 
 function module:UpdateTaxiDestinations()
     for k, v in pairs(zoneDictionary) do
@@ -67,6 +68,10 @@ function module:UpdateTaxiDestinations()
         local siteName, zoneName = string.split(",", nodeName)
         siteName = siteName and siteName:trim()
         zoneName = zoneName and zoneName:trim()
+
+        if db.profile[nodeName] then
+            siteName = favIcon .. " " .. siteName
+        end
 
         if zoneName then                                              --Some Places Don't have zone names, will handle that with a "Special" section
             zoneDictionary[zoneName] = zoneDictionary[zoneName] or {} --Add Zone Name to Dictionary
@@ -180,7 +185,8 @@ local function treeGroup_OnButtonLeave(widget)
     end
 end
 
-local currentLocationIcon = CreateSimpleTextureMarkup(137033, 16, 16)
+local currentLocationIcon = CreateSimpleTextureMarkup(137033, 16, 16,0,0)
+
 local function StageFlightButton(widget, siteName, siteIndex, taxiNodeType)
     widget.frame:SetID(siteIndex)
     widget:SetCallback("OnClick", flightButton_OnClick)
@@ -251,7 +257,7 @@ function OnTreeGroupSelected(treeGroupWidget, event, selectedKey)
     if zoneName == L["Special"] then
         ---Fav Buttons Heading---
         local specialZoneTitle = AceGUI:Create("Heading")
-        specialZoneTitle:SetText(L["Favorite Destinations"])
+        specialZoneTitle:SetText(favIcon .. " " .. L["Favorite Destinations"])
         specialZoneTitle.width = "fill"
         treeGroupWidget:AddChild(specialZoneTitle)
 
@@ -279,7 +285,7 @@ function module:BuildandShowGUI(treeOptions)
     if module.AceGuiFrame then return end
     local mainFrame = AceGUI:Create("Frame")
     mainFrame:SetHeight(450)
-    mainFrame:SetWidth(450)
+    mainFrame:SetWidth(495)
     mainFrame:SetTitle("Flight Destinations")
     mainFrame:SetStatusText((L["Total: %d -- Unknown: %d"]):format(countSitesTotal, countSitesUnknown))
     mainFrame:SetLayout("Fill")
