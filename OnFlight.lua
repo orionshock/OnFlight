@@ -243,7 +243,7 @@ hooksecurefunc(
     "ReloadUI",
     function()
         if taxiTimerFrame and taxiTimerFrame:IsShown() then
-            taxiTimerFrame.earlyExit = L["Reloading UI"]
+            taxiTimerFrame.earlyExit = RELOADUI
         end
     end
 )
@@ -251,7 +251,15 @@ hooksecurefunc(
     "Logout",
     function()
         if taxiTimerFrame and taxiTimerFrame:IsShown() then
-            taxiTimerFrame.earlyExit = L["Logout"]
+            taxiTimerFrame.earlyExit = LOGOUT
+        end
+    end
+)
+hooksecurefunc(
+    "Quit",
+    function()
+        if taxiTimerFrame and taxiTimerFrame:IsShown() then
+            taxiTimerFrame.earlyExit = EXIT_GAME
         end
     end
 )
