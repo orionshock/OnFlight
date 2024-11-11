@@ -132,6 +132,7 @@ local function flightButton_OnClick(widget, event, button, direction)
         else
             db.profile[siteName] = true
         end
+        module:UpdateTaxiDestinations()
         OnTreeGroupSelected(widget.parent, "flightButton_OnClick", widget.parent.localstatus.selected)
     else
         TakeTaxiNode(widget.frame:GetID())
@@ -185,7 +186,7 @@ local function treeGroup_OnButtonLeave(widget)
     end
 end
 
-local currentLocationIcon = CreateSimpleTextureMarkup(137033, 16, 16,0,0)
+local currentLocationIcon = CreateSimpleTextureMarkup(137033, 16, 16, 0, 0)
 
 local function StageFlightButton(widget, siteName, siteIndex, taxiNodeType)
     widget.frame:SetID(siteIndex)

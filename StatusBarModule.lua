@@ -49,8 +49,8 @@ function statusBarModuleCore:OnInitialize()
     db = self.db
     self:SetEnabledState(addonCore.db.profile.moduleState[moduleName])
 
-    db.RegisterCallback(self,"OnProfileReset", "OnProfileUpdated")
-    db.RegisterCallback(self,"OnProfileChanged", "OnProfileUpdated")
+    db.RegisterCallback(self, "OnProfileReset", "OnProfileUpdated")
+    db.RegisterCallback(self, "OnProfileChanged", "OnProfileUpdated")
 end
 
 function statusBarModuleCore:OnEnable()
@@ -301,10 +301,10 @@ local optionsTable_SetPoint_Dictionary = {
     ["BOTTOMLEFT"] = "BOTTOMLEFT",
     ["BOTTOM"] = "BOTTOM",
     ["BOTTOMRIGHT"] = "BOTTOMRIGHT",
-    
+
 }
 local optionsTable_SetPoint_SortedList = {
-    "TOPLEFT","TOP", "TOPRIGHT",
+    "TOPLEFT", "TOP", "TOPRIGHT",
     "LEFT", "CENTER", "RIGHT",
     "BOTTOMLEFT", "BOTTOM", "BOTTOMRIGHT", }
 ---
@@ -373,7 +373,7 @@ addonCore.configOptionsTable.plugins[moduleName] = {
                 type = "execute",
                 name = L["Reset All Bar Options to Defaults"],
                 width = "full",
-                func = function(info) 
+                func = function(info)
                     db:ResetProfile(true)
                 end,
                 order = 1000,

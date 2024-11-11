@@ -17,7 +17,7 @@ svDefaults.global["gossipTriggered"] = {
 	-- we set a start locatoin name and end location name here as it's not provided otherwise and is needed to work.
 
 	--Old World
-	[89449] = {"Moonglade", "Thunder Bluff, Mulgore"},	--Druid Flight
+	[89449] = { "Moonglade", "Thunder Bluff, Mulgore" }, --Druid Flight
 	[91907] = { "Tanaris", "Caverns of Time" },
 	--TBC
 	[92213] = { "Skyguard Outpost", "Blackwind Landing" },
