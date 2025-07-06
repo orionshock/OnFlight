@@ -290,7 +290,7 @@ function module:BuildandShowGUI(treeOptions)
     mainFrame:SetTitle("Flight Destinations")
     mainFrame:SetStatusText((L["Total: %d -- Unknown: %d"]):format(countSitesTotal, countSitesUnknown))
     mainFrame:SetLayout("Fill")
-    mainFrame:SetPoint("TOPLEFT", TaxiFrame, "TOPRIGHT", -32, -10)
+    mainFrame:SetPoint("TOPLEFT", TaxiFrame, "TOPRIGHT", 0,0)
     mainFrame:SetCallback("OnClose", mainFrame_OnClose)
 
 
@@ -335,7 +335,7 @@ taxiFrameToggleButton:SetHeight(32)
 taxiFrameToggleButton:SetFrameLevel(8)
 taxiFrameToggleButton:EnableMouse(true)
 taxiFrameToggleButton:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-taxiFrameToggleButton:SetPoint("CENTER", TaxiFrame, "TOPRIGHT", -55, -55)
+taxiFrameToggleButton:SetPoint("CENTER", TaxiFrame, "TOPRIGHT", -60, -45)
 
 local taxiFrameToggleButtonIcon = taxiFrameToggleButton:CreateTexture(nil, "BACKGROUND")
 taxiFrameToggleButtonIcon:SetTexture(132172) -- Set the texture using the provided ID
