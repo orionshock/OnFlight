@@ -95,10 +95,11 @@ end
 
 local function timerBarOnUpdate(self, elapsed)
     if (self.unknownFlight) then
+        self.countingUpwards = (self.countingUpwards or 0) + elapsed
         if db.profile.shortNames then
-            self.textObj:SetText(self.shortText)
+            self.textObj:SetFormattedText("%s - %s", self.shortText, disp_time(self.countingUpwards))
         else
-            self.textObj:SetText(self.text)
+            self.textObj:SetFormattedText("%s - %s", self.text, disp_time(self.countingUpwards))
         end
         self.spark:Hide()
         local ajdBarWidth = math.max(self.textObj:GetStringWidth() + 30, db.profile.barWidth)
@@ -270,6 +271,7 @@ function statusBarModuleCore:StartTimerBar(taxiSrcName, taxiDestName, duration, 
         statusBar:SetMinMaxValues(0, 1)
         statusBar:SetValue(1)
         timerFrame.unknownFlight = unknownFlight
+        timerFrame.countingUpwards = 0
     else
         statusBar:SetMinMaxValues(0, duration)
         statusBar:SetValue(duration)
@@ -282,6 +284,7 @@ end
 function statusBarModuleCore:StopTimerBar(reason)
     if not self:IsEnabled() then return end
     self.OnFlightTimerFrame:Hide()
+    self.OnFlightTimerFrame.countingUpwards = 0
     self.OnFlightTimerFrame.timeRemaining = 0
     self.OnFlightTimerFrame.duration = 0
     self.OnFlightTimerFrame.text = nil
