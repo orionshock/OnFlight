@@ -26,7 +26,9 @@ local svDefaults = {
 
         ["Shattrath, Terokkar Forest"] = true,
 
-        ["Dalaran"] = true
+        ["Dalaran"] = true,
+
+        ["Shrine of Two Moons, Vale of Eternal Blossoms"] = true,
     }
 }
 
@@ -290,7 +292,7 @@ function module:BuildandShowGUI(treeOptions)
     mainFrame:SetTitle("Flight Destinations")
     mainFrame:SetStatusText((L["Total: %d -- Unknown: %d"]):format(countSitesTotal, countSitesUnknown))
     mainFrame:SetLayout("Fill")
-    mainFrame:SetPoint("TOPLEFT", TaxiFrame, "TOPRIGHT", 0,0)
+    mainFrame:SetPoint("TOPLEFT", TaxiFrame, "TOPRIGHT", 0, 0)
     mainFrame:SetCallback("OnClose", mainFrame_OnClose)
 
 
