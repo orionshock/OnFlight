@@ -292,6 +292,7 @@ function module:BuildandShowGUI(treeOptions)
     mainFrame:SetTitle("Flight Destinations")
     mainFrame:SetStatusText((L["Total: %d -- Unknown: %d"]):format(countSitesTotal, countSitesUnknown))
     mainFrame:SetLayout("Fill")
+    mainFrame:ClearAllPoints()
     mainFrame:SetPoint("TOPLEFT", TaxiFrame, "TOPRIGHT", 0, 0)
     mainFrame:SetCallback("OnClose", mainFrame_OnClose)
 
@@ -307,7 +308,6 @@ function module:BuildandShowGUI(treeOptions)
     treeGroup:SelectByValue(L["Special"])
 
     mainFrame:Show()
-    mainFrame:ClearAllPoints()
     module.AceGuiFrame = mainFrame
 end
 
