@@ -304,7 +304,10 @@ function OnFlight_GetEstimatedTime(taxiDestSlot)
     }
 
     for hop = 2, numRoutes do
-        taxiNodes[hop] = TaxiNodeName(TaxiGetNodeSlot(taxiDestSlot, hop, true))
+        local nodeSlot = TaxiGetNodeSlot(taxiDestSlot, hop, true)
+        if nodeSlot then
+            taxiNodes[hop] = TaxiNodeName(nodeSlot)
+        end
     end
 
     local vars = addonCore.db.global[playerFaction]
@@ -495,6 +498,7 @@ do
 
     local original_C_GossipInfo_SelectOptionByIndex = C_GossipInfo.SelectOptionByIndex
 
+    ---@diagnostic disable-next-line: duplicate-set-field
     function C_GossipInfo.SelectOptionByIndex(...)
         local selectedIndex = tonumber(...)
         local gossipOptions = C_GossipInfo.GetOptions()
@@ -616,6 +620,7 @@ local gossipOptionTemplate = {
             type = "execute",
             func = function(info)
                 local id = tonumber(info[#info - 1])
+                ---@diagnostic disable-next-line: need-check-nil
                 db.global.gossipTriggered[id] = nil
                 addonCore:RefreshAdvOptions()
             end
