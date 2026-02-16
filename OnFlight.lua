@@ -265,9 +265,6 @@ hooksecurefunc(
 )
 
 function addonCore:LFG_PROPOSAL_DONE(event, ...)
-    --if your in flight then there should be nothing preventing you from accepting a port
-    --however there might be some quest taxis that will prevent it as they are vehicles not flights.
-    print("OnFlight:", event)
     if taxiTimerFrame and taxiTimerFrame:IsShown() then
         taxiTimerFrame.earlyExit = L["LFG Port"]
     end
