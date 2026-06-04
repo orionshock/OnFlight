@@ -31,7 +31,7 @@ local svDefaults = {
         shortNames = true,
         --Font Options
         fontName = "2002 Bold",
-        fontSize = "15",
+        fontSize = 15,
         fontColor = { r = 1, g = 1, b = 1, a = 1 },
         --Bar Location
         barLocation = {
@@ -168,7 +168,7 @@ local function ApplyLookAndFeel(self) --self is the baseFrame
     local textObj = self.textObj
     textObj:ClearAllPoints()
     textObj:SetPoint("CENTER", self, "CENTER")
-    textObj:SetFont(LSM:Fetch("font", db.profile.fontName), db.profile.fontSize)
+    textObj:SetFont(LSM:Fetch("font", db.profile.fontName), tonumber(db.profile.fontSize) or svDefaults.profile.fontSize)
     textObj:SetTextColor(db.profile.fontColor.r, db.profile.fontColor.g, db.profile.fontColor.b, db.profile.fontColor.a)
 
     if self.unknownFlight then
@@ -177,6 +177,12 @@ local function ApplyLookAndFeel(self) --self is the baseFrame
     else
         statusBar:SetStatusBarColor(db.profile.barColor.r, db.profile.barColor.g, db.profile.barColor.b,
             db.profile.barColor.a)
+    end
+end
+
+local function RefreshLookAndFeel()
+    if statusBarModuleCore.OnFlightTimerFrame then
+        ApplyLookAndFeel(statusBarModuleCore.OnFlightTimerFrame)
     end
 end
 
@@ -313,7 +319,7 @@ local optionsTable_SetPoint_SortedList = {
 ---
 
 function statusBarModuleCore:OnProfileUpdated()
-    ApplyLookAndFeel(self.OnFlightTimerFrame)
+    RefreshLookAndFeel()
 end
 
 function statusBarModuleCore:GetOption(info)
@@ -341,7 +347,7 @@ function statusBarModuleCore:SetOption(info, ...)
     else
         db.profile[info[#info]] = ...
     end
-    ApplyLookAndFeel(self.OnFlightTimerFrame)
+    RefreshLookAndFeel()
 end
 
 function statusBarModuleCore:GetBarLocation(info, ...)
@@ -350,7 +356,7 @@ end
 
 function statusBarModuleCore:SetBarLocation(info, value)
     db.profile.barLocation[info[#info]] = value
-    ApplyLookAndFeel(self.OnFlightTimerFrame)
+    RefreshLookAndFeel()
 end
 
 addonCore.configOptionsTable.plugins = addonCore.configOptionsTable.plugins or {}
