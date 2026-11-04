@@ -41,11 +41,15 @@ end
 function module:OnEnable()
     self:RegisterEvent("TAXIMAP_OPENED")
     self:RegisterEvent("TAXIMAP_CLOSED")
+    if TaxiFrame:IsShown() then
+        self:TAXIMAP_OPENED()
+    end
 end
 
 function module:OnDisable()
     self:UnregisterEvent("TAXIMAP_OPENED")
     self:UnregisterEvent("TAXIMAP_CLOSED")
+    self:TAXIMAP_CLOSED()
 end
 
 local zoneDictionary = {}
@@ -67,28 +71,31 @@ function module:UpdateTaxiDestinations()
 
     for taxiNodeIndex = 1, NumTaxiNodes(), 1 do
         local nodeName = TaxiNodeName(taxiNodeIndex)
-        local siteName, zoneName = string.split(",", nodeName)
-        siteName = siteName and siteName:trim()
-        zoneName = zoneName and zoneName:trim()
-
-        if db.profile[nodeName] then
-            siteName = favIcon .. " " .. siteName
-        end
-
-        if zoneName then                                              --Some Places Don't have zone names, will handle that with a "Special" section
-            zoneDictionary[zoneName] = zoneDictionary[zoneName] or {} --Add Zone Name to Dictionary
-            zoneDictionary[zoneName][taxiNodeIndex] = siteName
-        else
-            zoneDictionary[L["Special"]][taxiNodeIndex] = siteName
-        end
-
         local taxiNodeType = TaxiNodeGetType(taxiNodeIndex)
-        if taxiNodeType == "DISTANT" then
-            countSitesUnknown = countSitesUnknown + 1
-        elseif taxiNodeType == "CURRENT" then
-            currentZoneTag = zoneName or L["Special"]
+        if nodeName and taxiNodeType ~= "NONE" then
+            local siteName, zoneName = nodeName:match("^([^,]+),?%s*([^,]*)")
+            if zoneName == "" then zoneName = nil end
+            siteName = siteName and siteName:trim()
+            zoneName = zoneName and zoneName:trim()
+
+            if db.profile[nodeName] then
+                siteName = favIcon .. " " .. siteName
+            end
+
+            if zoneName then                                              --Some Places Don't have zone names, will handle that with a "Special" section
+                zoneDictionary[zoneName] = zoneDictionary[zoneName] or {} --Add Zone Name to Dictionary
+                zoneDictionary[zoneName][taxiNodeIndex] = siteName
+            else
+                zoneDictionary[L["Special"]][taxiNodeIndex] = siteName
+            end
+
+            if taxiNodeType == "DISTANT" then
+                countSitesUnknown = countSitesUnknown + 1
+            elseif taxiNodeType == "CURRENT" then
+                currentZoneTag = zoneName or L["Special"]
+            end
+            countSitesTotal = countSitesTotal + 1
         end
-        countSitesTotal = countSitesTotal + 1
     end
     for zName in pairs(zoneDictionary) do --Send Dict to List
         table.insert(zoneList, zName)
@@ -148,11 +155,11 @@ local function flightButton_OnEnter(widget, event, button, direction)
             OnFlight_TaxiFrame_TooltipHook(widget.frame)
         end
         for index = 1, NUM_TAXI_BUTTONS do
-            local button = _G["TaxiButton" .. index];
-            if button:GetID() == widget.frame:GetID() then
-                button:LockHighlight()
+            local taxiButton = _G["TaxiButton" .. index];
+            if taxiButton:GetID() == widget.frame:GetID() then
+                taxiButton:LockHighlight()
             else
-                button:UnlockHighlight()
+                taxiButton:UnlockHighlight()
             end
         end
     end
@@ -195,7 +202,7 @@ local function StageFlightButton(widget, siteName, siteIndex, taxiNodeType)
     widget:SetCallback("OnClick", flightButton_OnClick)
     widget:SetCallback("OnEnter", flightButton_OnEnter)
     widget:SetCallback("OnLeave", flightButton_OnLeave)
-    if taxiNodeType == "DISTANT" then
+    if taxiNodeType ~= "REACHABLE" and taxiNodeType ~= "CURRENT" then
         widget:SetText(siteName)
         widget:SetDisabled(true)
     elseif taxiNodeType == "CURRENT" then

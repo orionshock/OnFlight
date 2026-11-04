@@ -51,19 +51,31 @@ function statusBarModuleCore:OnInitialize()
 
     db.RegisterCallback(self, "OnProfileReset", "OnProfileUpdated")
     db.RegisterCallback(self, "OnProfileChanged", "OnProfileUpdated")
+    db.RegisterCallback(self, "OnProfileCopied", "OnProfileUpdated")
 end
 
 function statusBarModuleCore:OnEnable()
-    self:SetupTimerBar()
+    if not self.OnFlightTimerFrame then
+        self:SetupTimerBar()
+    end
     self:RegisterMessage("OnFlight_Taxi_Start")
     self:RegisterMessage("OnFlight_Taxi_Stop")
     self:RegisterMessage("OnFlight_Taxi_EarlyExit")
     self:RegisterMessage("OnFlight_Taxi_FAILED_ENTRY", "OnFlight_Taxi_Stop")
     self:RegisterMessage("OnFlight_Taxi_RESUME")
+    self:RegisterMessage("OnFlight_Taxi_Suspend", function()
+        self.OnFlightTimerFrame:Hide()
+    end)
+    local elapsed, remaining, duration = addonCore:GetCurrentFlightProgress()
+    if elapsed then
+        local source, destination = addonCore:GetCurrentFlightDetail()
+        self:OnFlight_Taxi_RESUME(nil, source, destination, duration, remaining, not duration, elapsed)
+    end
 end
 
 function statusBarModuleCore:OnDisable()
     self:UnregisterAllMessages()
+    self:StopTimerBar("Module disabled")
 end
 
 function statusBarModuleCore:OnFlight_Taxi_Start(event, taxiSrcName, taxiDestName, taxiDuration, unknownFlight)
@@ -83,8 +95,11 @@ function statusBarModuleCore:OnFlight_Taxi_EarlyExit(event, taxiSrcName, taxiDes
 end
 
 function statusBarModuleCore:OnFlight_Taxi_RESUME(event, taxiSrcName, taxiDestName, taxiDuration, timeRemaining,
-                                                  unknownFlight)
+                                                  unknownFlight, timeOnFlight)
     self:StartTimerBar(taxiSrcName, taxiDestName, taxiDuration, timeRemaining, unknownFlight)
+    if unknownFlight then
+        self.OnFlightTimerFrame.countingUpwards = timeOnFlight or 0
+    end
 end
 
 local function disp_time(time)
@@ -142,6 +157,7 @@ local function ApplyLookAndFeel(self) --self is the baseFrame
     self:SetWidth(db.profile.barWidth)
     self:SetHeight(db.profile.barHeight)
     local barLocation = db.profile.barLocation
+    self:ClearAllPoints()
     self:SetPoint(barLocation.anchorPoint, UIParent, barLocation.relativePoint, barLocation.offsetX,
         barLocation.offsetY)
     self:ClearBackdrop()
@@ -221,8 +237,8 @@ function statusBarModuleCore:SetupTimerBar()
         function(frame)
             if IsShiftKeyDown() then
                 if frame.timeRemaining then
-                    ChatEdit_ActivateChat(DEFAULT_CHAT_FRAME.editBox)
-                    ChatEdit_InsertLink(("[%s]: %s - %s"):format(L["OnFlight"], frame.shortText,
+                    ChatFrameUtil.ActivateChat(DEFAULT_CHAT_FRAME.editBox)
+                    ChatFrameUtil.InsertLink(("[%s]: %s - %s"):format(L["OnFlight"], frame.shortText,
                         disp_time(frame.timeRemaining)))
                 end
             end
@@ -265,6 +281,7 @@ function statusBarModuleCore:StartTimerBar(taxiSrcName, taxiDestName, duration, 
 
     timerFrame.duration = duration
     timerFrame.timeRemaining = timeRemaining or duration
+    timerFrame.unknownFlight = unknownFlight or false
 
     timerFrame.text = ("%s --> %s"):format(taxiSrcName, taxiDestName)
 
@@ -288,7 +305,7 @@ function statusBarModuleCore:StartTimerBar(taxiSrcName, taxiDestName, duration, 
 end
 
 function statusBarModuleCore:StopTimerBar(reason)
-    if not self:IsEnabled() then return end
+    if not self.OnFlightTimerFrame then return end
     self.OnFlightTimerFrame:Hide()
     self.OnFlightTimerFrame.countingUpwards = 0
     self.OnFlightTimerFrame.timeRemaining = 0

@@ -1,6 +1,7 @@
-## Interface: 50504
+## Interface: 16001
 ## Title: OnFlight
-## Notes: Status bar timer Taxis and Flights.
+## Notes: Taxi flight timer and destination list for WoW Forever.
+## Dependencies: Blizzard_UIPanels_Game
 ## Author: Orionshock
 ## Version: @project-version@
 ## SavedVariables: OnFlightSV

@@ -1,3 +1,5 @@
+package-as: OnFlight
+
 externals:
     libs/LibStub: https://repos.wowace.com/wow/libstub/trunk
     libs/CallbackHandler-1.0: https://repos.wowace.com/wow/callbackhandler/trunk/CallbackHandler-1.0
@@ -12,7 +14,9 @@ externals:
     libs/LibSharedMedia-3.0: https://repos.wowace.com/wow/libsharedmedia-3-0/trunk/LibSharedMedia-3.0
     libs/AceGUI-3.0-SharedMediaWidgets: https://repos.wowace.com/wow/ace-gui-3-0-shared-media-widgets/trunk/AceGUI-3.0-SharedMediaWidgets
 
-ignore: 
+ignore:
     - README.md
     - pkgmeta.yaml
-    
+    - .github
+    - .previews
+    - .vscode

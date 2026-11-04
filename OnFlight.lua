@@ -73,8 +73,13 @@ function addonCore:OnInitialize()
     playerFaction = UnitFactionGroup("player")
     self.db = LibStub("AceDB-3.0"):New("OnFlightSV", svDefaults, true)
     db = self.db
+    -- Flights only survive loading screens within this Lua session, never a reload/login.
+    wipe(db.char)
     db.global[playerFaction] = db.global[playerFaction] or {}
     db.profile.gossipConfig = false
+    db.RegisterCallback(self, "OnProfileChanged", "OnProfileUpdated")
+    db.RegisterCallback(self, "OnProfileCopied", "OnProfileUpdated")
+    db.RegisterCallback(self, "OnProfileReset", "OnProfileUpdated")
 
     self.configOptionsTable.args.profiles = LibStub("AceDBOptions-3.0"):GetOptionsTable(self.db)
     self.configOptionsTable.args.profiles.order = 800
@@ -100,7 +105,7 @@ end
 
 function addonCore.ChatCommand(_, input)
     if InCombatLockdown() then
-        addonCore.SendMessage("In Combat")
+        addonCore:Print(L["In Combat"])
         return
     end
     if not input or input:trim() == "" then
@@ -132,6 +137,7 @@ do
         taxiTimerFrame.elapsedNotOnFlight = nil
         taxiTimerFrame.earlyExit = nil
         taxiTimerFrame.timeRmaining = nil
+        taxiTimerFrame.taxiState = false
         taxiTimerFrame:Hide()
     end
 
@@ -159,6 +165,7 @@ do
 
             if (prevState ~= self.taxiState) then
                 if self.taxiState then
+                    self.elapsedNotOnFlight = nil
                     self.taxiStartTime = self.taxiStartTime or GetTime()
                     local flightDurationFromDB = addonCore:GetFlightDuration(self.taxiSrcName, self.taxiDestName)
                     if flightDurationFromDB then
@@ -235,31 +242,6 @@ hooksecurefunc(
     function()
         if taxiTimerFrame and taxiTimerFrame:IsShown() then
             taxiTimerFrame.earlyExit = L["Accepted Summon"]
-        end
-    end
-)
-
-hooksecurefunc(
-    "ReloadUI",
-    function()
-        if taxiTimerFrame and taxiTimerFrame:IsShown() then
-            taxiTimerFrame.earlyExit = RELOADUI
-        end
-    end
-)
-hooksecurefunc(
-    "Logout",
-    function()
-        if taxiTimerFrame and taxiTimerFrame:IsShown() then
-            taxiTimerFrame.earlyExit = LOGOUT
-        end
-    end
-)
-hooksecurefunc(
-    "Quit",
-    function()
-        if taxiTimerFrame and taxiTimerFrame:IsShown() then
-            taxiTimerFrame.earlyExit = EXIT_GAME
         end
     end
 )
@@ -385,21 +367,13 @@ function addonCore.TAXIMAP_OPENED(_, event, uiMapSystem)
 end
 
 function addonCore:PLAYER_ENTERING_WORLD(event, isInitialLogin, isReloadingUi)
-    if (taxiTimerFrame.taxiSrcName and taxiTimerFrame.taxiDestName) and (not taxiTimerFrame.earlyExit) then
+    if taxiTimerFrame.taxiSrcName and taxiTimerFrame.taxiDestName then
         taxiTimerFrame:Show()
-        return
-    end
-    if db.char.taxiSrcName and db.char.taxiDestName then
-        local flightDuration = self:GetFlightDuration(db.char.taxiSrcName, db.char.taxiDestName)
-        if flightDuration then
-            self:StartAFlight(db.char.taxiSrcName, db.char.taxiDestName, db.char.timeRemaining, db.char.earlyExit)
-        else
-            self:StartAFlight(db.char.taxiSrcName, db.char.taxiDestName, nil, db.char.earlyExit)
-            if (not db.char.timeRemaining) and (not taxiTimerFrame.earlyExit) then
-                taxiTimerFrame.taxiStartTime = db.char.taxiStartTime
-            end
+        if taxiTimerFrame.taxiStartTime then
+            local elapsed, remaining, duration = self:GetCurrentFlightProgress()
+            self:SendMessage("OnFlight_Taxi_RESUME", taxiTimerFrame.taxiSrcName, taxiTimerFrame.taxiDestName,
+                duration, remaining, not duration, elapsed)
         end
-        wipe(db.char)
     end
 end
 
@@ -407,29 +381,18 @@ function addonCore:PLAYER_LEAVING_WORLD(event)
     if not self:IsOnFlight() then
         return
     end
-    if not taxiTimerFrame.earlyExit then
-        taxiTimerFrame:Hide() --to keep the onUpdate after PLW from causing db to save
-        return
-    elseif taxiTimerFrame.earlyExit then
-        db.char.taxiSrcName = taxiTimerFrame.taxiSrcName
-        db.char.taxiDestName = taxiTimerFrame.taxiDestName
-        db.char.earlyExit = taxiTimerFrame.earlyExit
-        local flightProgress = GetTime() - taxiTimerFrame.taxiStartTime
-        local flightDuration = self:GetFlightDuration(db.char.taxiSrcName, db.char.taxiDestName)
-        if flightDuration then
-            db.char.timeRemaining = flightDuration - flightProgress
-        else
-            db.char.taxiStartTime = taxiTimerFrame.taxiStartTime
-        end
-    end
+    -- UnitOnTaxi can briefly be false during a transfer. Suspend polling without
+    -- discarding the start timestamp, so loading time remains part of the flight.
+    taxiTimerFrame:Hide()
+    self:SendMessage("OnFlight_Taxi_Suspend")
 end
 
 ---External / Internal APIs
 function addonCore:GetFlightDuration(source, destination, faction)
     local src = (source and (type(source) == "string")) and source:trim()
-    local dest = (source and (type(destination) == "string")) and destination:trim()
+    local dest = (destination and (type(destination) == "string")) and destination:trim()
     local fact = (faction and (type(faction) == "string")) and faction:trim() or playerFaction
-    if src and dest then
+    if src and dest and db.global[fact] then
         if db.global[fact][src] then
             return db.global[fact][src][dest]
         end
@@ -452,7 +415,7 @@ function addonCore:GetCurrentFlightDetail()
 end
 
 function addonCore:GetCurrentFlightProgress()
-    if not self:IsOnFlight() then
+    if not self:IsOnFlight() or not taxiTimerFrame.taxiStartTime then
         return
     end
     local timeOnFlight = GetTime() - taxiTimerFrame.taxiStartTime
@@ -515,26 +478,23 @@ do
         GossipOptionButtonMixin,
         "Setup",
         function(self, optionInfo)
-            self:SetScript(
-                "OnEnter",
-                function(frame)
-                    if db and (db.profile.showGossipConfig or db.profile.gossipdebug) then
-                        if frame.GetData then
-                            local data = frame:GetData()
-                            local gossipID = data and data.info.gossipOptionID or "??"
-                            GameTooltip:SetOwner(frame, "ANCHOR_RIGHT")
-                            GameTooltip:AddLine("gossipOptionID: " .. gossipID)
-                            GameTooltip:Show()
-                        end
+            self.OnFlightGossipID = optionInfo.gossipOptionID
+            if self.OnFlightTooltipHooked then return end
+            self.OnFlightTooltipHooked = true
+            self:HookScript("OnEnter", function(frame)
+                if db and (db.profile.showGossipConfig or db.profile.gossipdebug) then
+                    if GameTooltip:GetOwner() ~= frame then
+                        GameTooltip:SetOwner(frame, "ANCHOR_RIGHT")
                     end
+                    GameTooltip:AddLine("gossipOptionID: " .. (frame.OnFlightGossipID or "??"))
+                    GameTooltip:Show()
                 end
-            )
-            self:SetScript(
-                "OnLeave",
-                function(frame)
+            end)
+            self:HookScript("OnLeave", function(frame)
+                if GameTooltip:GetOwner() == frame then
                     GameTooltip:Hide()
                 end
-            )
+            end)
         end
     )
 end
@@ -543,7 +503,8 @@ end
 function addonCore:GetOption(info)
     if info.type == "color" then
         if db.profile[info[#info]] then
-            return db.profile[info[#info]].r, db.profile[info[#info]].b, db[info[#info]].g, db.profile[info[#info]].a
+            local color = db.profile[info[#info]]
+            return color.r, color.g, color.b, color.a
         else
             return math.random(0, 100) / 100, math.random(0, 100) / 100, math.random(0, 100) / 100,
                 math.random(0, 100) / 100
@@ -690,6 +651,18 @@ function addonCore:SetModuleStatus(info, value)
     else
         addonCore:DisableModule(info[#info])
     end
+end
+
+function addonCore:OnProfileUpdated()
+    for name, module in self:IterateModules() do
+        local enabled = db.profile.moduleState[name]
+        if enabled and not module:IsEnabled() then
+            self:EnableModule(name)
+        elseif not enabled and module:IsEnabled() then
+            self:DisableModule(name)
+        end
+    end
+    self:RefreshAdvOptions()
 end
 
 function addonCore:RefreshAdvOptions()
