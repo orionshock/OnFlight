@@ -182,111 +182,81 @@ function addonCore:ChatMessage(...)
     end
 end
 
-local taxiTimerFrame = CreateFrame("frame")
-taxiTimerFrame:Hide()
-taxiTimerFrame.taxiState = false
-do
-    local function ResetOnFlightTimer(reason)
-        taxiTimerFrame.flight = nil
-        taxiTimerFrame.taxiSrcName = nil
-        taxiTimerFrame.taxiDestName = nil
-        taxiTimerFrame.taxiStartTime = nil
-        taxiTimerFrame.elapsedNotOnFlight = nil
-        taxiTimerFrame.earlyExit = nil
-        taxiTimerFrame.timeRmaining = nil
-        taxiTimerFrame.taxiState = false
-        taxiTimerFrame:Hide()
-    end
+-- The monitor schedules work; the private record owns all flight state.
+local flight
+local flightMonitor = CreateFrame("Frame")
 
-    function addonCore.StartAFlight(_, source, destination, timeRmaining, forceEarlyExitState, route)
-        if type(source) ~= "number" or type(destination) ~= "number" then return end
-        local sourceName = addonCore:GetTaxiNodeName(source)
-        local destinationName = addonCore:GetTaxiNodeName(destination)
-        if not sourceName or not destinationName then return end
-        ResetOnFlightTimer("PreFlightReset")
-        taxiTimerFrame.flight = { sourceID = source, destinationID = destination, route = route or {},
-            sourceName = sourceName, destinationName = destinationName }
-        taxiTimerFrame.taxiSrcName = sourceName
-        taxiTimerFrame.taxiDestName = destinationName
-        taxiTimerFrame.timeRmaining = timeRmaining
-        if timeRmaining or forceEarlyExitState then
-            taxiTimerFrame.earlyExit = forceEarlyExitState
-        end
-        taxiTimerFrame:Show()
-    end
+local function ResetFlight()
+    flight = nil
+    flightMonitor:SetScript("OnUpdate", nil)
+end
 
-    local UnitOnTaxi, UnitInVehicle = UnitOnTaxi, UnitInVehicle
-    taxiTimerFrame:SetScript(
-        "OnUpdate",
-        function(self, elapsed)
-            local prevState = self.taxiState
-            self.taxiState = UnitOnTaxi("player") or UnitInVehicle("player")
+local function UpdateFlight(_, elapsed)
+    local previous = flight.onTaxi
+    flight.onTaxi = UnitOnTaxi("player") or UnitInVehicle("player")
 
-            if (not self.taxiSrcName) or (not self.taxiDestName) then
-                return ResetOnFlightTimer("OnUpdateMonitor, no src or dest")
-            end
-
-            if (prevState ~= self.taxiState) then
-                if self.taxiState then
-                    self.elapsedNotOnFlight = nil
-                    self.taxiStartTime = self.taxiStartTime or GetTime()
-                    local flightDurationFromDB = addonCore:GetFlightDuration(self.flight.sourceID, self.flight.destinationID)
-                    if flightDurationFromDB then
-                        if taxiTimerFrame.timeRmaining then
-                            addonCore:SendMessage("OnFlight_Taxi_RESUME", self.taxiSrcName, self.taxiDestName,
-                                flightDurationFromDB, self.timeRmaining)
-                            addonCore:ChatMessage(L["Resume On Taxi:"], self.taxiSrcName, "-->", self.taxiDestName)
-                        else
-                            addonCore:SendMessage("OnFlight_Taxi_Start", self.taxiSrcName, self.taxiDestName,
-                                flightDurationFromDB, false)
-                            addonCore:ChatMessage(L["On Taxi:"], self.taxiSrcName, "-->", self.taxiDestName, "--",
-                                SecondsToTime(flightDurationFromDB))
-                        end
-                    else
-                        if taxiTimerFrame.timeRmaining then
-                            addonCore:SendMessage("OnFlight_Taxi_RESUME", self.taxiSrcName, self.taxiDestName, nil, nil,
-                                true)
-                            addonCore:ChatMessage(L["Resume On Taxi:"], self.taxiSrcName, "-->", self.taxiDestName)
-                        else
-                            addonCore:SendMessage("OnFlight_Taxi_Start", self.taxiSrcName, self.taxiDestName, 0, true)
-                            addonCore:ChatMessage(L["On Taxi:"], self.taxiSrcName .. " --> " .. self.taxiDestName)
-                        end
-                    end
-                elseif (not self.taxiState) and (self.taxiStartTime) then
-                    if not self.earlyExit then
-                        local flightDuration = abs(GetTime() - self.taxiStartTime)
-                        local times = db.global.flightTimes[playerFaction]
-                        times[self.flight.sourceID] = times[self.flight.sourceID] or {}
-                        times[self.flight.sourceID][self.flight.destinationID] = math.floor(flightDuration)
-                        addonCore:SendMessage("OnFlight_Taxi_Stop", self.taxiSrcName, self.taxiDestName, flightDuration)
-                        addonCore:ChatMessage(L["Off Taxi:"], self.taxiSrcName .. " --> " .. self.taxiDestName, "--",
-                            SecondsToTime(flightDuration))
-                        return ResetOnFlightTimer("End Of Normal Flight")
-                    elseif self.earlyExit then
-                        addonCore:SendMessage("OnFlight_Taxi_EarlyExit", self.taxiSrcName, self.taxiDestName,
-                            self.earlyExit)
-                        addonCore:ChatMessage(L["Taxi Ended Early:"], self.earlyExit)
-                        return ResetOnFlightTimer("End of Flight: " .. self.earlyExit)
-                    end
+    if previous ~= flight.onTaxi then
+        if flight.onTaxi then
+            flight.elapsedNotOnFlight = nil
+            flight.startedAt = flight.startedAt or GetTime()
+            local duration = addonCore:GetFlightDuration(flight.sourceID, flight.destinationID)
+            if duration then
+                if flight.resumeRemaining then
+                    addonCore:SendMessage("OnFlight_Taxi_RESUME", flight.sourceName, flight.destinationName,
+                        duration, flight.resumeRemaining)
+                    addonCore:ChatMessage(L["Resume On Taxi:"], flight.sourceName, "-->", flight.destinationName)
+                else
+                    addonCore:SendMessage("OnFlight_Taxi_Start", flight.sourceName, flight.destinationName, duration, false)
+                    addonCore:ChatMessage(L["On Taxi:"], flight.sourceName, "-->", flight.destinationName, "--", SecondsToTime(duration))
                 end
+            elseif flight.resumeRemaining then
+                addonCore:SendMessage("OnFlight_Taxi_RESUME", flight.sourceName, flight.destinationName, nil, nil, true)
+                addonCore:ChatMessage(L["Resume On Taxi:"], flight.sourceName, "-->", flight.destinationName)
+            else
+                addonCore:SendMessage("OnFlight_Taxi_Start", flight.sourceName, flight.destinationName, 0, true)
+                addonCore:ChatMessage(L["On Taxi:"], flight.sourceName .. " --> " .. flight.destinationName)
             end
-            if (not self.taxiState) then
-                self.elapsedNotOnFlight = (self.elapsedNotOnFlight or 0) + elapsed
-                if self.elapsedNotOnFlight > 5 then
-                    addonCore:SendMessage("OnFlight_Taxi_FAILED_ENTRY", self.taxiSrcName, self.taxiDestName)
-                    return ResetOnFlightTimer("FAILED_ENTRY")
-                end
+        elseif flight.startedAt then
+            if not flight.earlyExit then
+                local duration = abs(GetTime() - flight.startedAt)
+                local times = db.global.flightTimes[playerFaction]
+                times[flight.sourceID] = times[flight.sourceID] or {}
+                times[flight.sourceID][flight.destinationID] = math.floor(duration)
+                addonCore:SendMessage("OnFlight_Taxi_Stop", flight.sourceName, flight.destinationName, duration)
+                addonCore:ChatMessage(L["Off Taxi:"], flight.sourceName .. " --> " .. flight.destinationName, "--", SecondsToTime(duration))
+            else
+                addonCore:SendMessage("OnFlight_Taxi_EarlyExit", flight.sourceName, flight.destinationName, flight.earlyExit)
+                addonCore:ChatMessage(L["Taxi Ended Early:"], flight.earlyExit)
             end
+            return ResetFlight()
         end
-    )
+    end
+    if not flight.onTaxi then
+        flight.elapsedNotOnFlight = (flight.elapsedNotOnFlight or 0) + elapsed
+        if flight.elapsedNotOnFlight > 5 then
+            addonCore:SendMessage("OnFlight_Taxi_FAILED_ENTRY", flight.sourceName, flight.destinationName)
+            ResetFlight()
+        end
+    end
+end
+
+function addonCore:StartAFlight(source, destination, timeRemaining, forceEarlyExitState, route)
+    if type(source) ~= "number" or type(destination) ~= "number" then return end
+    local sourceName = self:GetTaxiNodeName(source)
+    local destinationName = self:GetTaxiNodeName(destination)
+    if not sourceName or not destinationName then return end
+    flight = { sourceID = source, destinationID = destination, route = route or {},
+        sourceName = sourceName, destinationName = destinationName, onTaxi = false,
+        resumeRemaining = timeRemaining, earlyExit = forceEarlyExitState }
+    flightMonitor:SetScript("OnUpdate", UpdateFlight)
 end
 
 -- function hooks to detect if we left a flight early
 hooksecurefunc(
     "TaxiRequestEarlyLanding",
     function()
-        if taxiTimerFrame and taxiTimerFrame:IsShown() then
-            taxiTimerFrame.earlyExit = L["Request Early Landing"]
+        if flight and not flight.suspended then
+            flight.earlyExit = L["Request Early Landing"]
         end
     end
 )
@@ -294,8 +264,8 @@ hooksecurefunc(
 hooksecurefunc(
     "AcceptBattlefieldPort",
     function()
-        if taxiTimerFrame and taxiTimerFrame:IsShown() then
-            taxiTimerFrame.earlyExit = L["Battlefield Port"]
+        if flight and not flight.suspended then
+            flight.earlyExit = L["Battlefield Port"]
         end
     end
 )
@@ -304,15 +274,15 @@ hooksecurefunc(
     C_SummonInfo,
     "ConfirmSummon",
     function()
-        if taxiTimerFrame and taxiTimerFrame:IsShown() then
-            taxiTimerFrame.earlyExit = L["Accepted Summon"]
+        if flight and not flight.suspended then
+            flight.earlyExit = L["Accepted Summon"]
         end
     end
 )
 
 function addonCore:LFG_PROPOSAL_DONE(event, ...)
-    if taxiTimerFrame and taxiTimerFrame:IsShown() then
-        taxiTimerFrame.earlyExit = L["LFG Port"]
+    if flight and not flight.suspended then
+        flight.earlyExit = L["LFG Port"]
     end
 end
 
@@ -418,23 +388,24 @@ hooksecurefunc("SetTaxiMap", function()
 end)
 
 function addonCore:PLAYER_ENTERING_WORLD(event, isInitialLogin, isReloadingUi)
-    if taxiTimerFrame.taxiSrcName and taxiTimerFrame.taxiDestName then
-        taxiTimerFrame:Show()
-        if taxiTimerFrame.taxiStartTime then
+    if flight then
+        flight.suspended = nil
+        flightMonitor:SetScript("OnUpdate", UpdateFlight)
+        if flight.startedAt then
+            -- World-entry resume uses the measured duration and full elapsed time.
+            flight.resumeRemaining = nil
             local elapsed, remaining, duration = self:GetCurrentFlightProgress()
-            self:SendMessage("OnFlight_Taxi_RESUME", taxiTimerFrame.taxiSrcName, taxiTimerFrame.taxiDestName,
+            self:SendMessage("OnFlight_Taxi_RESUME", flight.sourceName, flight.destinationName,
                 duration, remaining, not duration, elapsed)
         end
     end
 end
 
 function addonCore:PLAYER_LEAVING_WORLD(event)
-    if not self:IsOnFlight() then
-        return
-    end
-    -- UnitOnTaxi can briefly be false during a transfer. Suspend polling without
-    -- discarding the start timestamp, so loading time remains part of the flight.
-    taxiTimerFrame:Hide()
+    if not self:IsOnFlight() then return end
+    -- UnitOnTaxi may briefly be false during a transfer. Keep the timing origin.
+    flight.suspended = true
+    flightMonitor:SetScript("OnUpdate", nil)
     self:SendMessage("OnFlight_Taxi_Suspend")
 end
 
@@ -446,33 +417,26 @@ function addonCore:GetFlightDuration(source, destination, faction)
     return times and times[source] and times[source][destination]
 end
 
+-- Consumers may read this record; only the core updates it.
+function addonCore:GetCurrentFlight()
+    return flight
+end
+
 function addonCore:IsOnFlight()
-    if taxiTimerFrame and taxiTimerFrame:IsShown() then
-        if taxiTimerFrame.taxiSrcName and taxiTimerFrame.taxiDestName then
-            return true
-        end
-    end
-    return false
+    return flight ~= nil and not flight.suspended
 end
 
 function addonCore:GetCurrentFlightDetail()
-    if self:IsOnFlight() then
-        return taxiTimerFrame.taxiSrcName, taxiTimerFrame.taxiDestName
-    end
+    if self:IsOnFlight() then return flight.sourceName, flight.destinationName end
 end
 
 function addonCore:GetCurrentFlightProgress()
-    if not self:IsOnFlight() or not taxiTimerFrame.taxiStartTime then
-        return
-    end
-    local timeOnFlight = GetTime() - taxiTimerFrame.taxiStartTime
-    local totalDuration = self:GetFlightDuration(taxiTimerFrame.flight.sourceID, taxiTimerFrame.flight.destinationID)
-    local timeRemaining
-    if totalDuration then
-        timeRemaining = totalDuration - timeOnFlight
-    end
-
-    return timeOnFlight, timeRemaining, totalDuration
+    if not self:IsOnFlight() or not flight.startedAt then return end
+    local elapsed = GetTime() - flight.startedAt
+    local duration = self:GetFlightDuration(flight.sourceID, flight.destinationID)
+    local remaining
+    if duration then remaining = duration - elapsed end
+    return elapsed, remaining, duration
 end
 
 do --Direct Hoook Funcs

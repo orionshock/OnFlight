@@ -66,11 +66,7 @@ function statusBarModuleCore:OnEnable()
     self:RegisterMessage("OnFlight_Taxi_Suspend", function()
         self.OnFlightTimerFrame:Hide()
     end)
-    local elapsed, remaining, duration = addonCore:GetCurrentFlightProgress()
-    if elapsed then
-        local source, destination = addonCore:GetCurrentFlightDetail()
-        self:OnFlight_Taxi_RESUME(nil, source, destination, duration, remaining, not duration, elapsed)
-    end
+    self:ShowCurrentFlight()
 end
 
 function statusBarModuleCore:OnDisable()
@@ -78,11 +74,19 @@ function statusBarModuleCore:OnDisable()
     self:StopTimerBar("Module disabled")
 end
 
+-- Rebuild presentation from the core if enabled after a lifecycle notification.
+function statusBarModuleCore:ShowCurrentFlight()
+    local current = addonCore:GetCurrentFlight()
+    local elapsed, remaining, duration = addonCore:GetCurrentFlightProgress()
+    if not current or elapsed == nil then return end
+    self:StartTimerBar(current.sourceName, current.destinationName, duration, remaining, not duration, true)
+end
+
 function statusBarModuleCore:OnFlight_Taxi_Start(event, taxiSrcName, taxiDestName, taxiDuration, unknownFlight)
     if taxiDuration ~= 0 then
-        self:StartTimerBar(taxiSrcName, taxiDestName, taxiDuration)
+        self:StartTimerBar(taxiSrcName, taxiDestName, taxiDuration, nil, nil, true)
     elseif unknownFlight then
-        self:StartTimerBar(taxiSrcName, taxiDestName, nil, nil, unknownFlight)
+        self:StartTimerBar(taxiSrcName, taxiDestName, nil, nil, unknownFlight, true)
     end
 end
 
@@ -96,10 +100,7 @@ end
 
 function statusBarModuleCore:OnFlight_Taxi_RESUME(event, taxiSrcName, taxiDestName, taxiDuration, timeRemaining,
                                                   unknownFlight, timeOnFlight)
-    self:StartTimerBar(taxiSrcName, taxiDestName, taxiDuration, timeRemaining, unknownFlight)
-    if unknownFlight then
-        self.OnFlightTimerFrame.countingUpwards = timeOnFlight or 0
-    end
+    self:StartTimerBar(taxiSrcName, taxiDestName, taxiDuration, timeRemaining, unknownFlight, true)
 end
 
 local function disp_time(time)
@@ -109,12 +110,29 @@ local function disp_time(time)
 end
 
 local function timerBarOnUpdate(self, elapsed)
+    local timeOnFlight
+    if self.isFlightDisplay then
+        -- These are render values, not a second clock or authoritative flight state.
+        timeOnFlight, self.timeRemaining, self.duration = addonCore:GetCurrentFlightProgress()
+        if timeOnFlight == nil then
+            statusBarModuleCore:StopTimerBar("No active flight progress")
+            return
+        end
+        local current = addonCore:GetCurrentFlight()
+        if self.timeRemaining and current.resumeRemaining then
+            self.timeRemaining = current.resumeRemaining - timeOnFlight
+        end
+    end
     if (self.unknownFlight) then
-        self.countingUpwards = (self.countingUpwards or 0) + elapsed
+        if not self.isFlightDisplay then
+            -- Appearance previews have no core flight and keep their own display timer.
+            self.countingUpwards = (self.countingUpwards or 0) + elapsed
+        end
+        local displayedElapsed = timeOnFlight or self.countingUpwards
         if db.profile.shortNames then
-            self.textObj:SetFormattedText("%s - %s", self.shortText, disp_time(self.countingUpwards))
+            self.textObj:SetFormattedText("%s - %s", self.shortText, disp_time(displayedElapsed))
         else
-            self.textObj:SetFormattedText("%s - %s", self.text, disp_time(self.countingUpwards))
+            self.textObj:SetFormattedText("%s - %s", self.text, disp_time(displayedElapsed))
         end
         self.spark:Hide()
         local ajdBarWidth = math.max(self.textObj:GetStringWidth() + 30, db.profile.barWidth)
@@ -122,7 +140,7 @@ local function timerBarOnUpdate(self, elapsed)
         return
     end
 
-    self.timeRemaining = self.timeRemaining - elapsed
+    if not self.isFlightDisplay then self.timeRemaining = self.timeRemaining - elapsed end
     if self.timeRemaining > 0 then
         if db.profile.compactMode then
             self.textObj:SetText(disp_time(self.timeRemaining))
@@ -268,7 +286,7 @@ function statusBarModuleCore:SetupTimerBar()
     self.OnFlightTimerFrame = OnFlightTimerFrame
 end
 
-function statusBarModuleCore:StartTimerBar(taxiSrcName, taxiDestName, duration, timeRemaining, unknownFlight) --Bar Text and Duration in seconds--
+function statusBarModuleCore:StartTimerBar(taxiSrcName, taxiDestName, duration, timeRemaining, unknownFlight, isFlightDisplay) --Bar Text and Duration in seconds--
     if not self:IsEnabled() then return end
     if not self.OnFlightTimerFrame then
         return
@@ -279,6 +297,7 @@ function statusBarModuleCore:StartTimerBar(taxiSrcName, taxiDestName, duration, 
 
     local timerFrame = self.OnFlightTimerFrame
 
+    timerFrame.isFlightDisplay = isFlightDisplay or false
     timerFrame.duration = duration
     timerFrame.timeRemaining = timeRemaining or duration
     timerFrame.unknownFlight = unknownFlight or false
@@ -307,6 +326,7 @@ end
 function statusBarModuleCore:StopTimerBar(reason)
     if not self.OnFlightTimerFrame then return end
     self.OnFlightTimerFrame:Hide()
+    self.OnFlightTimerFrame.isFlightDisplay = false
     self.OnFlightTimerFrame.countingUpwards = 0
     self.OnFlightTimerFrame.timeRemaining = 0
     self.OnFlightTimerFrame.duration = 0
