@@ -4,7 +4,7 @@
 ## Dependencies: Blizzard_UIPanels_Game
 ## Author: Orionshock
 ## Version: @project-version@
-## SavedVariables: OnFlightSV
+## SavedVariables: OnFlightSV, OnFlightTaxiDebugDB
 ## X-Curse-Project-ID: 821247
 
 embeds.xml
@@ -15,5 +15,6 @@ Defaults.lua
 FlightListWindow.lua
 
 #@debug@
+TaxiDebug.lua
 AllTaxiRunner.lua
 #@end-debug@
