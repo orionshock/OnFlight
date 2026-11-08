@@ -47,10 +47,65 @@ _G[addonName] = addonCore
 
 local L = LibStub("AceLocale-3.0"):GetLocale(addonName)
 
-local TaxiNodeName, GetNumRoutes, NumTaxiNodes, TaxiNodeGetType, TaxiGetNodeSlot = TaxiNodeName, GetNumRoutes,
+local GetNumRoutes, NumTaxiNodes, TaxiNodeGetType, TaxiGetNodeSlot = GetNumRoutes,
     NumTaxiNodes, TaxiNodeGetType, TaxiGetNodeSlot
 
 local db, playerFaction
+
+-- Node names are session-local presentation data, never database keys.
+local nodeCache, taxiSession = {}, nil
+
+function addonCore:GetTaxiNodeName(nodeID)
+    if type(nodeID) ~= "number" then return end
+    if not nodeCache[nodeID] then
+        for _, node in ipairs(C_TaxiMap.GetTaxiNodesForMap(947)) do
+            nodeCache[node.nodeID] = node.name
+        end
+    end
+    return nodeCache[nodeID]
+end
+
+function addonCore:GetTaxiSession()
+    if taxiSession and TaxiFrame:IsShown() and taxiSession.mapID == GetTaxiMapID() then return taxiSession end
+end
+
+function addonCore:RefreshTaxiSession()
+    if not TaxiFrame:IsShown() then return end
+    local mapID = GetTaxiMapID()
+    if not mapID then return end
+    local session = { mapID = mapID, nodes = {}, slotToID = {}, idToSlot = {} }
+    for _, node in ipairs(C_TaxiMap.GetAllTaxiNodes(mapID)) do
+        local slot, id = node.slotIndex, node.nodeID
+        if slot and slot > 0 and id and id > 0 then
+            session.nodes[id], nodeCache[id] = node, node.name
+            session.slotToID[slot], session.idToSlot[id] = id, slot
+            if TaxiNodeGetType(slot) == "CURRENT" then session.sourceID = id end
+        end
+    end
+    if not session.sourceID then return end
+    for slot = 1, NumTaxiNodes() do
+        if TaxiNodeGetType(slot) ~= "NONE" and not session.slotToID[slot] then return end
+    end
+    taxiSession = session
+    return session
+end
+
+function addonCore:GetTaxiRoute(destinationID)
+    local session = self:GetTaxiSession()
+    local slot = session and session.idToSlot[destinationID]
+    if not slot then return end
+    local hops = GetNumRoutes(slot)
+    local route = { [1] = session.sourceID, [hops + 1] = destinationID }
+    -- Preserve the estimator's existing intermediate-source ordering.
+    for hop = 2, hops do
+        local id = session.slotToID[TaxiGetNodeSlot(slot, hop, true)]
+        if not id then return end
+        route[hop] = id
+    end
+    return route
+end
+
+local taxiSessionFrame = CreateFrame("Frame")
 
 local svDefaults = {
     char = {},
@@ -58,13 +113,13 @@ local svDefaults = {
         showChat = true,
         gossipConfig = false,
         gossipdebug = false,
+        favorites = {},
         moduleState = {
             ["*"] = true,
         }
     },
     global = {
-        Horde = {},
-        Alliance = {}
+        flightTimes = { Horde = {}, Alliance = {} }
     }
 }
 addonCore.svDefaults = svDefaults
@@ -75,7 +130,7 @@ function addonCore:OnInitialize()
     db = self.db
     -- Flights only survive loading screens within this Lua session, never a reload/login.
     wipe(db.char)
-    db.global[playerFaction] = db.global[playerFaction] or {}
+    db.global.flightTimes[playerFaction] = db.global.flightTimes[playerFaction] or {}
     db.profile.gossipConfig = false
     db.RegisterCallback(self, "OnProfileChanged", "OnProfileUpdated")
     db.RegisterCallback(self, "OnProfileCopied", "OnProfileUpdated")
@@ -95,6 +150,7 @@ end
 
 function addonCore:OnEnable()
     self:RegisterEvent("TAXIMAP_OPENED")
+    self:RegisterEvent("TAXIMAP_CLOSED")
     self:RegisterEvent("PLAYER_ENTERING_WORLD")
     self:RegisterEvent("PLAYER_LEAVING_WORLD")
     self:RegisterEvent("LFG_PROPOSAL_DONE")
@@ -131,6 +187,7 @@ taxiTimerFrame:Hide()
 taxiTimerFrame.taxiState = false
 do
     local function ResetOnFlightTimer(reason)
+        taxiTimerFrame.flight = nil
         taxiTimerFrame.taxiSrcName = nil
         taxiTimerFrame.taxiDestName = nil
         taxiTimerFrame.taxiStartTime = nil
@@ -141,10 +198,16 @@ do
         taxiTimerFrame:Hide()
     end
 
-    function addonCore.StartAFlight(_, source, destination, timeRmaining, forceEarlyExitState)
+    function addonCore.StartAFlight(_, source, destination, timeRmaining, forceEarlyExitState, route)
+        if type(source) ~= "number" or type(destination) ~= "number" then return end
+        local sourceName = addonCore:GetTaxiNodeName(source)
+        local destinationName = addonCore:GetTaxiNodeName(destination)
+        if not sourceName or not destinationName then return end
         ResetOnFlightTimer("PreFlightReset")
-        taxiTimerFrame.taxiSrcName = source
-        taxiTimerFrame.taxiDestName = destination
+        taxiTimerFrame.flight = { sourceID = source, destinationID = destination, route = route or {},
+            sourceName = sourceName, destinationName = destinationName }
+        taxiTimerFrame.taxiSrcName = sourceName
+        taxiTimerFrame.taxiDestName = destinationName
         taxiTimerFrame.timeRmaining = timeRmaining
         if timeRmaining or forceEarlyExitState then
             taxiTimerFrame.earlyExit = forceEarlyExitState
@@ -167,7 +230,7 @@ do
                 if self.taxiState then
                     self.elapsedNotOnFlight = nil
                     self.taxiStartTime = self.taxiStartTime or GetTime()
-                    local flightDurationFromDB = addonCore:GetFlightDuration(self.taxiSrcName, self.taxiDestName)
+                    local flightDurationFromDB = addonCore:GetFlightDuration(self.flight.sourceID, self.flight.destinationID)
                     if flightDurationFromDB then
                         if taxiTimerFrame.timeRmaining then
                             addonCore:SendMessage("OnFlight_Taxi_RESUME", self.taxiSrcName, self.taxiDestName,
@@ -192,8 +255,9 @@ do
                 elseif (not self.taxiState) and (self.taxiStartTime) then
                     if not self.earlyExit then
                         local flightDuration = abs(GetTime() - self.taxiStartTime)
-                        db.global[playerFaction][self.taxiSrcName] = db.global[playerFaction][self.taxiSrcName] or {}
-                        db.global[playerFaction][self.taxiSrcName][self.taxiDestName] = math.floor(flightDuration)
+                        local times = db.global.flightTimes[playerFaction]
+                        times[self.flight.sourceID] = times[self.flight.sourceID] or {}
+                        times[self.flight.sourceID][self.flight.destinationID] = math.floor(flightDuration)
                         addonCore:SendMessage("OnFlight_Taxi_Stop", self.taxiSrcName, self.taxiDestName, flightDuration)
                         addonCore:ChatMessage(L["Off Taxi:"], self.taxiSrcName .. " --> " .. self.taxiDestName, "--",
                             SecondsToTime(flightDuration))
@@ -253,43 +317,20 @@ function addonCore:LFG_PROPOSAL_DONE(event, ...)
 end
 
 ---Estimated Flight Times - Transposed from origional code
----@param taxiDestSlot number
-function OnFlight_GetEstimatedTime(taxiDestSlot)
+---@param destinationID number
+function OnFlight_GetEstimatedTime(destinationID)
     if not TaxiFrame:IsShown() then
         return
     end
-    taxiDestSlot = tonumber(taxiDestSlot)
-    if not taxiDestSlot then
-        return
-    end
-
-    local taxiSrcName
-    local taxiDestName = TaxiNodeName(taxiDestSlot)
+    destinationID = tonumber(destinationID)
+    local session = addonCore:GetTaxiSession()
+    local taxiDestSlot = session and session.idToSlot[destinationID]
+    if not taxiDestSlot then return end
     local numRoutes = GetNumRoutes(taxiDestSlot)
-    if numRoutes < 2 then --if there are no hops between points then we cannot estimate anything.
-        return
-    end
-    --Find Current Index and Name (because no generic global variables for this stuff)
-    for index = 1, NumTaxiNodes() do
-        local nodeType = TaxiNodeGetType(index)
-        if nodeType == "CURRENT" then
-            taxiSrcName = TaxiNodeName(index)
-        end
-    end
-
-    local taxiNodes = {
-        [1] = taxiSrcName,
-        [numRoutes + 1] = taxiDestName
-    }
-
-    for hop = 2, numRoutes do
-        local nodeSlot = TaxiGetNodeSlot(taxiDestSlot, hop, true)
-        if nodeSlot then
-            taxiNodes[hop] = TaxiNodeName(nodeSlot)
-        end
-    end
-
-    local vars = addonCore.db.global[playerFaction]
+    if numRoutes < 2 then return end
+    local taxiNodes = addonCore:GetTaxiRoute(destinationID)
+    if not taxiNodes then return end
+    local vars = addonCore.db.global.flightTimes[playerFaction]
     local etimes, prevNode, nextNode = {}, {}, {}
     local srcNode = 1
     local dstNode = #taxiNodes - 1
@@ -327,20 +368,14 @@ function OnFlight_TaxiFrame_TooltipHook(button)
         if TaxiNodeGetType(id) ~= "REACHABLE" then
             return
         end
-        local taxiSrcName
-        for index = 1, NumTaxiNodes() do
-            local nodeType = TaxiNodeGetType(index)
-            if nodeType == "CURRENT" then
-                taxiSrcName = TaxiNodeName(index)
-            end
-        end
-        local vars = addonCore.db.global[playerFaction]
-        local duration = vars[taxiSrcName] and vars[taxiSrcName][TaxiNodeName(id)]
+        local session = addonCore:GetTaxiSession()
+        if not session then return end
+        local duration = addonCore:GetFlightDuration(session.sourceID, session.slotToID[id])
         if duration then
             GameTooltip:AddDoubleLine(L["Duration:"], SecondsToTime(duration))
             GameTooltip:Show()
         else
-            local eta = OnFlight_GetEstimatedTime(id)
+            local eta = OnFlight_GetEstimatedTime(session.slotToID[id])
             if eta then
                 GameTooltip:AddDoubleLine(L["Duration:"], "~" .. SecondsToTime(eta))
                 GameTooltip:Show()
@@ -352,9 +387,11 @@ function OnFlight_TaxiFrame_TooltipHook(button)
     end
 end
 
-function addonCore.TAXIMAP_OPENED(_, event, uiMapSystem)
-    if TaxiFrame:IsShown() then
-        if (uiMapSystem == Enum.UIMapSystem.Taxi) then
+function addonCore:TAXIMAP_OPENED(event, uiMapSystem)
+    taxiSession = nil
+    local function initialize()
+        if self:RefreshTaxiSession() then
+            taxiSessionFrame:SetScript("OnUpdate", nil)
             for i = 1, NumTaxiNodes(), 1 do
                 local tb = _G["TaxiButton" .. i]
                 if tb and not tb.OnFlighted then
@@ -362,9 +399,23 @@ function addonCore.TAXIMAP_OPENED(_, event, uiMapSystem)
                     tb.OnFlighted = true
                 end
             end
+            self:SendMessage("OnFlight_TaxiMapReady")
         end
     end
+    -- Poll only until the open map has populated its slot mappings.
+    taxiSessionFrame:SetScript("OnUpdate", initialize)
+    initialize()
 end
+
+function addonCore:TAXIMAP_CLOSED()
+    taxiSessionFrame:SetScript("OnUpdate", nil)
+    taxiSession = nil
+end
+
+-- A different displayed continent has its own slot numbering.
+hooksecurefunc("SetTaxiMap", function()
+    if taxiSession and taxiSession.mapID ~= GetTaxiMapID() then addonCore:TAXIMAP_OPENED() end
+end)
 
 function addonCore:PLAYER_ENTERING_WORLD(event, isInitialLogin, isReloadingUi)
     if taxiTimerFrame.taxiSrcName and taxiTimerFrame.taxiDestName then
@@ -389,14 +440,10 @@ end
 
 ---External / Internal APIs
 function addonCore:GetFlightDuration(source, destination, faction)
-    local src = (source and (type(source) == "string")) and source:trim()
-    local dest = (destination and (type(destination) == "string")) and destination:trim()
-    local fact = (faction and (type(faction) == "string")) and faction:trim() or playerFaction
-    if src and dest and db.global[fact] then
-        if db.global[fact][src] then
-            return db.global[fact][src][dest]
-        end
-    end
+    if type(source) ~= "number" or type(destination) ~= "number" then return end
+    local fact = type(faction) == "string" and faction:trim() or playerFaction
+    local times = db.global.flightTimes[fact]
+    return times and times[source] and times[source][destination]
 end
 
 function addonCore:IsOnFlight()
@@ -419,7 +466,7 @@ function addonCore:GetCurrentFlightProgress()
         return
     end
     local timeOnFlight = GetTime() - taxiTimerFrame.taxiStartTime
-    local totalDuration = self:GetFlightDuration(self:GetCurrentFlightDetail())
+    local totalDuration = self:GetFlightDuration(taxiTimerFrame.flight.sourceID, taxiTimerFrame.flight.destinationID)
     local timeRemaining
     if totalDuration then
         timeRemaining = totalDuration - timeOnFlight
@@ -431,18 +478,24 @@ end
 do --Direct Hoook Funcs
     local oldTakeTaxiNode = TakeTaxiNode
     TakeTaxiNode = function(slot, ...)
-        for taxiIndex = 1, NumTaxiNodes(), 1 do
-            if TaxiNodeGetType(taxiIndex) == "CURRENT" then
-                local taxiSrcName = TaxiNodeName(taxiIndex)
-                local taxiDestName = TaxiNodeName(slot)
-                if taxiSrcName and taxiDestName then
-                    addonCore:StartAFlight(taxiSrcName, taxiDestName)
-                    break
-                end
-            end
+        local session = addonCore:RefreshTaxiSession()
+        local destinationID = session and session.slotToID[slot]
+        if destinationID then
+            local route = addonCore:GetTaxiRoute(destinationID)
+            if route then addonCore:StartAFlight(session.sourceID, destinationID, nil, nil, route) end
         end
         oldTakeTaxiNode(slot, ...)
     end
+end
+
+function addonCore:StartGossipFlight(optionID)
+    local endpoints = db.global.gossipTriggered[optionID]
+    if type(endpoints[1]) ~= "number" or type(endpoints[2]) ~= "number"
+        or not self:GetTaxiNodeName(endpoints[1]) or not self:GetTaxiNodeName(endpoints[2]) then
+        self:Print("Gossip flight needs verified taxi-node IDs in settings: " .. optionID)
+        return
+    end
+    self:StartAFlight(endpoints[1], endpoints[2])
 end
 
 do
@@ -451,7 +504,7 @@ do
         "SelectOption",
         function(option, ...)
             if db.global.gossipTriggered[option] then
-                addonCore:StartAFlight(unpack(db.global.gossipTriggered[option]))
+                addonCore:StartGossipFlight(option)
             end
         end
     )
@@ -466,7 +519,7 @@ do
             if optionData.orderIndex == selectedIndex then
                 local selectedGossipID = optionData.gossipOptionID
                 if db.global.gossipTriggered[selectedGossipID] then
-                    addonCore:StartAFlight(unpack(db.global.gossipTriggered[selectedGossipID]))
+                    addonCore:StartGossipFlight(selectedGossipID)
                     break
                 end
             end
@@ -546,30 +599,32 @@ local gossipOptionTemplate = {
             end,
             disabled = true
         },
-        sourceName = {
+        sourceID = {
             order = 2,
             type = "input",
-            name = "Source Name",
+            name = "Source Node ID",
+            validate = function(_, value) return addonCore:GetTaxiNodeName(tonumber(value)) ~= nil or "Enter a known taxi-node ID" end,
             get = function(info)
                 local id = tonumber(info[#info - 1])
-                return db.global.gossipTriggered[id][1]
+                return tostring(db.global.gossipTriggered[id][1])
             end,
             set = function(info, value)
                 local id = tonumber(info[#info - 1])
-                db.global.gossipTriggered[id][1] = value
+                db.global.gossipTriggered[id][1] = tonumber(value)
             end
         },
-        destinationName = {
+        destinationID = {
             order = 3,
             type = "input",
-            name = "Destination Name",
+            name = "Destination Node ID",
+            validate = function(_, value) return addonCore:GetTaxiNodeName(tonumber(value)) ~= nil or "Enter a known taxi-node ID" end,
             get = function(info)
                 local id = tonumber(info[#info - 1])
-                return db.global.gossipTriggered[id][2]
+                return tostring(db.global.gossipTriggered[id][2])
             end,
             set = function(info, value)
                 local id = tonumber(info[#info - 1])
-                db.global.gossipTriggered[id][2] = value
+                db.global.gossipTriggered[id][2] = tonumber(value)
             end
         },
         remove = {
@@ -606,17 +661,19 @@ local gossipOptionTemplate_AddNew = {
             get = addNew_Temp_get,
             set = addNew_Temp_set
         },
-        sourceName = {
+        sourceID = {
             order = 2,
             type = "input",
-            name = "Source Name",
+            name = "Source Node ID",
+            validate = function(_, value) return addonCore:GetTaxiNodeName(tonumber(value)) ~= nil or "Enter a known taxi-node ID" end,
             get = addNew_Temp_get,
             set = addNew_Temp_set
         },
-        destinationName = {
+        destinationID = {
             order = 3,
             type = "input",
-            name = "Destination Name",
+            name = "Destination Node ID",
+            validate = function(_, value) return addonCore:GetTaxiNodeName(tonumber(value)) ~= nil or "Enter a known taxi-node ID" end,
             get = addNew_Temp_get,
             set = addNew_Temp_set
         },
@@ -626,12 +683,11 @@ local gossipOptionTemplate_AddNew = {
             type = "execute",
             func = function()
                 local id = tonumber(addNew_Temp.name)
-                if not id then
-                    return
-                end
+                if not id or not addonCore:GetTaxiNodeName(tonumber(addNew_Temp.sourceID))
+                    or not addonCore:GetTaxiNodeName(tonumber(addNew_Temp.destinationID)) then return end
                 db.global.gossipTriggered[id] = {
-                    addNew_Temp.sourceName,
-                    addNew_Temp.destinationName
+                    tonumber(addNew_Temp.sourceID),
+                    tonumber(addNew_Temp.destinationID)
                 }
                 wipe(addNew_Temp)
                 addonCore:RefreshAdvOptions()

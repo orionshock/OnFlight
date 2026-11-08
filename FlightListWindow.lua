@@ -5,41 +5,15 @@ local module = addonCore:NewModule(moduleName, "AceEvent-3.0")
 local AceGUI = LibStub("AceGUI-3.0")
 local L = LibStub("AceLocale-3.0"):GetLocale(addonName)
 local db
-local TaxiNodeName, GetNumRoutes, NumTaxiNodes, TaxiNodeGetType, TaxiGetNodeSlot = TaxiNodeName, GetNumRoutes,
-    NumTaxiNodes, TaxiNodeGetType, TaxiGetNodeSlot
-
 local OnTreeGroupSelected --because we use it in different places...
-
-local svDefaults = {
-    profile = {
-        --Dictionary List of Flight locations for Fav/Special Menu
-        --Defaults are the Major Faction Cities
-        ["Orgrimmar, Durotar"] = true,
-        ["Thunder Bluff, Mulgore"] = true,
-        ["Undercity, Tirisfal"] = true,
-        ["Silvermoon City"] = true,
-
-        ["Stormwind, Elwynn"] = true,
-        ["Ironforge, Dun Morogh"] = true,
-        ["Darnassus, Teldrassil"] = true,
-        ["Exodar, Azuremyst, Isle"] = true,
-
-        ["Shattrath, Terokkar Forest"] = true,
-
-        ["Dalaran"] = true,
-
-        ["Shrine of Two Moons, Vale of Eternal Blossoms"] = true,
-    }
-}
 
 function module:OnInitialize()
     self:SetEnabledState(addonCore.db.profile.moduleState[moduleName])
-    self.db = addonCore.db:RegisterNamespace(moduleName, svDefaults)
-    db = self.db
+    db = addonCore.db
 end
 
 function module:OnEnable()
-    self:RegisterEvent("TAXIMAP_OPENED")
+    self:RegisterMessage("OnFlight_TaxiMapReady", "TAXIMAP_OPENED")
     self:RegisterEvent("TAXIMAP_CLOSED")
     if TaxiFrame:IsShown() then
         self:TAXIMAP_OPENED()
@@ -47,7 +21,7 @@ function module:OnEnable()
 end
 
 function module:OnDisable()
-    self:UnregisterEvent("TAXIMAP_OPENED")
+    self:UnregisterMessage("OnFlight_TaxiMapReady")
     self:UnregisterEvent("TAXIMAP_CLOSED")
     self:TAXIMAP_CLOSED()
 end
@@ -68,9 +42,12 @@ function module:UpdateTaxiDestinations()
     wipe(masterTree)
     countSitesTotal, countSitesUnknown = 0, 0
     local currentZoneTag
+    local session = addonCore:GetTaxiSession()
+    if not session then return masterTree end
 
     for taxiNodeIndex = 1, NumTaxiNodes(), 1 do
-        local nodeName = TaxiNodeName(taxiNodeIndex)
+        local nodeID = session.slotToID[taxiNodeIndex]
+        local nodeName = nodeID and addonCore:GetTaxiNodeName(nodeID)
         local taxiNodeType = TaxiNodeGetType(taxiNodeIndex)
         if nodeName and taxiNodeType ~= "NONE" then
             local siteName, zoneName = nodeName:match("^([^,]+),?%s*([^,]*)")
@@ -78,15 +55,15 @@ function module:UpdateTaxiDestinations()
             siteName = siteName and siteName:trim()
             zoneName = zoneName and zoneName:trim()
 
-            if db.profile[nodeName] then
+            if db.profile.favorites[nodeID] then
                 siteName = favIcon .. " " .. siteName
             end
 
             if zoneName then                                              --Some Places Don't have zone names, will handle that with a "Special" section
                 zoneDictionary[zoneName] = zoneDictionary[zoneName] or {} --Add Zone Name to Dictionary
-                zoneDictionary[zoneName][taxiNodeIndex] = siteName
+                zoneDictionary[zoneName][nodeID] = siteName
             else
-                zoneDictionary[L["Special"]][taxiNodeIndex] = siteName
+                zoneDictionary[L["Special"]][nodeID] = siteName
             end
 
             if taxiNodeType == "DISTANT" then
@@ -114,8 +91,8 @@ function module:UpdateTaxiDestinations()
     end
 
     for zoneName, zoneData in pairs(zoneDictionary) do
-        for taxiNodeIndex, siteName in pairs(zoneData) do
-            if TaxiNodeGetType(taxiNodeIndex) == "DISTANT" then
+        for nodeID in pairs(zoneData) do
+            if TaxiNodeGetType(session.idToSlot[nodeID]) == "DISTANT" then
                 masterTree[zoneList[zoneName]].icon = masterTree[zoneList[zoneName]].icon or
                     134400 --The Question Mark Icon
             end
@@ -133,18 +110,16 @@ local function mainFrame_OnClose(widget, event)
 end
 
 local function flightButton_OnClick(widget, event, button, direction)
-    --button seems to always be left click...
+    local session = addonCore:GetTaxiSession()
+    local nodeID = widget.nodeID
+    local slot = session and session.idToSlot[nodeID]
+    if not slot then return end
     if IsShiftKeyDown() then
-        local siteName = TaxiNodeName(widget.frame:GetID())
-        if db.profile[siteName] then
-            db.profile[siteName] = nil
-        else
-            db.profile[siteName] = true
-        end
+        db.profile.favorites[nodeID] = not db.profile.favorites[nodeID] or nil
         module:UpdateTaxiDestinations()
         OnTreeGroupSelected(widget.parent, "flightButton_OnClick", widget.parent.localstatus.selected)
     else
-        TakeTaxiNode(widget.frame:GetID())
+        TakeTaxiNode(slot)
     end
 end
 
@@ -179,7 +154,8 @@ local function treeGroup_OnButtonEnter(widget, event, path, frame)
         for taxiNodeID, siteName in pairs(zoneData) do
             for index = 1, NUM_TAXI_BUTTONS do
                 local button = _G["TaxiButton" .. index];
-                if taxiNodeID == button:GetID() then
+                local session = addonCore:GetTaxiSession()
+                if session and session.idToSlot[taxiNodeID] == button:GetID() then
                     button:LockHighlight()
                 end
             end
@@ -197,8 +173,9 @@ end
 
 local currentLocationIcon = CreateSimpleTextureMarkup(137033, 16, 16, 0, 0)
 
-local function StageFlightButton(widget, siteName, siteIndex, taxiNodeType)
-    widget.frame:SetID(siteIndex)
+local function StageFlightButton(widget, siteName, nodeID, taxiNodeType)
+    widget.nodeID = nodeID
+    widget.frame:SetID(addonCore:GetTaxiSession().idToSlot[nodeID])
     widget:SetCallback("OnClick", flightButton_OnClick)
     widget:SetCallback("OnEnter", flightButton_OnEnter)
     widget:SetCallback("OnLeave", flightButton_OnLeave)
@@ -227,6 +204,8 @@ local function GetCurrentlySelectedTreeIcon(widgetObject)
 end
 
 function OnTreeGroupSelected(treeGroupWidget, event, selectedKey)
+    local session = addonCore:GetTaxiSession()
+    if not session then return end
     local zoneName = selectedKey
     local zoneList = zoneDictionary[zoneName]
     treeGroupWidget:ReleaseChildren()
@@ -246,11 +225,12 @@ function OnTreeGroupSelected(treeGroupWidget, event, selectedKey)
 
         ---Zone Buttons---
         for siteIndex = 1, NumTaxiNodes(), 1 do
-            local siteName = zoneList[siteIndex]
+            local nodeID = session.slotToID[siteIndex]
+            local siteName = zoneList[nodeID]
             if siteName then
                 local button = AceGUI:Create("Button")
                 local taxiNodeType = TaxiNodeGetType(siteIndex)
-                StageFlightButton(button, siteName, siteIndex, taxiNodeType)
+                StageFlightButton(button, siteName, nodeID, taxiNodeType)
                 treeGroupWidget:AddChild(button)
             end
         end
@@ -273,11 +253,12 @@ function OnTreeGroupSelected(treeGroupWidget, event, selectedKey)
 
         ---Fav Buttons---
         for taxiNodeIndex = 1, NumTaxiNodes(), 1 do
-            local nodeName = TaxiNodeName(taxiNodeIndex)
-            if db.profile[nodeName] then
+            local nodeID = session.slotToID[taxiNodeIndex]
+            local nodeName = nodeID and addonCore:GetTaxiNodeName(nodeID)
+            if db.profile.favorites[nodeID] then
                 local button = AceGUI:Create("Button")
                 local taxiNodeType = TaxiNodeGetType(taxiNodeIndex)
-                button = StageFlightButton(button, nodeName, taxiNodeIndex, taxiNodeType)
+                button = StageFlightButton(button, nodeName, nodeID, taxiNodeType)
                 treeGroupWidget:AddChild(button)
             end
         end
@@ -319,12 +300,8 @@ function module:BuildandShowGUI(treeOptions)
 end
 
 function module:TAXIMAP_OPENED()
-    for i = 1, NumTaxiNodes() do
-        for j = 1, GetNumRoutes(i) do
-            TaxiGetNodeSlot(i, j, true)
-            TaxiGetNodeSlot(i, j, false)
-        end
-    end
+    if not addonCore:GetTaxiSession() then return end
+    self:TAXIMAP_CLOSED()
     local flightTree = module:UpdateTaxiDestinations()
     self:BuildandShowGUI(flightTree)
 end
@@ -411,7 +388,7 @@ addonCore.configOptionsTable.plugins[moduleName] = {
                 type = "execute",
                 name = L["Reset Favorite Destinations"],
                 func = function(info)
-                    db:ResetProfile(true)
+                    wipe(db.profile.favorites)
                 end,
             },
         }
