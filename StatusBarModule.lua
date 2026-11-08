@@ -60,7 +60,7 @@ function statusBarModuleCore:OnEnable()
     end
     self:RegisterMessage("OnFlight_Taxi_Start")
     self:RegisterMessage("OnFlight_Taxi_Stop")
-    self:RegisterMessage("OnFlight_Taxi_EarlyExit")
+    self:RegisterMessage("OnFlight_Taxi_EarlyExit", "OnFlight_Taxi_Stop")
     self:RegisterMessage("OnFlight_Taxi_FAILED_ENTRY", "OnFlight_Taxi_Stop")
     self:RegisterMessage("OnFlight_Taxi_RESUME")
     self:RegisterMessage("OnFlight_Taxi_Suspend", function()
@@ -94,10 +94,6 @@ function statusBarModuleCore:OnFlight_Taxi_Stop(event, ...)
     self:StopTimerBar(event)
 end
 
-function statusBarModuleCore:OnFlight_Taxi_EarlyExit(event, taxiSrcName, taxiDestName, exitReason)
-    self:StopTimerBar(event)
-end
-
 function statusBarModuleCore:OnFlight_Taxi_RESUME(event, taxiSrcName, taxiDestName, taxiDuration, timeRemaining,
                                                   unknownFlight, timeOnFlight)
     self:StartTimerBar(taxiSrcName, taxiDestName, taxiDuration, timeRemaining, unknownFlight, true)
@@ -123,115 +119,85 @@ local function timerBarOnUpdate(self, elapsed)
             self.timeRemaining = current.resumeRemaining - timeOnFlight
         end
     end
-    if (self.unknownFlight) then
+    local profile = db.profile
+    local displayedTime
+    if self.unknownFlight then
         if not self.isFlightDisplay then
             -- Appearance previews have no core flight and keep their own display timer.
             self.countingUpwards = (self.countingUpwards or 0) + elapsed
         end
-        local displayedElapsed = timeOnFlight or self.countingUpwards
-        if db.profile.shortNames then
-            self.textObj:SetFormattedText("%s - %s", self.shortText, disp_time(displayedElapsed))
-        else
-            self.textObj:SetFormattedText("%s - %s", self.text, disp_time(displayedElapsed))
+        displayedTime = timeOnFlight or self.countingUpwards
+    else
+        if not self.isFlightDisplay then self.timeRemaining = self.timeRemaining - elapsed end
+        if self.timeRemaining <= 0 then
+            statusBarModuleCore:StopTimerBar("timerBarOnUpdate timedout")
+            return
         end
-        self.spark:Hide()
-        local ajdBarWidth = math.max(self.textObj:GetStringWidth() + 30, db.profile.barWidth)
-        self:SetWidth(ajdBarWidth)
-        return
+        displayedTime = self.timeRemaining
     end
 
-    if not self.isFlightDisplay then self.timeRemaining = self.timeRemaining - elapsed end
-    if self.timeRemaining > 0 then
-        if db.profile.compactMode then
-            self.textObj:SetText(disp_time(self.timeRemaining))
+    local second = floor(displayedTime)
+    if self.displayedSecond ~= second then
+        self.displayedSecond = second
+        if profile.compactMode and not self.unknownFlight then
+            self.textObj:SetText(disp_time(displayedTime))
         else
-            if db.profile.shortNames then
-                self.textObj:SetFormattedText("%s - %s", self.shortText, disp_time(self.timeRemaining))
-            else
-                self.textObj:SetFormattedText("%s - %s", self.text, disp_time(self.timeRemaining))
-            end
+            local label = profile.shortNames and self.shortText or self.text
+            self.textObj:SetFormattedText("%s - %s", label, disp_time(displayedTime))
         end
+        local currentWidth = self:GetWidth()
+        local width = math.max(self.textObj:GetStringWidth() + 30, profile.barWidth)
+        if not self.unknownFlight then width = math.max(width, currentWidth) end
+        if width ~= currentWidth then self:SetWidth(width) end
+    end
 
-        local ajdBarWidth = math.max(self.textObj:GetStringWidth() + 30, db.profile.barWidth) --dynamic size to min or make it bigger as needed
-        self:SetWidth(math.max(ajdBarWidth, self:GetWidth()))                                 --make bar bigger only, don't shrink it.
-
+    if not self.unknownFlight then
         self.statusBar:SetValue(self.timeRemaining)
-        self.spark:Show()
         local sparkPosition = (self.timeRemaining / self.duration) * self.statusBar:GetWidth()
         self.spark:SetPoint("CENTER", self.statusBar, "LEFT", sparkPosition, 0)
-    elseif self.timeRemaining <= 0 then
-        statusBarModuleCore:StopTimerBar("timerBarOnUpdate timedout")
-        self:Hide()
     end
 end
 
 local bdrop = { edgeSize = 16, insets = { left = 4, right = 4, top = 4, bottom = 4 } }
-local function ApplyLookAndFeel(self) --self is the baseFrame
-    local barTexture = LSM:Fetch("statusbar", db.profile.barTexture)
+local function ApplyLookAndFeel(self)
+    local profile = db.profile
+    local barTexture = LSM:Fetch("statusbar", profile.barTexture)
     bdrop.bgFile = barTexture
-    bdrop.edgeFile = LSM:Fetch("border", db.profile.borderTexture)
+    bdrop.edgeFile = LSM:Fetch("border", profile.borderTexture)
 
-    --Set Frame Settings
-    self:SetWidth(db.profile.barWidth)
-    self:SetHeight(db.profile.barHeight)
-    local barLocation = db.profile.barLocation
+    -- Invalidate text and width after any appearance or profile change.
+    self.displayedSecond = nil
+    if self:GetWidth() ~= profile.barWidth then self:SetWidth(profile.barWidth) end
+    self:SetHeight(profile.barHeight)
+    local location = profile.barLocation
     self:ClearAllPoints()
-    self:SetPoint(barLocation.anchorPoint, UIParent, barLocation.relativePoint, barLocation.offsetX,
-        barLocation.offsetY)
+    self:SetPoint(location.anchorPoint, UIParent, location.relativePoint, location.offsetX, location.offsetY)
+    -- Forever skips SetBackdrop for the same table unless it is cleared first.
     self:ClearBackdrop()
     self:SetBackdrop(bdrop)
-    self:SetBackdropColor(db.profile.backgroundColor.r, db.profile.backgroundColor.g, db.profile.backgroundColor.b,
-        db.profile.backgroundColor.a)
-    self:SetBackdropBorderColor(db.profile.borderColor.r, db.profile.borderColor.g, db.profile.borderColor.b,
-        db.profile.borderColor.a)
+    local background, border = profile.backgroundColor, profile.borderColor
+    self:SetBackdropColor(background.r, background.g, background.b, background.a)
+    self:SetBackdropBorderColor(border.r, border.g, border.b, border.a)
 
-    --Set Status Bar Settings
-    local statusBar = self.statusBar
-    statusBar:SetStatusBarTexture(barTexture)
-    statusBar:SetStatusBarColor(db.profile.barColor.r, db.profile.barColor.g, db.profile.barColor.b,
-        db.profile.barColor.a)
-    statusBar:ClearAllPoints()
-    statusBar:SetPoint("TOPLEFT", self, "TOPLEFT", 6, -6)
-    statusBar:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", -6, 6)
-    local spark = self.spark
-    spark:ClearAllPoints()
-    spark:SetHeight(db.profile.barHeight)
-    spark:SetWidth(16)
-
-    --Text Object
-    local textObj = self.textObj
-    textObj:ClearAllPoints()
-    textObj:SetPoint("CENTER", self, "CENTER")
-    textObj:SetFont(LSM:Fetch("font", db.profile.fontName), tonumber(db.profile.fontSize) or svDefaults.profile.fontSize)
-    textObj:SetTextColor(db.profile.fontColor.r, db.profile.fontColor.g, db.profile.fontColor.b, db.profile.fontColor.a)
-
-    if self.unknownFlight then
-        statusBar:SetStatusBarColor(db.profile.unknownFlightColor.r, db.profile.unknownFlightColor.g,
-            db.profile.unknownFlightColor.b, db.profile.unknownFlightColor.a)
-    else
-        statusBar:SetStatusBarColor(db.profile.barColor.r, db.profile.barColor.g, db.profile.barColor.b,
-            db.profile.barColor.a)
-    end
-end
-
-local function RefreshLookAndFeel()
-    if statusBarModuleCore.OnFlightTimerFrame then
-        ApplyLookAndFeel(statusBarModuleCore.OnFlightTimerFrame)
-    end
+    self.statusBar:SetStatusBarTexture(barTexture)
+    local color = self.unknownFlight and profile.unknownFlightColor or profile.barColor
+    self.statusBar:SetStatusBarColor(color.r, color.g, color.b, color.a)
+    self.spark:SetHeight(profile.barHeight)
+    self.textObj:SetFont(LSM:Fetch("font", profile.fontName), tonumber(profile.fontSize) or svDefaults.profile.fontSize)
+    local font = profile.fontColor
+    self.textObj:SetTextColor(font.r, font.g, font.b, font.a)
 end
 
 function statusBarModuleCore:SetupTimerBar()
-    local barLocation = db.profile.barLocation
     local OnFlightTimerFrame = CreateFrame("Frame", "OnFlightTimerFrame", UIParent, "BackdropTemplate")
     local statusBar = CreateFrame("StatusBar", "OnFlightTimerFrameStatusBar", OnFlightTimerFrame)
     LowerFrameLevel(statusBar)
+    statusBar:SetPoint("TOPLEFT", OnFlightTimerFrame, "TOPLEFT", 6, -6)
+    statusBar:SetPoint("BOTTOMRIGHT", OnFlightTimerFrame, "BOTTOMRIGHT", -6, 6)
     local textObj = OnFlightTimerFrame:CreateFontString("OnFlightTimerFrameText", nil, "GameFontHighlight")
+    textObj:SetPoint("CENTER", OnFlightTimerFrame, "CENTER")
     OnFlightTimerFrame:SetScript("OnUpdate", timerBarOnUpdate)
     OnFlightTimerFrame:Hide()
-    OnFlightTimerFrame:SetWidth(db.profile.barWidth)
-    OnFlightTimerFrame:SetHeight(db.profile.barHeight)
-    OnFlightTimerFrame:SetPoint(barLocation.anchorPoint, UIParent, barLocation.relativePoint, barLocation.offsetX,
-        barLocation.offsetY)
     OnFlightTimerFrame:SetMovable(true)
     OnFlightTimerFrame:EnableMouse(true)
     OnFlightTimerFrame:SetClampedToScreen(true)
@@ -245,7 +211,6 @@ function statusBarModuleCore:SetupTimerBar()
     spark:Hide()
     spark:SetTexture("Interface\\CastingBar\\UI-CastingBar-Spark")
     spark:SetWidth(16)
-    spark:SetHeight(16)
     spark:SetBlendMode("ADD")
 
     ApplyLookAndFeel(OnFlightTimerFrame)
@@ -277,10 +242,9 @@ function statusBarModuleCore:SetupTimerBar()
         function(frame)
             frame:StopMovingOrSizing()
             local anchorPoint, _, relativePoint, offsetX, offsetY = frame:GetPoint()
-            db.profile.barLocation.anchorPoint = anchorPoint
-            db.profile.barLocation.relativePoint = relativePoint
-            db.profile.barLocation.offsetX = offsetX
-            db.profile.barLocation.offsetY = offsetY
+            local location = db.profile.barLocation
+            location.anchorPoint, location.relativePoint = anchorPoint, relativePoint
+            location.offsetX, location.offsetY = offsetX, offsetY
         end
     )
     self.OnFlightTimerFrame = OnFlightTimerFrame
@@ -312,11 +276,12 @@ function statusBarModuleCore:StartTimerBar(taxiSrcName, taxiDestName, duration, 
     if unknownFlight then
         statusBar:SetMinMaxValues(0, 1)
         statusBar:SetValue(1)
-        timerFrame.unknownFlight = unknownFlight
+        timerFrame.spark:Hide()
         timerFrame.countingUpwards = 0
     else
         statusBar:SetMinMaxValues(0, duration)
         statusBar:SetValue(duration)
+        timerFrame.spark:Show()
     end
     ApplyLookAndFeel(self.OnFlightTimerFrame)
 
@@ -356,12 +321,13 @@ local optionsTable_SetPoint_SortedList = {
 ---
 
 function statusBarModuleCore:OnProfileUpdated()
-    RefreshLookAndFeel()
+    if self.OnFlightTimerFrame then ApplyLookAndFeel(self.OnFlightTimerFrame) end
 end
 
 function statusBarModuleCore:GetOption(info)
+    local profile = db.profile
     if info.type == "color" then
-        local t = db.profile[info[#info]]
+        local t = profile[info[#info]]
         if t then
             return t.r, t.g, t.b, t.a
         else
@@ -369,22 +335,23 @@ function statusBarModuleCore:GetOption(info)
                 math.random(0, 100) / 100
         end
     else
-        return db.profile[info[#info]]
+        return profile[info[#info]]
     end
 end
 
 function statusBarModuleCore:SetOption(info, ...)
+    local profile = db.profile
     if info.type == "color" then
         local red, green, blue, alpha = ...
-        db.profile[info[#info]] = db.profile[info[#info]] or {}
-        db.profile[info[#info]].r = red
-        db.profile[info[#info]].g = green
-        db.profile[info[#info]].b = blue
-        db.profile[info[#info]].a = alpha
+        profile[info[#info]] = profile[info[#info]] or {}
+        profile[info[#info]].r = red
+        profile[info[#info]].g = green
+        profile[info[#info]].b = blue
+        profile[info[#info]].a = alpha
     else
-        db.profile[info[#info]] = ...
+        profile[info[#info]] = ...
     end
-    RefreshLookAndFeel()
+    self:OnProfileUpdated()
 end
 
 function statusBarModuleCore:GetBarLocation(info, ...)
@@ -393,7 +360,7 @@ end
 
 function statusBarModuleCore:SetBarLocation(info, value)
     db.profile.barLocation[info[#info]] = value
-    RefreshLookAndFeel()
+    self:OnProfileUpdated()
 end
 
 addonCore.configOptionsTable.plugins = addonCore.configOptionsTable.plugins or {}
