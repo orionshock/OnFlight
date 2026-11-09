@@ -123,7 +123,8 @@ local function RowOnClick(self)
     end
     if IsShiftKeyDown() then
         local favorites = addonCore.db.profile.favorites
-        favorites[id] = not favorites[id] or nil
+        -- False overrides AceDB's default favorites across reloads and profile changes.
+        favorites[id] = not favorites[id]
         module:Refresh(false)
     elseif nodeType == "REACHABLE" then
         -- The core's existing pre-call hook captures IDs and starts tracking.

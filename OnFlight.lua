@@ -135,7 +135,14 @@ local svDefaults = {
         gossipConfig = false,
         showGossipConfig = false,
         gossipdebug = false,
-        favorites = {},
+        favorites = {
+            [2] = true, -- Stormwind
+            [6] = true, -- Ironforge
+            [27] = true, -- Rut'theran Village
+            [23] = true, -- Orgrimmar
+            [22] = true, -- Thunder Bluff
+            [11] = true, -- Undercity
+        },
         minimap = {
             hide = false,
             minimapPos = 225
