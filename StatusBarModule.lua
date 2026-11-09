@@ -322,6 +322,7 @@ local optionsTable_SetPoint_SortedList = {
 
 function statusBarModuleCore:OnProfileUpdated()
     if self.OnFlightTimerFrame then ApplyLookAndFeel(self.OnFlightTimerFrame) end
+    addonCore:RefreshSettings()
 end
 
 function statusBarModuleCore:GetOption(info)
@@ -363,6 +364,7 @@ function statusBarModuleCore:SetBarLocation(info, value)
     self:OnProfileUpdated()
 end
 
+-- These descriptions remain for AceConfigCmd, not the native settings page.
 addonCore.configOptionsTable.plugins = addonCore.configOptionsTable.plugins or {}
 addonCore.configOptionsTable.plugins[moduleName] = {
     barOptions = {
@@ -478,8 +480,7 @@ addonCore.configOptionsTable.plugins[moduleName] = {
                                 name = L["Bar Texture"],
                                 type = "select",
                                 order = 10,
-                                dialogControl = "LSM30_Statusbar",
-                                values = AceGUIWidgetLSMlists.statusbar
+                                values = function() return LSM:HashTable("statusbar") end
                             },
                             backgroundColor = {
                                 name = L["Background Color"],
@@ -508,8 +509,7 @@ addonCore.configOptionsTable.plugins[moduleName] = {
                                 name = L["Border Texture"],
                                 type = "select",
                                 order = 10,
-                                dialogControl = "LSM30_Border",
-                                values = AceGUIWidgetLSMlists.border
+                                values = function() return LSM:HashTable("border") end
                             },
                             borderColor = {
                                 name = L["Border Color"],
@@ -547,8 +547,7 @@ addonCore.configOptionsTable.plugins[moduleName] = {
                             fontName = {
                                 name = L["Font"],
                                 type = "select",
-                                dialogControl = "LSM30_Font",
-                                values = AceGUIWidgetLSMlists.font,
+                                values = function() return LSM:HashTable("font") end,
                                 order = 10
                             },
                             fontSize = {

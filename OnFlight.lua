@@ -112,6 +112,7 @@ local svDefaults = {
     profile = {
         showChat = true,
         gossipConfig = false,
+        showGossipConfig = false,
         gossipdebug = false,
         favorites = {},
         moduleState = {
@@ -140,15 +141,11 @@ function addonCore:OnInitialize()
     self.configOptionsTable.args.profiles.order = 800
 
     LibStub("AceConfig-3.0"):RegisterOptionsTable(addonName, self.configOptionsTable)
-    LibStub("AceConfigDialog-3.0"):SetDefaultSize(addonName, 770, 475)
-
-    self.optionFrames = {
-        mainPannel = { LibStub("AceConfigDialog-3.0"):AddToBlizOptions(addonName, "On Flight") }
-    }
     self:RegisterChatCommand("OnFlight", "ChatCommand")
 end
 
 function addonCore:OnEnable()
+    self:InitializeSettings()
     self:RegisterEvent("TAXIMAP_OPENED")
     self:RegisterEvent("TAXIMAP_CLOSED")
     self:RegisterEvent("PLAYER_ENTERING_WORLD")
@@ -165,7 +162,7 @@ function addonCore.ChatCommand(_, input)
         return
     end
     if not input or input:trim() == "" then
-        LibStub("AceConfigDialog-3.0"):Open(addonName)
+        addonCore:OpenSettings()
     else
         LibStub("AceConfigCmd-3.0").HandleCommand(addonCore, "OnFlight", addonName, input)
     end
@@ -569,6 +566,7 @@ function addonCore:SetOption(info, ...)
     else
         db.profile[info[#info]] = ...
     end
+    self:RefreshSettings()
 end
 
 local gossipOptionTemplate = {
@@ -594,28 +592,38 @@ local gossipOptionTemplate = {
             order = 2,
             type = "input",
             name = "Source Node ID",
-            validate = function(_, value) return addonCore:GetTaxiNodeName(tonumber(value)) ~= nil or "Enter a known taxi-node ID" end,
+            validate = function(_, value)
+                local key, message = addonCore:ParseGossipEndpoint(0, value)
+                return key ~= nil or message
+            end,
             get = function(info)
                 local id = tonumber(info[#info - 1])
-                return tostring(db.global.gossipTriggered[id][1])
+                local value = db.global.gossipTriggered[id][1]
+                return type(value) == "number" and tostring(value) or select(2, addonCore:GetGossipEndpoint(id, value))
             end,
             set = function(info, value)
                 local id = tonumber(info[#info - 1])
-                db.global.gossipTriggered[id][1] = tonumber(value)
+                db.global.gossipTriggered[id][1] = addonCore:ParseGossipEndpoint(id, value)
+                addonCore:RefreshGossipEditor(id)
             end
         },
         destinationID = {
             order = 3,
             type = "input",
             name = "Destination Node ID",
-            validate = function(_, value) return addonCore:GetTaxiNodeName(tonumber(value)) ~= nil or "Enter a known taxi-node ID" end,
+            validate = function(_, value)
+                local key, message = addonCore:ParseGossipEndpoint(0, value)
+                return key ~= nil or message
+            end,
             get = function(info)
                 local id = tonumber(info[#info - 1])
-                return tostring(db.global.gossipTriggered[id][2])
+                local value = db.global.gossipTriggered[id][2]
+                return type(value) == "number" and tostring(value) or select(2, addonCore:GetGossipEndpoint(id, value))
             end,
             set = function(info, value)
                 local id = tonumber(info[#info - 1])
-                db.global.gossipTriggered[id][2] = tonumber(value)
+                db.global.gossipTriggered[id][2] = addonCore:ParseGossipEndpoint(id, value)
+                addonCore:RefreshGossipEditor(id)
             end
         },
         remove = {
@@ -656,7 +664,10 @@ local gossipOptionTemplate_AddNew = {
             order = 2,
             type = "input",
             name = "Source Node ID",
-            validate = function(_, value) return addonCore:GetTaxiNodeName(tonumber(value)) ~= nil or "Enter a known taxi-node ID" end,
+            validate = function(_, value)
+                local key, message = addonCore:ParseGossipEndpoint(0, value)
+                return key ~= nil or message
+            end,
             get = addNew_Temp_get,
             set = addNew_Temp_set
         },
@@ -664,7 +675,10 @@ local gossipOptionTemplate_AddNew = {
             order = 3,
             type = "input",
             name = "Destination Node ID",
-            validate = function(_, value) return addonCore:GetTaxiNodeName(tonumber(value)) ~= nil or "Enter a known taxi-node ID" end,
+            validate = function(_, value)
+                local key, message = addonCore:ParseGossipEndpoint(0, value)
+                return key ~= nil or message
+            end,
             get = addNew_Temp_get,
             set = addNew_Temp_set
         },
@@ -674,12 +688,11 @@ local gossipOptionTemplate_AddNew = {
             type = "execute",
             func = function()
                 local id = tonumber(addNew_Temp.name)
-                if not id or not addonCore:GetTaxiNodeName(tonumber(addNew_Temp.sourceID))
-                    or not addonCore:GetTaxiNodeName(tonumber(addNew_Temp.destinationID)) then return end
-                db.global.gossipTriggered[id] = {
-                    tonumber(addNew_Temp.sourceID),
-                    tonumber(addNew_Temp.destinationID)
-                }
+                if not id or not addNew_Temp.sourceID or not addNew_Temp.destinationID then return end
+                local source = addonCore:ParseGossipEndpoint(id, addNew_Temp.sourceID)
+                local destination = addonCore:ParseGossipEndpoint(id, addNew_Temp.destinationID)
+                if not source or not destination then return end
+                db.global.gossipTriggered[id] = { source, destination }
                 wipe(addNew_Temp)
                 addonCore:RefreshAdvOptions()
             end
@@ -698,6 +711,7 @@ function addonCore:SetModuleStatus(info, value)
     else
         addonCore:DisableModule(info[#info])
     end
+    self:RefreshSettings()
 end
 
 function addonCore:OnProfileUpdated()
@@ -710,6 +724,8 @@ function addonCore:OnProfileUpdated()
         end
     end
     self:RefreshAdvOptions()
+    self:RefreshSettings()
+    self:SendMessage("OnFlight_DiagnosticsChanged")
 end
 
 function addonCore:RefreshAdvOptions()
@@ -719,8 +735,10 @@ function addonCore:RefreshAdvOptions()
     end
     opt.AddNewGossipID = gossipOptionTemplate_AddNew
     LibStub("AceConfigRegistry-3.0"):NotifyChange(addonName)
+    self:RefreshGossipEditor()
 end
 
+-- Keep the existing command paths; only Profiles is rendered by AceConfigDialog.
 addonCore.configOptionsTable = {
     type = "group",
     name = L["OnFlight Options"],
@@ -742,8 +760,8 @@ addonCore.configOptionsTable = {
                     order = 10
                 },
                 showGossipConfig = {
-                    name = L["Show Gossip Config"],
-                    desc = L["Show Gossip Config Pannel to add or remove Gossip Initated Travel"],
+                    name = "Show Diagnostic IDs",
+                    desc = "Show gossip option IDs and taxi-node IDs.",
                     type = "toggle",
                     order = 20,
                     get = function(info)
@@ -751,9 +769,8 @@ addonCore.configOptionsTable = {
                     end,
                     set = function(_, option)
                         db.profile.showGossipConfig = option
-                        if db.profile.showGossipConfig then
-                            addonCore:RefreshAdvOptions()
-                        end
+                        addonCore:RefreshSettings()
+                        addonCore:SendMessage("OnFlight_DiagnosticsChanged")
                     end
                 },
                 moduleControl = {
@@ -778,9 +795,6 @@ addonCore.configOptionsTable = {
             name = "Gossip Configuration",
             type = "group",
             order = 900,
-            hidden = function()
-                return not db.profile.showGossipConfig
-            end,
             args = {}
         }
     }

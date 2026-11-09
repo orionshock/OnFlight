@@ -139,6 +139,9 @@ local function GetRow(index)
     row.detail:SetPoint("BOTTOMRIGHT", -6, 4)
     row.detail:SetJustifyH("LEFT")
     row.detail:SetWordWrap(false)
+    row.nodeNumber = row:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    row.nodeNumber:SetPoint("BOTTOMRIGHT", -6, 4)
+    row.nodeNumber:SetJustifyH("RIGHT")
     row:SetScript("OnClick", RowOnClick)
     row:SetScript("OnEnter", RowOnEnter)
     row:SetScript("OnLeave", RowOnLeave)
@@ -207,6 +210,8 @@ function module:Refresh(resetScroll, focusCurrentZone)
         local row = GetRow(index)
         row:UnlockHighlight()
         row.nodeID, row.zone = nil, nil
+        row.nodeNumber:Hide()
+        row.detail:SetPoint("BOTTOMRIGHT", -6, 4)
         if zoneList then
             local zone = zoneNames[index]
             local group = zones[zone]
@@ -234,6 +239,11 @@ function module:Refresh(resetScroll, focusCurrentZone)
         else
             local node = destinations[index]
             row.nodeID = node.id
+            if addonCore.db.profile.showGossipConfig then
+                row.nodeNumber:SetText(tostring(node.id))
+                row.nodeNumber:Show()
+                row.detail:SetPoint("BOTTOMRIGHT", -row.nodeNumber:GetStringWidth() - 14, 4)
+            end
             row:SetEnabled(node.type == "REACHABLE" or node.type == "CURRENT")
             local available = node.type == "REACHABLE" or node.type == "CURRENT"
             row.icon:SetTexture(node.type == "CURRENT" and currentIcon or node.type == "REACHABLE" and reachableIcon or unavailableIcon)
@@ -382,6 +392,9 @@ end
 
 function module:OnEnable()
     self:RegisterMessage("OnFlight_TaxiMapReady", "TAXIMAP_OPENED")
+    self:RegisterMessage("OnFlight_DiagnosticsChanged", function()
+        if window and window:IsShown() then self:Refresh(false) end
+    end)
     self:RegisterEvent("TAXIMAP_CLOSED")
     if addonCore:GetTaxiSession() then self:Open() end
 end
@@ -417,13 +430,7 @@ toggle:SetScript("OnClick", function(_, button)
         if not module:IsEnabled() then return end
         if window and window:IsShown() then window:Hide() else module:Open() end
     else
-        local settings = LibStub("AceConfigDialog-3.0")
-        if settings.OpenFrames[addonName] then
-            settings:Close(addonName)
-            if module:IsEnabled() then module:Open() end
-        else
-            if window then window:Hide() end
-            settings:Open(addonName)
-        end
+        if window then window:Hide() end
+        addonCore:ToggleSettings()
     end
 end)

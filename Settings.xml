@@ -1,0 +1,10 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/">
+    <Script file="Settings.lua" />
+    <Frame name="OnFlightSettingsColorTemplate" inherits="SettingsColorSwatchControlTemplate" mixin="OnFlightSettingsColorMixin" virtual="true" />
+    <Frame name="OnFlightSettingsFontSizeTemplate" inherits="SettingsListElementTemplate" mixin="OnFlightSettingsFontSizeMixin" virtual="true">
+        <Size x="280" y="26" />
+        <Scripts>
+            <OnLoad method="OnLoad" />
+        </Scripts>
+    </Frame>
+</Ui>
