@@ -67,6 +67,8 @@ OnFlight keeps communication state in memory. Reloading does not restore a local
 
 Its single table holds one flight per sender. Repeated announcements update the last-heard time, newer flights replace older ones, and matching `E` removes a flight. It uses the same stale timeouts described above, with no recently-ended markers or reconciliation machinery. The reference receiver deliberately keeps delayed-packet handling small.
 
+Left-clicking the launcher requests an extra copy of Communication's frozen announcement through `RequestFlightAnnouncement()`. This local call sends no request message, changes no scheduling state, and supplies no flight data to the launcher. Right-click opens Settings. The receiver still updates only from `CHAT_MSG_ADDON`.
+
 The `OnFlight` LibDataBroker launcher shows the local self-received flight's countdown, or `Flying` for `U`. Its tooltip lists only received flights, including the local player, and resolves destination names through Blizzard's global taxi-node metadata. The minimap button uses LibDBIcon.
 
 LibDataBroker and LibDBIcon support this display only. They are **not protocol dependencies**: another addon needs only the shared prefix, four-field payload, Blizzard messaging functions, and server clock. The production Communication receiver continues to exclude self-originated messages from its remote records; the launcher intentionally accepts them.

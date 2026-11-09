@@ -441,7 +441,7 @@ function addonCore:InitializeSettings()
         self:GetModule("LDBLauncher"):RefreshMinimapIcon()
     end)
     Settings.CreateCheckbox(category, minimap,
-        L["Shows the OnFlight minimap launcher. Left-click to open settings; drag to move it."])
+        L["Shows the OnFlight minimap launcher. Left-click to resend your flight; right-click to open settings. Drag to move it."])
     local bar = self:GetModule("StatusBarModule")
     local enabled = Register(category, "StatusBarModule", "boolean", L["Enable Flight Timer Bar"], true, function()
         return self.db.profile.moduleState.StatusBarModule

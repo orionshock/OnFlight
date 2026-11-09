@@ -64,6 +64,9 @@ local function RenderTooltip(tip)
                 1, 1, 1, 1, 1, 1)
         end
     end
+    tip:AddLine(" ")
+    tip:AddLine(L["Left-click: Resend current flight"], 0.7, 0.7, 0.7)
+    tip:AddLine(L["Right-click: Open settings"], 0.7, 0.7, 0.7)
     tip:Show()
     lastTooltipUpdate = GetTime()
 end
@@ -186,6 +189,8 @@ function module:OnInitialize()
         text = L["OnFlight"],
         OnClick = function(_, button)
             if button == "LeftButton" then
+                addonCore:GetModule("Communication"):RequestFlightAnnouncement()
+            elseif button == "RightButton" then
                 addonCore:OpenSettings()
             end
         end,

@@ -192,7 +192,7 @@ L["DestParse"] = ", .+"
 
 -- Broker launcher and minimap button.
 L["Show Minimap Button"] = true
-L["Shows the OnFlight minimap launcher. Left-click to open settings; drag to move it."] = true
+L["Shows the OnFlight minimap launcher. Left-click to resend your flight; right-click to open settings. Drag to move it."] = true
 L["Flying"] = true
 L["OnFlight: %s"] = true
 L["OnFlight - Group Flights"] = true
@@ -201,3 +201,5 @@ L["Player / Destination"] = true
 L["Remaining"] = true
 L["%s (you)"] = true
 L["%s | %s"] = true
+L["Left-click: Resend current flight"] = true
+L["Right-click: Open settings"] = true

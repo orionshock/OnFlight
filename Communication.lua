@@ -158,6 +158,12 @@ function module:FlightStarted()
     Broadcast(outgoing.message)
 end
 
+function module:RequestFlightAnnouncement()
+    if outgoing and outgoing.flight == addonCore:GetCurrentFlight() then
+        Broadcast(outgoing.message)
+    end
+end
+
 function module:FlightEnded()
     if not outgoing then
         return
