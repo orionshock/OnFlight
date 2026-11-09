@@ -84,7 +84,7 @@ end
 
 local function RowOnLeave()
     ClearHover()
-    HighlightZone(selectedTab == "zones" and selectedZone)
+    HighlightZone(selectedTab == "zones" and (selectedZone or window.focusedZone))
 end
 
 local function RowOnClick(self)
@@ -268,8 +268,11 @@ function module:Refresh(resetScroll, focusCurrentZone)
         offset = math.max(0, (focusIndex - 1) * ROW_HEIGHT - (window.scroll:GetHeight() - ROW_HEIGHT) / 2)
     end
     window.content:SetHeight(math.max(1, count * ROW_HEIGHT))
+    -- Update the scroll range before positioning after a short Favorites list.
+    window.scroll:UpdateScrollChildRect()
     window.scroll:SetVerticalScroll(math.min(offset, math.max(0, count * ROW_HEIGHT - window.scroll:GetHeight())))
-    HighlightZone(selectedTab == "zones" and selectedZone)
+    window.focusedZone = focusIndex and zoneNames[focusIndex]
+    HighlightZone(selectedTab == "zones" and (selectedZone or window.focusedZone))
 end
 
 local function CreateWindow()
