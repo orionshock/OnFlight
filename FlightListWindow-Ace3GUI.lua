@@ -1,3 +1,4 @@
+-- Archived AceGUI browser; intentionally not loaded or packaged.
 ---@diagnostic disable: undefined-field, invisible
 local addonName, addonCore = ...
 local moduleName = "FlightListWindow"

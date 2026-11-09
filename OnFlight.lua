@@ -743,13 +743,6 @@ addonCore.configOptionsTable = {
                             set = "SetModuleStatus",
 
                         },
-                        FlightListWindow = {
-                            name = L["Flight Destinatoins"],
-                            desc = L["Companion Window to the Flight Master"],
-                            type = "toggle",
-                            get = "GetModuleStatus",
-                            set = "SetModuleStatus",
-                        }
                     }
                 }
             }

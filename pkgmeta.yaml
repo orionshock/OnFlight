@@ -15,6 +15,7 @@ externals:
     libs/AceGUI-3.0-SharedMediaWidgets: https://repos.wowace.com/wow/ace-gui-3-0-shared-media-widgets/trunk/AceGUI-3.0-SharedMediaWidgets
 
 ignore:
+    - FlightListWindow-Ace3GUI.lua
     - README.md
     - pkgmeta.yaml
     - .github

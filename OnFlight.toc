@@ -12,7 +12,6 @@ locales\locales.xml
 OnFlight.lua
 StatusBarModule.lua
 Defaults.lua
-FlightListWindow.lua
 
 #@debug@
 TaxiDebug.lua
