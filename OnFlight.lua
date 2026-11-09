@@ -6,8 +6,6 @@
         Send Events via AceEvent when things happen.
 
         StatusBarMdoule handles the display
-        Quartz also can handle the display
-        --Maybe LDB will later?
 Events:
 
 OnFlight_Taxi_Start
@@ -373,7 +371,7 @@ function OnFlight_TaxiFrame_TooltipHook(button)
                 GameTooltip:AddDoubleLine(L["Duration:"], "~" .. SecondsToTime(eta))
                 GameTooltip:Show()
             else
-                GameTooltip:AddDoubleLine(L["Duration:"], "Unknown")
+                GameTooltip:AddDoubleLine(L["Duration:"], L["Unknown"])
                 GameTooltip:Show()
             end
         end

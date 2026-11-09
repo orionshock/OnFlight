@@ -1,5 +1,9 @@
 package-as: OnFlight
 
+manual-changelog:
+    filename: CHANGELOG.md
+    markup-type: markdown
+
 externals:
     libs/LibStub: https://repos.wowace.com/wow/libstub/trunk
     libs/CallbackHandler-1.0: https://repos.wowace.com/wow/callbackhandler/trunk/CallbackHandler-1.0
@@ -16,8 +20,8 @@ externals:
     libs/LibDBIcon-1.0: https://repos.wowace.com/wow/libdbicon-1-0/trunk/LibDBIcon-1.0
 
 ignore:
+    - .gitignore
     - TaxiDebug.lua
-    - AllTaxiRunner.lua
     - README.md
     - pkgmeta.yaml
     - .github
