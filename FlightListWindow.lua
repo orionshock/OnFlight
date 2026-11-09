@@ -37,17 +37,23 @@ local function ClearSearch()
     window.search.clearing = nil
 end
 
+local function HighlightZone(zone)
+    local session = addonCore:GetTaxiSession()
+    if not zone or not session or not window:IsShown() then return end
+    for id, node in pairs(session.nodes) do
+        if GetDisplayZone(node.name) == zone then
+            local button = _G["TaxiButton" .. session.idToSlot[id]]
+            if button then button:LockHighlight() end
+        end
+    end
+end
+
 local function RowOnEnter(self)
     ClearHover()
     local session = addonCore:GetTaxiSession()
     if not session then return end
     if self.zone then
-        for id, node in pairs(session.nodes) do
-            if GetDisplayZone(node.name) == self.zone then
-                local button = _G["TaxiButton" .. session.idToSlot[id]]
-                if button then button:LockHighlight() end
-            end
-        end
+        HighlightZone(self.zone)
         return
     end
     local slot = session.idToSlot[self.nodeID]
@@ -71,6 +77,11 @@ local function RowOnEnter(self)
     end
     OnFlight_TaxiFrame_TooltipHook(self)
     GameTooltip:Show()
+end
+
+local function RowOnLeave()
+    ClearHover()
+    HighlightZone(selectedTab == "zones" and selectedZone)
 end
 
 local function RowOnClick(self)
@@ -127,7 +138,7 @@ local function GetRow(index)
     row.detail:SetWordWrap(false)
     row:SetScript("OnClick", RowOnClick)
     row:SetScript("OnEnter", RowOnEnter)
-    row:SetScript("OnLeave", ClearHover)
+    row:SetScript("OnLeave", RowOnLeave)
     rows[index] = row
     return row
 end
@@ -243,6 +254,7 @@ function module:Refresh(resetScroll)
     local offset = resetScroll and 0 or window.scroll:GetVerticalScroll()
     window.content:SetHeight(math.max(1, count * ROW_HEIGHT))
     window.scroll:SetVerticalScroll(math.min(offset, math.max(0, count * ROW_HEIGHT - window.scroll:GetHeight())))
+    HighlightZone(selectedTab == "zones" and selectedZone)
 end
 
 local function CreateWindow()
@@ -252,6 +264,7 @@ local function CreateWindow()
     window:SetPoint("TOPLEFT", TaxiFrame, "TOPRIGHT", 10, 0)
     window:SetPoint("BOTTOMLEFT", TaxiFrame, "BOTTOMRIGHT", 10, 0)
     window:SetFrameStrata("HIGH")
+    window:EnableMouse(true)
     window:SetClampedToScreen(true)
     window:SetTitle(L["Flight Destinations"])
     window:SetPortraitToAsset(132172)
