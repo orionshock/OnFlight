@@ -153,7 +153,7 @@ local function GetDurationText(sourceID, destinationID)
     return estimate and "~" .. SecondsToTime(estimate) or L["Unknown"]
 end
 
-function module:Refresh(resetScroll)
+function module:Refresh(resetScroll, focusCurrentZone)
     local session = addonCore:GetTaxiSession()
     if not session then self:TAXIMAP_CLOSED() return end
     ClearHover()
@@ -202,8 +202,10 @@ function module:Refresh(resetScroll)
 
     local zoneList = selectedTab == "zones" and not selectedZone
     local count = zoneList and #zoneNames or #destinations
+    local focusIndex
     for index = 1, count do
         local row = GetRow(index)
+        row:UnlockHighlight()
         row.nodeID, row.zone = nil, nil
         if zoneList then
             local zone = zoneNames[index]
@@ -213,6 +215,10 @@ function module:Refresh(resetScroll)
             if group.current then
                 row.icon:SetTexture(currentIcon)
                 row.icon:SetTexCoord(0, 1, 0, 1)
+                if focusCurrentZone then
+                    focusIndex = index
+                    row:LockHighlight()
+                end
             elseif zone == L["Other Locations"] then
                 row.icon:SetTexture(otherLocationsIcon)
                 row.icon:SetTexCoord(0, 1, 0, 1)
@@ -258,6 +264,9 @@ function module:Refresh(resetScroll)
     end
     window.footer:SetFormattedText(L["Total: %d -- Unknown: %d"], total, unknown)
     local offset = resetScroll and 0 or window.scroll:GetVerticalScroll()
+    if focusIndex then
+        offset = math.max(0, (focusIndex - 1) * ROW_HEIGHT - (window.scroll:GetHeight() - ROW_HEIGHT) / 2)
+    end
     window.content:SetHeight(math.max(1, count * ROW_HEIGHT))
     window.scroll:SetVerticalScroll(math.min(offset, math.max(0, count * ROW_HEIGHT - window.scroll:GetHeight())))
     HighlightZone(selectedTab == "zones" and selectedZone)
@@ -352,9 +361,10 @@ end
 function module:Open()
     if not addonCore:GetTaxiSession() then return end
     if not window then CreateWindow() end
+    selectedTab, selectedZone = "zones", nil
     ClearSearch()
     window:Show()
-    self:Refresh(true)
+    self:Refresh(true, true)
 end
 
 function module:TAXIMAP_OPENED()
