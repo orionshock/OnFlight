@@ -11,6 +11,7 @@ embeds.xml
 locales\locales.xml
 OnFlight.lua
 GossipTravel.lua
+Communication.lua
 StatusBarModule.lua
 Defaults.lua
 Settings.xml

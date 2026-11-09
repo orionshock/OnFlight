@@ -36,7 +36,7 @@ taxiDestName --Full Proper name from API for where we are going
 ]]
 --luacheck: no max line length
 --luacheck: globals LibStub InCombatLockdown TaxiNodeName GetNumRoutes NumTaxiNodes TaxiNodeGetType
---luacheck: globals UnitFactionGroup string UnitOnTaxi UnitInVehicle CreateFrame tostringall GetTime date SecondsToTime abs hooksecurefunc
+--luacheck: globals UnitFactionGroup string UnitOnTaxi UnitInVehicle CreateFrame tostringall GetTime GetServerTime date SecondsToTime abs hooksecurefunc
 --luacheck: globals C_SummonInfo OnFlight_GetEstimatedTime TaxiFrame TaxiGetNodeSlot OnFlight_TaxiFrame_TooltipHook GameTooltip wipe
 
 
@@ -180,6 +180,7 @@ local function UpdateFlight(_, elapsed)
         if flight.onTaxi then
             flight.elapsedNotOnFlight = nil
             flight.startedAt = flight.startedAt or GetTime()
+            flight.startServerTime = flight.startServerTime or GetServerTime()
             local duration = addonCore:GetFlightDuration(flight.sourceID, flight.destinationID)
             if duration then
                 if flight.resumeRemaining then
