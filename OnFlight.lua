@@ -241,9 +241,8 @@ local function UpdateFlight(_, elapsed)
 end
 
 function addonCore:StartAFlight(source, destination, timeRemaining, forceEarlyExitState, route)
-    if type(source) ~= "number" or type(destination) ~= "number" then return end
-    local sourceName = self:GetTaxiNodeName(source)
-    local destinationName = self:GetTaxiNodeName(destination)
+    local sourceName = self:GetFlightEndpointName(source)
+    local destinationName = self:GetFlightEndpointName(destination)
     if not sourceName or not destinationName then return end
     flight = { sourceID = source, destinationID = destination, route = route or {},
         sourceName = sourceName, destinationName = destinationName, onTaxi = false,
@@ -411,7 +410,6 @@ end
 
 ---External / Internal APIs
 function addonCore:GetFlightDuration(source, destination, faction)
-    if type(source) ~= "number" or type(destination) ~= "number" then return end
     local fact = type(faction) == "string" and faction:trim() or playerFaction
     local times = db.global.flightTimes[fact]
     return times and times[source] and times[source][destination]
@@ -452,14 +450,43 @@ do --Direct Hoook Funcs
     end
 end
 
+-- Custom gossip endpoints never resolve by name to a taxi node.
+function addonCore:GetGossipEndpoint(optionID, value)
+    if type(value) == "number" then return value, self:GetTaxiNodeName(value) end
+    if type(value) ~= "string" then return end
+    local prefix = tostring(optionID) .. ":"
+    local label = value:sub(1, #prefix) == prefix and value:sub(#prefix + 1) or value
+    label = label:match("^%s*(.-)%s*$")
+    if label ~= "" then return prefix .. label, label end
+end
+
+function addonCore:ParseGossipEndpoint(optionID, text)
+    local value = text:match("^%s*(.-)%s*$")
+    if value == "" then return nil, "Enter a taxi-node ID or custom location name." end
+    if value:match("^%d+$") then
+        local id = tonumber(value)
+        local name = self:GetTaxiNodeName(id)
+        if name then return id, name end
+        return nil, "Unknown taxi-node ID. Saved value unchanged."
+    end
+    return tostring(optionID) .. ":" .. value, value
+end
+
+function addonCore:GetFlightEndpointName(key)
+    if type(key) == "number" then return self:GetTaxiNodeName(key) end
+    if type(key) == "string" then return key:match("^%d+:(.+)$") end
+end
+
 function addonCore:StartGossipFlight(optionID)
     local endpoints = db.global.gossipTriggered[optionID]
-    if type(endpoints[1]) ~= "number" or type(endpoints[2]) ~= "number"
-        or not self:GetTaxiNodeName(endpoints[1]) or not self:GetTaxiNodeName(endpoints[2]) then
-        self:Print("Gossip flight needs verified taxi-node IDs in settings: " .. optionID)
+    if not endpoints then return end
+    local source, sourceName = self:GetGossipEndpoint(optionID, endpoints[1])
+    local destination, destinationName = self:GetGossipEndpoint(optionID, endpoints[2])
+    if not sourceName or not destinationName then
+        self:Print("Configure both gossip-flight endpoints in settings: " .. optionID)
         return
     end
-    self:StartAFlight(endpoints[1], endpoints[2])
+    self:StartAFlight(source, destination)
 end
 
 do
