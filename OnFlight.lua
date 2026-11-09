@@ -519,7 +519,7 @@ function addonCore:SetModuleStatus(info, value)
     else
         addonCore:DisableModule(info[#info])
     end
-    self:RefreshSettings()
+    self:RefreshSettings(info[#info])
 end
 
 function addonCore:OnProfileUpdated()
@@ -531,7 +531,6 @@ function addonCore:OnProfileUpdated()
             self:DisableModule(name)
         end
     end
-    self:RefreshAdvOptions()
     self:RefreshSettings()
-    self:SendMessage("OnFlight_DiagnosticsChanged")
+    self:RefreshDiagnostics()
 end

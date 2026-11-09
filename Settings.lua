@@ -16,12 +16,39 @@ local gossipPage, diagnosticSetting
 local function Register(category, key, kind, name, default, get, set)
     local setting = Settings.RegisterProxySetting(category, addonName .. "_" .. key,
         kind, name, default, get, set)
-    settings[#settings + 1] = setting
+    settings[key] = setting
     return setting
 end
 
-function addonCore:RefreshSettings()
-    for _, setting in ipairs(settings) do setting:NotifyUpdate() end
+function addonCore:RefreshSettings(...)
+    local function Notify(setting)
+        -- A native setter emits its own notification after releasing this lock.
+        if setting and not setting:IsLocked() then setting:NotifyUpdate() end
+    end
+    if select("#", ...) == 0 then
+        for _, setting in pairs(settings) do Notify(setting) end
+    else
+        for index = 1, select("#", ...) do
+            local key = select(index, ...)
+            Notify(settings[key])
+            -- Short Names listens to Compact Mode as well as module enablement.
+            if key == "StatusBarModule" then Notify(settings.bar_compactMode) end
+        end
+    end
+end
+
+function addonCore:RefreshDiagnostics()
+    local owner = GameTooltip:GetOwner()
+    if owner and owner.OnFlightGossipID
+        and not (self.db.profile.showGossipConfig or self.db.profile.gossipdebug) then
+        GameTooltip:Hide()
+    end
+    self:SendMessage("OnFlight_DiagnosticsChanged")
+end
+
+local function ResetBarSettings()
+    statusBarModuleCore.db:ResetProfile(true)
+    addonCore:RefreshSettings()
 end
 
 function addonCore:OpenSettings()
@@ -202,7 +229,7 @@ function addonCore:RefreshGossipEditor(optionID)
             if not row.remove then
                 row.remove = MakeButton(row, L["Remove"], 80, function()
                     self.db.global.gossipTriggered[row.optionID] = nil
-                    self:RefreshAdvOptions()
+                    self:RefreshAdvOptions(row.optionID)
                 end)
                 row.remove:SetPoint("TOPRIGHT", -8, 0)
             end
@@ -231,7 +258,7 @@ local function CreateGossipPage(parentCategory)
         function() return addonCore.db.profile.showGossipConfig end,
         function(value)
             addonCore.db.profile.showGossipConfig = value
-            addonCore:SendMessage("OnFlight_DiagnosticsChanged")
+            addonCore:RefreshDiagnostics()
         end)
     local checkbox = CreateFrame("CheckButton", nil, page, "UICheckButtonTemplate")
     checkbox:SetPoint("TOPLEFT", 12, -8)
@@ -306,7 +333,7 @@ local function CreateGossipPage(parentCategory)
             new[index].feedback:SetText("")
             new[index]:ClearFocus()
         end
-        addonCore:RefreshAdvOptions()
+        addonCore:RefreshAdvOptions(id)
     end)
     new.add:SetPoint("TOPRIGHT", -8, 0)
 
@@ -450,7 +477,7 @@ function addonCore:InitializeSettings()
         L["Shows an elapsed-time display with sample locations. Previews leave your travel and learned flight times unchanged."])
     Button(L["Hide Timer Bar"], function() bar:StopTimerBar() end,
         L["Hides the preview or current flight display. Flight tracking and duration learning continue."])
-    Button(L["Reset Bar Settings"], function() bar.db:ResetProfile(true) end,
+    Button(L["Reset Bar Settings"], ResetBarSettings,
         L["Restores the current profile's timer-bar appearance and position defaults. Other OnFlight settings and learned flight times stay unchanged."])
     LibStub("AceConfigDialog-3.0"):AddToBlizOptions(addonName, L["Profiles"], category:GetID(), "profiles")
     CreateGossipPage(category)
@@ -511,7 +538,7 @@ function addonCore:SetOption(info, ...)
     else
         addonCore.db.profile[info[#info]] = ...
     end
-    self:RefreshSettings()
+    self:RefreshSettings(info[#info])
 end
 
 local gossipOptionTemplate = {
@@ -579,7 +606,7 @@ local gossipOptionTemplate = {
                 local id = tonumber(info[#info - 1])
                 ---@diagnostic disable-next-line: need-check-nil
                 addonCore.db.global.gossipTriggered[id] = nil
-                addonCore:RefreshAdvOptions()
+                addonCore:RefreshAdvOptions(id)
             end
         }
     }
@@ -639,7 +666,7 @@ local gossipOptionTemplate_AddNew = {
                 if not source or not destination then return end
                 addonCore.db.global.gossipTriggered[id] = { source, destination }
                 wipe(addNew_Temp)
-                addonCore:RefreshAdvOptions()
+                addonCore:RefreshAdvOptions(id)
             end
         }
     }
@@ -649,14 +676,14 @@ function addonCore:GetModuleStatus(info)
     return addonCore.db.profile.moduleState[info[#info]]
 end
 
-function addonCore:RefreshAdvOptions()
+function addonCore:RefreshAdvOptions(optionID)
     local opt = wipe(self.configOptionsTable.args.gossipConfigTab.args)
     for k, _ in pairs(addonCore.db.global.gossipTriggered) do
         opt[tostring(k)] = gossipOptionTemplate
     end
     opt.AddNewGossipID = gossipOptionTemplate_AddNew
     LibStub("AceConfigRegistry-3.0"):NotifyChange(addonName)
-    self:RefreshGossipEditor()
+    self:RefreshGossipEditor(optionID)
 end
 
 -- Keep the existing command paths; only Profiles is rendered by AceConfigDialog.
@@ -690,8 +717,8 @@ addonCore.configOptionsTable = {
                     end,
                     set = function(_, option)
                         addonCore.db.profile.showGossipConfig = option
-                        addonCore:RefreshSettings()
-                        addonCore:SendMessage("OnFlight_DiagnosticsChanged")
+                        addonCore:RefreshSettings("showGossipConfig")
+                        addonCore:RefreshDiagnostics()
                     end
                 },
                 moduleControl = {
@@ -767,6 +794,7 @@ function statusBarModuleCore:SetOption(info, ...)
         profile[info[#info]] = ...
     end
     self:OnProfileUpdated()
+    addonCore:RefreshSettings("bar_" .. info[#info])
 end
 
 function statusBarModuleCore:GetBarLocation(info, ...)
@@ -776,6 +804,7 @@ end
 function statusBarModuleCore:SetBarLocation(info, value)
     statusBarModuleCore.db.profile.barLocation[info[#info]] = value
     self:OnProfileUpdated()
+    addonCore:RefreshSettings("bar_" .. info[#info])
 end
 
 -- These descriptions remain for AceConfigCmd, not the native settings page.
@@ -802,9 +831,7 @@ addonCore.configOptionsTable.plugins[moduleName] = {
                 type = "execute",
                 name = L["Reset All Bar Options to Defaults"],
                 width = "full",
-                func = function(info)
-                    statusBarModuleCore.db:ResetProfile(true)
-                end,
+                func = ResetBarSettings,
                 order = 1000,
             },
             barOptions = {

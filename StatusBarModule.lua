@@ -245,6 +245,7 @@ function statusBarModuleCore:SetupTimerBar()
             local location = db.profile.barLocation
             location.anchorPoint, location.relativePoint = anchorPoint, relativePoint
             location.offsetX, location.offsetY = offsetX, offsetY
+            addonCore:RefreshSettings("bar_anchorPoint", "bar_relativePoint", "bar_offsetX", "bar_offsetY")
         end
     )
     self.OnFlightTimerFrame = OnFlightTimerFrame
@@ -304,5 +305,4 @@ end
 ---
 function statusBarModuleCore:OnProfileUpdated()
     if self.OnFlightTimerFrame then ApplyLookAndFeel(self.OnFlightTimerFrame) end
-    addonCore:RefreshSettings()
 end
