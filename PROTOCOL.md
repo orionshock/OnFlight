@@ -4,7 +4,7 @@ Other Forever flight addons can implement this protocol using Blizzard addon mes
 
 Register the addon-message prefix **`OnFlight`** with `C_ChatInfo.RegisterAddonMessagePrefix`. Send with `C_ChatInfo.SendAddonMessage` on `RAID` for a normal raid, otherwise `PARTY` for a normal party. While solo, send `WHISPER` to the local character. Select one channel per announcement; do not also whisper group announcements. No guild or instance-chat transport is used.
 
-Resolve the whisper target with Blizzard's player name and realm functions. A character on the local realm can use its unqualified name. Receive through `CHAT_MSG_ADDON`; independent displays should accept PARTY, RAID, and whispers from the local character. Do not accept whispers from other players as self-loop traffic. Recognize both qualified and unqualified forms of the local sender's name.
+Resolve the self-whisper target with Forever's `NameUtil.GetUnmodifiedUnitFullName("player")`, which includes the character surname. Do not interpret the surname as a realm. Receive through `CHAT_MSG_ADDON`; the independent launcher accepts PARTY, RAID, and WHISPER packets without sender-name filtering or rewriting. It keeps each sender exactly as Blizzard supplies it.
 
 ## Payload
 

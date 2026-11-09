@@ -1,6 +1,6 @@
 -- Forever group flight status. See PROTOCOL.md for the independent wire protocol.
 -- luacheck: no max line length
--- luacheck: globals LibStub C_ChatInfo C_AddOns C_Timer IsInGuild CreateFrame GetTime GetServerTime IsInRaid IsInGroup UnitFullName GetNormalizedRealmName wipe
+-- luacheck: globals LibStub C_ChatInfo C_AddOns C_Timer IsInGuild CreateFrame GetTime GetServerTime IsInRaid IsInGroup NameUtil wipe
 local addonName, addonCore = ...
 local module = addonCore:NewModule("Communication", "AceEvent-3.0")
 local PREFIX, STALE_SECONDS = "OnFlight", 180
@@ -17,9 +17,7 @@ local function PositiveInteger(value)
 end
 
 local function IsSelf(sender)
-    local name, realm = UnitFullName("player")
-    realm = realm and realm ~= "" and realm:gsub("%s+", "") or GetNormalizedRealmName()
-    return sender == name or sender == name .. "-" .. realm
+    return sender == NameUtil.GetUnmodifiedUnitFullName("player")
 end
 
 local function Broadcast(message)
@@ -28,14 +26,7 @@ local function Broadcast(message)
     elseif IsInGroup(1) then
         C_ChatInfo.SendAddonMessage(PREFIX, message, "PARTY")
     else
-        local name, realm = UnitFullName("player")
-        if realm and realm ~= "" then
-            realm = realm:gsub("%s+", "")
-            if realm ~= GetNormalizedRealmName() then
-                name = name .. "-" .. realm
-            end
-        end
-        C_ChatInfo.SendAddonMessage(PREFIX, message, "WHISPER", name)
+        C_ChatInfo.SendAddonMessage(PREFIX, message, "WHISPER", NameUtil.GetUnmodifiedUnitFullName("player"))
     end
 end
 

@@ -1,20 +1,16 @@
 -- Independent OnFlight wire receiver and broker display. See PROTOCOL.md.
 -- Flight data comes only from CHAT_MSG_ADDON, including our own received packets.
 -- luacheck: no max line length
--- luacheck: globals LibStub C_ChatInfo C_TaxiMap CreateFrame GetTime GetServerTime UnitFullName GetNormalizedRealmName wipe
+-- luacheck: globals LibStub C_ChatInfo C_TaxiMap CreateFrame GetTime GetServerTime NameUtil wipe
 local addonName, addonCore = ...
 local module = addonCore:NewModule("LDBLauncher", "AceEvent-3.0")
 local L = LibStub("AceLocale-3.0"):GetLocale(addonName)
 local LDB, DBIcon = LibStub("LibDataBroker-1.1"), LibStub("LibDBIcon-1.0")
 local flights = {}
-local playerName, playerFullName, broker, nodeNames
+local playerName, broker, nodeNames
 local tooltip, tooltipOwner, lastTooltipUpdate
 local timer = CreateFrame("Frame")
 timer:Hide()
-
-local function IsSelf(sender)
-    return sender == playerName or sender == playerFullName
-end
 
 local function PositiveInteger(value)
     return value and value > 0 and value < math.huge and value == math.floor(value)
@@ -59,8 +55,7 @@ local function RenderTooltip(tip)
         local now = GetServerTime()
         for _, sender in ipairs(senders) do
             local flight = flights[sender]
-            local name = IsSelf(sender) and L["%s (you)"]:format(sender) or sender
-            tip:AddDoubleLine(L["%s | %s"]:format(name, DestinationName(flight.destinationID)), TimeText(flight, now),
+            tip:AddDoubleLine(L["%s | %s"]:format(sender, DestinationName(flight.destinationID)), TimeText(flight, now),
                 1, 1, 1, 1, 1, 1)
         end
     end
@@ -93,8 +88,7 @@ function module:CHAT_MSG_ADDON(_, prefix, message, channel, sender)
     if prefix ~= "OnFlight" then
         return
     end
-    local own = IsSelf(sender)
-    if channel ~= "PARTY" and channel ~= "RAID" and not (channel == "WHISPER" and own) then
+    if channel ~= "PARTY" and channel ~= "RAID" and channel ~= "WHISPER" then
         return
     end
     local source, start, command, destination = message:match("^(%d+):(%d+):([^:]+):(%d+)$")
@@ -114,10 +108,6 @@ function module:CHAT_MSG_ADDON(_, prefix, message, channel, sender)
         if not PositiveInteger(duration) then
             return
         end
-    end
-    -- Party/raid and self-whisper delivery may qualify our name differently.
-    if own then
-        sender = playerName
     end
     local current = flights[sender]
     local matches = current and current.sourceID == sourceID and current.startServerTime == startServerTime and
@@ -177,10 +167,7 @@ function module:RefreshMinimapIcon()
 end
 
 function module:OnInitialize()
-    local realm
-    playerName, realm = UnitFullName("player")
-    realm = realm and realm ~= "" and realm:gsub("%s+", "") or GetNormalizedRealmName()
-    playerFullName = realm ~= "" and playerName .. "-" .. realm or playerName
+    playerName = NameUtil.GetUnmodifiedUnitFullName("player")
     self:SetEnabledState(addonCore.db.profile.moduleState.LDBLauncher)
     broker = LDB:NewDataObject("OnFlight", {
         type = "launcher",
