@@ -1,9 +1,11 @@
 -- Forever group flight status. See PROTOCOL.md for the independent wire protocol.
 -- luacheck: no max line length
--- luacheck: globals LibStub C_ChatInfo CreateFrame GetTime GetServerTime IsInRaid IsInGroup UnitFullName GetNormalizedRealmName wipe
-local _, addonCore = ...
+-- luacheck: globals LibStub C_ChatInfo C_AddOns C_Timer IsInGuild CreateFrame GetTime GetServerTime IsInRaid IsInGroup UnitFullName GetNormalizedRealmName wipe
+local addonName, addonCore = ...
 local module = addonCore:NewModule("Communication", "AceEvent-3.0")
 local PREFIX, STALE_SECONDS = "OnFlight", 180
+local VERSION_PREFIX = "OnFlightVersion"
+local versionScheduled = false
 local thresholds = {0.3, 0.5, 0.7}
 local remoteFlights, ended = {}, {}
 local outgoing
@@ -226,6 +228,15 @@ function module:OnEnable()
         outgoing = nil
     end
     C_ChatInfo.RegisterAddonMessagePrefix(PREFIX)
+    C_ChatInfo.RegisterAddonMessagePrefix(VERSION_PREFIX)
+    if not versionScheduled then
+        versionScheduled = true
+        C_Timer.After(5, function()
+            if self:IsEnabled() and IsInGuild() then
+                C_ChatInfo.SendAddonMessage(VERSION_PREFIX, C_AddOns.GetAddOnMetadata(addonName, "Version"), "GUILD")
+            end
+        end)
+    end
     self:RegisterEvent("CHAT_MSG_ADDON")
     self:RegisterMessage("OnFlight_Taxi_Start", "FlightStarted")
     self:RegisterMessage("OnFlight_Taxi_RESUME", "FlightStarted")

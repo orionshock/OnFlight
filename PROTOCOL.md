@@ -85,3 +85,9 @@ Local addons and modules may observe these Ace messages:
 `Communication:GetRemoteFlight(sender)` and `GetRemoteFlights()` expose current records for reading. Each record contains `sourceID`, `destinationID`, `startServerTime`, `duration` (nil for unknown), and `lastSeenAt` in server seconds. Consumers must not modify them.
 
 `GetRemoteFlightProgress(sender)` returns elapsed seconds, remaining seconds, and advertised duration. Remaining time is clamped to zero for an overdue known flight while the record remains active. Both remaining time and duration are nil for unknown flights. There is no per-frame notification; displays can calculate progress as needed.
+
+## Separate guild version announcement
+
+Five seconds after Communication first enables during a load or reload, OnFlight sends its TOC `Version` value to `GUILD` using the separate **`OnFlightVersion`** prefix, provided the player is in a guild and Communication is enabled. This is an addon message, not a visible guild-chat message. It sends once per load, with no replies or guild-roster-triggered broadcasts.
+
+This notice is separate from the four-field flight protocol. Flight messages still use only the `OnFlight` prefix and their existing PARTY, RAID, or self-WHISPER transport.
