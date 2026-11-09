@@ -5,10 +5,12 @@ local window, hoveredButton, hoveredRow
 local rows = {}
 local selectedTab, selectedZone = "favorites", nil
 local ROW_HEIGHT = 40
-local favoriteIcon = CreateSimpleTextureMarkup(134411, 16, 16)
-local currentIcon = CreateSimpleTextureMarkup(137033, 16, 16)
-local unknownIcon = CreateSimpleTextureMarkup(134400, 16, 16)
-local specialIcon = CreateSimpleTextureMarkup(132172, 16, 16)
+-- Shared taxi art from TaxiFrame.lua; the green location marker is unchanged.
+local currentIcon = 137033
+local reachableIcon = "Interface\\TaxiFrame\\UI-Taxi-Icon-White"
+local unavailableIcon = "Interface\\TaxiFrame\\UI-Taxi-Icon-Nub"
+local zoneAtlas = "poi-traveldirections-arrow"
+local favoriteAtlas = "PetJournal-FavoritesIcon"
 
 -- Temporary presentation grouping only. Never used to identify a destination.
 local function GetDisplayZone(name)
@@ -96,13 +98,20 @@ local function GetRow(index)
     background:SetAtlas("UI-Character-Info-Line-Bounce")
     background:SetAllPoints()
     row:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
+    row.icon = row:CreateTexture(nil, "ARTWORK")
+    row.icon:SetSize(16, 16)
+    row.icon:SetPoint("TOPLEFT", 6, -3)
+    row.favorite = row:CreateTexture(nil, "OVERLAY")
+    row.favorite:SetAtlas(favoriteAtlas)
+    row.favorite:SetSize(16, 16)
+    row.favorite:SetPoint("TOPRIGHT", -6, -3)
     row.label = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    row.label:SetPoint("TOPLEFT", 6, -3)
-    row.label:SetPoint("TOPRIGHT", -6, -3)
+    row.label:SetPoint("TOPLEFT", 28, -3)
+    row.label:SetPoint("TOPRIGHT", -28, -3)
     row.label:SetJustifyH("LEFT")
     row.label:SetWordWrap(false)
     row.detail = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    row.detail:SetPoint("BOTTOMLEFT", 6, 4)
+    row.detail:SetPoint("BOTTOMLEFT", 28, 4)
     row.detail:SetPoint("BOTTOMRIGHT", -6, 4)
     row.detail:SetJustifyH("LEFT")
     row.detail:SetWordWrap(false)
@@ -140,7 +149,7 @@ function module:Refresh(resetScroll)
             local group = zones[zone]
             group.count = group.count + 1
             if nodeType == "CURRENT" then group.current = true end
-            if nodeType == "DISTANT" then group.unknown = true; unknown = unknown + 1 end
+            if nodeType == "DISTANT" then unknown = unknown + 1 end
             total = total + 1
             if (selectedTab == "favorites" and favorites[id])
                 or (selectedTab == "zones" and selectedZone == zone) then
@@ -156,7 +165,7 @@ function module:Refresh(resetScroll)
     if window.back:IsShown() then
         window.header:SetPoint("LEFT", window.back, "RIGHT", 8, 0)
     else
-        window.header:SetPoint("LEFT", window, "TOPLEFT", 16, -46)
+        window.header:SetPoint("LEFT", window, "TOPLEFT", 74, -46)
     end
     window.header:SetPoint("RIGHT", window, "TOPRIGHT", -18, -46)
     window.header:SetText(selectedTab == "favorites" and L["Favorite Destinations"] or selectedZone or L["By Zone"])
@@ -170,21 +179,33 @@ function module:Refresh(resetScroll)
         if zoneList then
             local zone = zoneNames[index]
             local group = zones[zone]
-            local icon = group.current and currentIcon or group.unknown and unknownIcon
-                or zone == L["Special"] and specialIcon or ""
             row.zone = zone
             row:SetEnabled(true)
-            row.label:SetText(icon .. " " .. zone)
+            if group.current then
+                row.icon:SetTexture(currentIcon)
+                row.icon:SetTexCoord(0, 1, 0, 1)
+            else
+                row.icon:SetAtlas(zoneAtlas)
+            end
+            row.icon:SetDesaturated(false)
+            row.icon:SetVertexColor(1, 1, 1)
+            row.favorite:Hide()
+            row.label:SetText(zone)
             row.label:SetTextColor(1, 1, 1)
             row.detail:SetFormattedText("%d %s", group.count, L["destinations"])
         else
             local node = destinations[index]
             row.nodeID = node.id
             row:SetEnabled(node.type == "REACHABLE")
-            local icon = node.type == "CURRENT" and currentIcon or node.type == "DISTANT" and unknownIcon or ""
-            row.label:SetText(icon .. (favorites[node.id] and favoriteIcon .. " " or "") .. node.name)
-            local shade = node.type == "REACHABLE" or node.type == "CURRENT"
-            row.label:SetTextColor(shade and 1 or 0.5, shade and 1 or 0.5, shade and 1 or 0.5)
+            local available = node.type == "REACHABLE" or node.type == "CURRENT"
+            row.icon:SetTexture(node.type == "CURRENT" and currentIcon or node.type == "REACHABLE" and reachableIcon or unavailableIcon)
+            row.icon:SetTexCoord(0, 1, 0, 1)
+            row.icon:SetDesaturated(not available)
+            local tint = available and 1 or 0.5
+            row.icon:SetVertexColor(tint, tint, tint)
+            row.favorite:SetShown(favorites[node.id] == true)
+            row.label:SetText(node.name)
+            row.label:SetTextColor(tint, tint, tint)
             if node.type == "REACHABLE" then
                 row.detail:SetText(L["Duration:"] .. " " .. GetDurationText(session.sourceID, node.id))
             else
@@ -230,7 +251,7 @@ local function CreateWindow()
     end)
     window.back = CreateFrame("Button", nil, window, "UIPanelButtonTemplate")
     window.back:SetSize(85, 22)
-    window.back:SetPoint("TOPLEFT", 14, -35)
+    window.back:SetPoint("TOPLEFT", 74, -35)
     window.back:SetText("< " .. L["Back"])
     window.back:SetScript("OnClick", function() selectedZone = nil; module:Refresh(true) end)
     window.header = window:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
@@ -254,12 +275,13 @@ local function CreateWindow()
     hint:SetPoint("BOTTOM", 0, 12)
     hint:SetText(L["Shift-click a destination to toggle favorites."])
     window.tabs = {}
-    for index, data in ipairs({ { "favorites", L["Favorites"], 134411 }, { "zones", L["By Zone"], 132172 } }) do
+    for index, data in ipairs({ { "favorites", L["Favorites"], favoriteAtlas }, { "zones", L["By Zone"], zoneAtlas } }) do
         local tab = CreateFrame("Frame", nil, window, "LargeSideTabButtonTemplate")
         tab:EnableMouse(true)
         tab:SetPoint("TOPLEFT", window, "TOPRIGHT", 0, -30 - (index - 1) * (tab:GetHeight() + 2))
-        tab.Icon:SetTexture(data[3])
-        tab:SetFillToInterior(true)
+        tab.Icon:SetAtlas(data[3])
+        tab:SetFillToInterior(false)
+        tab.Icon:SetSize(32, 32)
         tab.tooltipText = data[2]
         local key = data[1]
         tab:SetCustomOnMouseUpHandler(function(_, button, upInside)
