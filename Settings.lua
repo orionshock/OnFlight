@@ -4,6 +4,7 @@
 --luacheck: globals SettingsColorSwatchControlMixin MinimalSliderWithSteppersMixin
 --luacheck: globals CreateSettingsListSectionHeaderInitializer CreateSettingsButtonInitializer
 --luacheck: globals OnFlightSettingsFontSizeMixin OnFlightSettingsColorMixin
+--luacheck: globals GameTooltip GameTooltip_Hide
 local addonName, addonCore = ...
 local LSM = LibStub("LibSharedMedia-3.0")
 local settings = {}
@@ -160,7 +161,7 @@ local function CreateGossipRow(parent)
         input:SetPoint("TOPLEFT", index == 1 and 8 or 270, -46)
         local label = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
         label:SetPoint("BOTTOMLEFT", input, "TOPLEFT", 0, 4)
-        label:SetText(name .. " (taxi-node ID or name)")
+        label:SetText(name)
         input.feedback = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
         input.feedback:SetPoint("TOPLEFT", input, "BOTTOMLEFT", 0, -5)
         input.feedback:SetWidth(235)
@@ -222,7 +223,7 @@ local function CreateGossipPage(parentCategory)
     page.rows, page.freeRows = {}, {}
     gossipPage = page
     local category = Settings.RegisterCanvasLayoutSubcategory(parentCategory, page, "Gossip Configuration")
-    local help = "Displays gossip option IDs in gossip tooltips and taxi-node IDs in the Flight Destinations window. Useful when configuring gossip-triggered flights."
+    local help = "Shows gossip option IDs in NPC dialogue tooltips and taxi-node IDs beside destinations in Flight Destinations. Use these IDs to configure gossip flights."
     diagnosticSetting = Register(category, "showGossipConfig", "boolean", "Show Diagnostic IDs", false,
         function() return addonCore.db.profile.showGossipConfig end,
         function(value)
@@ -234,16 +235,43 @@ local function CreateGossipPage(parentCategory)
     checkbox.Text:SetText("Show Diagnostic IDs")
     checkbox.Text:SetFontObject("GameFontNormal")
     checkbox:SetScript("OnClick", function(self) diagnosticSetting:SetValue(self:GetChecked()) end)
+    checkbox:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetText("Show Diagnostic IDs")
+        GameTooltip:AddLine(help, 1, 1, 1, true)
+        GameTooltip:Show()
+    end)
+    checkbox:SetScript("OnLeave", GameTooltip_Hide)
     diagnosticSetting:SetValueChangedCallback(function(_, value) checkbox:SetChecked(value) end)
-    local explanation = page:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    explanation:SetPoint("TOPLEFT", 18, -46)
-    explanation:SetPoint("TOPRIGHT", -20, -46)
+    local diagnosticHelp = page:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    diagnosticHelp:SetPoint("TOPLEFT", 18, -44)
+    diagnosticHelp:SetPoint("TOPRIGHT", -20, -44)
+    diagnosticHelp:SetJustifyH("LEFT")
+    diagnosticHelp:SetText("Enable this while configuring a gossip flight.")
+    local title = page:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
+    title:SetPoint("TOPLEFT", diagnosticHelp, "BOTTOMLEFT", 0, -16)
+    title:SetPoint("TOPRIGHT", diagnosticHelp, "BOTTOMRIGHT", 0, -16)
+    title:SetJustifyH("LEFT")
+    title:SetText("Gossip Flights")
+    local explanation = page:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    explanation:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -8)
+    explanation:SetPoint("TOPRIGHT", title, "BOTTOMRIGHT", 0, -8)
     explanation:SetJustifyH("LEFT")
-    explanation:SetText(help .. "\nEnter a verified taxi-node ID or a custom location name for each endpoint.")
+    explanation:SetText("Configure flights started through NPC dialogue. A Gossip ID identifies the dialogue option that starts a flight.")
+    local endpointsTitle = page:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    endpointsTitle:SetPoint("TOPLEFT", explanation, "BOTTOMLEFT", 0, -14)
+    endpointsTitle:SetPoint("TOPRIGHT", explanation, "BOTTOMRIGHT", 0, -14)
+    endpointsTitle:SetJustifyH("LEFT")
+    endpointsTitle:SetText("Endpoints")
+    local endpointsHelp = page:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    endpointsHelp:SetPoint("TOPLEFT", endpointsTitle, "BOTTOMLEFT", 0, -8)
+    endpointsHelp:SetPoint("TOPRIGHT", endpointsTitle, "BOTTOMRIGHT", 0, -8)
+    endpointsHelp:SetJustifyH("LEFT")
+    endpointsHelp:SetText("Enter a taxi-node ID or a custom location name for Source and Destination. Press Enter or click away to save.")
 
     local new = CreateGossipRow(page)
-    new:SetPoint("TOPLEFT", 18, -105)
-    new:SetPoint("TOPRIGHT", -28, -105)
+    new:SetPoint("TOPLEFT", endpointsHelp, "BOTTOMLEFT", 0, -20)
+    new:SetPoint("TOPRIGHT", endpointsHelp, "BOTTOMRIGHT", -8, -20)
     new.title:SetText("New Gossip ID:")
     new.id = MakeInput(new, 95)
     new.id:SetPoint("TOPLEFT", 140, 2)
@@ -253,11 +281,11 @@ local function CreateGossipPage(parentCategory)
         CommitEndpoint(new[1]); CommitEndpoint(new[2])
         local id = tonumber(new.id:GetText())
         if not id or id <= 0 or id % 1 ~= 0 then
-            new[1].feedback:SetText("Enter a positive Gossip ID.")
+            new[1].feedback:SetText("Enter a Gossip ID from a dialogue tooltip: digits only, greater than zero.")
             return
         end
         if addonCore.db.global.gossipTriggered[id] then
-            new[1].feedback:SetText("Gossip ID already configured; edit it below.")
+            new[1].feedback:SetText("This Gossip ID already exists. Edit its endpoints below.")
             return
         end
         local source, sourceMessage = addonCore:ParseGossipEndpoint(id, new[1]:GetText())
@@ -280,7 +308,7 @@ local function CreateGossipPage(parentCategory)
     new.add:SetPoint("TOPRIGHT", -8, 0)
 
     local scroll = CreateFrame("ScrollFrame", nil, page, "UIPanelScrollFrameTemplate")
-    scroll:SetPoint("TOPLEFT", 18, -225)
+    scroll:SetPoint("TOPLEFT", new, "BOTTOMLEFT", 0, -6)
     scroll:SetPoint("BOTTOMRIGHT", -36, 12)
     page.content = CreateFrame("Frame", nil, scroll)
     page.content:SetSize(1, 1)
@@ -310,12 +338,13 @@ function addonCore:InitializeSettings()
     local showChat = Register(category, "showChat", "boolean", "Show Chat Messages", true,
         function() return self.db.profile.showChat end,
         function(value) self.db.profile.showChat = value end)
-    Settings.CreateCheckbox(category, showChat, "Show flight status messages in chat.")
+    Settings.CreateCheckbox(category, showChat, "Reports when flights start, resume, finish, or end early. Includes timing information when available.")
     local bar = self:GetModule("StatusBarModule")
     local enabled = Register(category, "StatusBarModule", "boolean", "Enable Flight Timer Bar", true,
         function() return self.db.profile.moduleState.StatusBarModule end,
         function(value) self:SetModuleStatus({ "StatusBarModule" }, value) end)
-    local enableControl = Settings.CreateCheckbox(category, enabled)
+    local enableControl = Settings.CreateCheckbox(category, enabled,
+        "Shows OnFlight's built-in timer bar. Flight tracking and duration learning continue when disabled, and timing data remains available to other displays.")
     local barCategory, layout = Settings.RegisterVerticalLayoutSubcategory(category, "Flight Timer Bar")
     local function AddControl(initializer)
         initializer:SetParentInitializer(enableControl, function() return bar:IsEnabled() end)
@@ -345,15 +374,15 @@ function addonCore:InitializeSettings()
     local function Heading(name)
         layout:AddInitializer(CreateSettingsListSectionHeaderInitializer(name))
     end
-    local function Slider(key, name, min, max, step, location)
+    local function Slider(key, name, min, max, step, location, tooltip)
         local setting = BarSetting(key, "number", name, location)
         local options = Settings.CreateSliderOptions(min, max, step)
         options:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right)
-        return AddControl(Settings.CreateSlider(barCategory, setting, options))
+        return AddControl(Settings.CreateSlider(barCategory, setting, options, tooltip))
     end
-    local function Dropdown(key, name, getOptions, location)
+    local function Dropdown(key, name, getOptions, location, tooltip)
         return AddControl(Settings.CreateDropdown(barCategory,
-            BarSetting(key, "string", name, location), getOptions))
+            BarSetting(key, "string", name, location), getOptions, tooltip))
     end
     local function MediaOptions(kind)
         return function()
@@ -362,8 +391,8 @@ function addonCore:InitializeSettings()
             return options:GetData()
         end
     end
-    local function Button(name, action)
-        layout:AddInitializer(AddControl(CreateSettingsButtonInitializer(name, name, action, nil, true)))
+    local function Button(name, action, tooltip)
+        layout:AddInitializer(AddControl(CreateSettingsButtonInitializer(name, name, action, tooltip, true)))
     end
     Heading("Layout and Position")
     local function Anchors()
@@ -373,35 +402,53 @@ function addonCore:InitializeSettings()
         end
         return options:GetData()
     end
-    Dropdown("anchorPoint", "Bar Anchor", Anchors, true)
-    Dropdown("relativePoint", "Relative Anchor", Anchors, true)
-    Slider("offsetX", "Horizontal Offset", -1000, 1000, 1, true)
-    Slider("offsetY", "Vertical Offset", -1000, 1000, 1, true)
-    Slider("barWidth", "Minimum Width", 10, 1000, 10)
-    Slider("barHeight", "Height", 10, 300, 1)
+    Dropdown("anchorPoint", "Bar Anchor", Anchors, true,
+        "Point on the timer bar attached to the Relative Anchor.")
+    Dropdown("relativePoint", "Relative Anchor", Anchors, true,
+        "Point on the screen's main UI frame (UIParent) that the bar attaches to. TOP for both anchors aligns their top centers before offsets.")
+    Slider("offsetX", "Horizontal Offset", -1000, 1000, 1, true,
+        "Moves the bar from its anchor position. Positive values move right; negative values move left.")
+    Slider("offsetY", "Vertical Offset", -1000, 1000, 1, true,
+        "Moves the bar from its anchor position. Positive values move up; negative values move down.")
+    Slider("barWidth", "Minimum Width", 10, 1000, 10, false,
+        "The bar grows wider when needed to fit its text. This sets its minimum width.")
+    Slider("barHeight", "Height", 10, 300, 1, false,
+        "Vertical size of the timer bar, including its border.")
     Heading("Display")
-    local compact = AddControl(Settings.CreateCheckbox(barCategory, BarSetting("compactMode", "boolean", "Compact Mode")))
-    local short = AddControl(Settings.CreateCheckbox(barCategory, BarSetting("shortNames", "boolean", "Short Destination Names")))
+    local compact = AddControl(Settings.CreateCheckbox(barCategory, BarSetting("compactMode", "boolean", "Compact Mode"),
+        "Shows only the remaining time for flights with a known duration. Unknown flights still show location names and elapsed time."))
+    local short = AddControl(Settings.CreateCheckbox(barCategory, BarSetting("shortNames", "boolean", "Short Destination Names"),
+        "Omits zone suffixes from source and destination names. Unavailable in Compact Mode because known flights show only the timer."))
     short:SetParentInitializer(compact, function() return not bar.db.profile.compactMode end)
     Heading("Appearance")
-    Dropdown("barTexture", "Bar Texture", MediaOptions("statusbar"))
-    Dropdown("borderTexture", "Border Texture", MediaOptions("border"))
-    Dropdown("fontName", "Font", MediaOptions("font"))
+    Dropdown("barTexture", "Bar Texture", MediaOptions("statusbar"), false,
+        "Artwork used for the bar fill and background. Choices come from LibSharedMedia and may include textures supplied by other addons.")
+    Dropdown("borderTexture", "Border Texture", MediaOptions("border"), false,
+        "Artwork around the edge of the timer bar. Choices come from LibSharedMedia and may include borders supplied by other addons.")
+    Dropdown("fontName", "Font", MediaOptions("font"), false,
+        "Typeface for location names and the timer. Choices come from LibSharedMedia and may include fonts supplied by other addons.")
     local fontSize = BarSetting("fontSize", "number", "Font Size")
-    layout:AddInitializer(AddControl(Settings.CreateControlInitializer("OnFlightSettingsFontSizeTemplate", fontSize)))
+    layout:AddInitializer(AddControl(Settings.CreateControlInitializer("OnFlightSettingsFontSizeTemplate", fontSize, nil,
+        "Size of the location names and timer text. Enter a positive number, then press Enter or click away to apply.")))
     for _, entry in ipairs({
-        { "backgroundColor", "Background Color" }, { "barColor", "Known-flight Bar Color" },
-        { "unknownFlightColor", "Unknown-flight Bar Color" }, { "borderColor", "Border Color" },
-        { "fontColor", "Font Color" },
+        { "backgroundColor", "Background Color", "Color behind the bar fill. Keeps the current transparency." },
+        { "barColor", "Known Flight Color", "Bar fill used for the countdown when OnFlight has a measured flight duration." },
+        { "unknownFlightColor", "Unknown Flight Color", "Bar fill used when no measured duration is saved for the flight's source and destination. The timer shows elapsed time instead of time remaining." },
+        { "borderColor", "Border Color", "Color of the frame edge. Choose its artwork with Border Texture." },
+        { "fontColor", "Font Color", "Color shared by location names and the timer text." },
     }) do
         local setting = BarSetting(entry[1], "string", entry[2], false, true)
-        layout:AddInitializer(AddControl(Settings.CreateControlInitializer("OnFlightSettingsColorTemplate", setting)))
+        layout:AddInitializer(AddControl(Settings.CreateControlInitializer("OnFlightSettingsColorTemplate", setting, nil, entry[3])))
     end
     Heading("Preview and Reset")
-    Button("Start Known-flight Preview", function() bar:StartTimerBar("City1, Zone1", "City2, Zone2", 300) end)
-    Button("Start Unknown-flight Preview", function() bar:StartTimerBar("Unknown1, Zone1", "Unknown2, Zone2", nil, nil, true) end)
-    Button("Stop Preview / Display", function() bar:StopTimerBar() end)
-    Button("Reset Status-bar Options", function() bar.db:ResetProfile(true) end)
+    Button("Preview Known Flight", function() bar:StartTimerBar("City1, Zone1", "City2, Zone2", 300) end,
+        "Shows a five-minute countdown with sample locations. Previews leave your travel and learned flight times unchanged.")
+    Button("Preview Unknown Flight", function() bar:StartTimerBar("Unknown1, Zone1", "Unknown2, Zone2", nil, nil, true) end,
+        "Shows an elapsed-time display with sample locations. Previews leave your travel and learned flight times unchanged.")
+    Button("Hide Timer Bar", function() bar:StopTimerBar() end,
+        "Hides the preview or current flight display. Flight tracking and duration learning continue.")
+    Button("Reset Bar Settings", function() bar.db:ResetProfile(true) end,
+        "Restores the current profile's timer-bar appearance and position defaults. Other OnFlight settings and learned flight times stay unchanged.")
     LibStub("AceConfigDialog-3.0"):AddToBlizOptions(addonName, "Profiles", category:GetID(), "profiles")
     CreateGossipPage(category)
     self:RefreshAdvOptions()

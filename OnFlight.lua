@@ -459,12 +459,12 @@ end
 
 function addonCore:ParseGossipEndpoint(optionID, text)
     local value = text:match("^%s*(.-)%s*$")
-    if value == "" then return nil, "Enter a taxi-node ID or custom location name." end
+    if value == "" then return nil, "Enter a taxi-node ID or a custom location name." end
     if value:match("^%d+$") then
         local id = tonumber(value)
         local name = self:GetTaxiNodeName(id)
         if name then return id, name end
-        return nil, "Unknown taxi-node ID. Saved value unchanged."
+        return nil, "Unknown taxi-node ID. Check the ID or use a name. Saved value unchanged."
     end
     return tostring(optionID) .. ":" .. value, value
 end
