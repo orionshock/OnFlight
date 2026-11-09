@@ -235,7 +235,7 @@ function module:Refresh(resetScroll, focusCurrentZone)
             row.favorite:Hide()
             row.label:SetText(zone)
             row.label:SetTextColor(1, 1, 1)
-            row.detail:SetFormattedText("%d %s", group.count, L["destinations"])
+            row.detail:SetFormattedText(L["%d destinations"], group.count)
         else
             local node = destinations[index]
             row.nodeID = node.id
@@ -255,7 +255,7 @@ function module:Refresh(resetScroll, focusCurrentZone)
             row.label:SetText(node.name)
             row.label:SetTextColor(tint, tint, tint)
             if node.type == "REACHABLE" then
-                row.detail:SetText(L["Duration:"] .. " " .. GetDurationText(session.sourceID, node.id))
+                row.detail:SetFormattedText(L["Duration: %s"], GetDurationText(session.sourceID, node.id))
             else
                 row.detail:SetText(node.type == "CURRENT" and TAXINODEYOUAREHERE or L["Unavailable"])
             end
@@ -314,7 +314,7 @@ local function CreateWindow()
     window.back = CreateFrame("Button", nil, window, "UIPanelButtonTemplate")
     window.back:SetSize(85, 22)
     window.back:SetPoint("TOPLEFT", 74, -35)
-    window.back:SetText("< " .. L["Back"])
+    window.back:SetText(L["< Back"])
     window.back:SetScript("OnClick", function()
         selectedZone = nil
         ClearSearch()

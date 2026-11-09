@@ -1,6 +1,8 @@
 -- Opt-in live-client probe. /oftaxi on, off, snap [mapID], status, clear
 -- No taxi actions are invoked here; secure post-hooks only observe user/UI actions.
 -- Compact captures persist in SavedVariables; chat shows concise summaries.
+local addonName = ...
+local L = LibStub("AceLocale-3.0"):GetLocale(addonName)
 local frame = CreateFrame("Frame")
 local enabled, lastMapID = false, nil
 local hooks = {}
@@ -138,78 +140,76 @@ local function record(kind, data)
     saved.kind, saved.sequence, saved.time = kind, db.sequence, GetTime()
     saved.run, saved.mapSession = db.run or 0, mapSession
     db.records[#db.records + 1] = saved
-    local prefix = "|cff66ccff[Taxi " .. db.sequence .. "]|r "
+    local prefix = "|cff66ccff" .. L["[Taxi %d]"]:format(db.sequence) .. "|r "
     local function line(message) print(prefix .. message) end
     if kind == "snapshot" and not db.verbose then
         local identity = data.identity
         local resolved = 0
         for _, node in ipairs(identity.slots) do if node.resolved then resolved = resolved + 1 end end
-        line(data.reason .. ": map=" .. value(data.mapID) .. "; " .. (data.mapOpen and "OPEN" or "CLOSED")
-            .. "; IDs=" .. resolved .. "/" .. #data.nodes .. "; checks=" .. #identity.issues)
+        line(L["%s: map=%s; %s; IDs=%d/%d; checks=%d"]:format(data.reason, value(data.mapID),
+            data.mapOpen and L["OPEN"] or L["CLOSED"], resolved, #data.nodes, #identity.issues))
         if identity.selectedSlot then
-            line("Selected slot " .. identity.selectedSlot .. " -> ID " .. text(identity.selectedNodeID))
+            line(L["Selected slot %d -> ID %s"]:format(identity.selectedSlot, text(identity.selectedNodeID)))
         end
         local current = #identity.currentSlots == 1 and identity.slots[identity.currentSlots[1]]
-        if current then line("At " .. text(current.legacyName) .. " (ID " .. text(current.nodeID) .. ")") end
-        if #identity.issues > 0 then line("CHECK: " .. identity.issues[1] .. "; full details saved") end
+        if current then line(L["At %s (ID %s)"]:format(text(current.legacyName), text(current.nodeID))) end
+        if #identity.issues > 0 then line(L["CHECK: %s; full details saved"]:format(identity.issues[1])) end
         return
     end
     if kind == "snapshot" then
         local identity = data.identity
-        line(data.reason .. " — session " .. data.mapSession .. "; map " .. value(data.mapID)
-            .. "; " .. (data.mapOpen and "OPEN" or "CLOSED") .. "; flying=" .. value(data.onTaxi))
-        line("Context: " .. value(data.npcName) .. "; player map=" .. value(data.playerMapID)
-            .. "; " .. value(data.faction) .. "; " .. value(data.locale))
+        line(L["%s — session %d; map %s; %s; flying=%s"]:format(data.reason, data.mapSession,
+            value(data.mapID), data.mapOpen and L["OPEN"] or L["CLOSED"], value(data.onTaxi)))
+        line(L["Context: %s; player map=%s; %s; %s"]:format(value(data.npcName), value(data.playerMapID),
+            value(data.faction), value(data.locale)))
         local mapIDs = {}
         for id in pairs(data.maps) do mapIDs[#mapIDs + 1] = id end
         table.sort(mapIDs)
         for _, id in ipairs(mapIDs) do
             local map = data.maps[id]
-            line("Map " .. id .. ": GetAllTaxiNodes=" .. listCount(map.all)
-                .. "; GetTaxiNodesForMap=" .. listCount(map.forMap))
+            line(L["Map %d: GetAllTaxiNodes=%s; GetTaxiNodesForMap=%s"]:format(id, listCount(map.all), listCount(map.forMap)))
         end
         local resolved = 0
         for _, node in ipairs(identity.slots) do if node.resolved then resolved = resolved + 1 end end
-        line("IDs resolved: " .. resolved .. "/" .. #data.nodes .. " slots; legacy nodes=" .. value(data.numNodes))
+        line(L["IDs resolved: %d/%d slots; legacy nodes=%s"]:format(resolved, #data.nodes, value(data.numNodes)))
         for slot, legacy in ipairs(data.nodes) do
             local node = identity.slots[slot] or {}
-            local marker = first(legacy.type) == "CURRENT" and " [HERE]" or ""
-            if slot == identity.selectedSlot then marker = marker .. " [SELECTED]" end
-            line("Slot " .. slot .. " -> ID " .. text(node.nodeID) .. marker .. " | " .. value(legacy.name)
-                .. " | " .. value(legacy.type) .. " | direct=" .. value(legacy.direct)
-                .. " | cost=" .. value(legacy.cost))
-            if node.nameMatches == false then line("CHECK slot " .. slot .. ": API names differ") end
+            local marker = first(legacy.type) == "CURRENT" and " " .. L["[HERE]"] or ""
+            if slot == identity.selectedSlot then marker = marker .. " " .. L["[SELECTED]"] end
+            line(L["Slot %d -> ID %s%s | %s | %s | direct=%s | cost=%s"]:format(slot, text(node.nodeID),
+                marker, value(legacy.name), value(legacy.type), value(legacy.direct), value(legacy.cost)))
+            if node.nameMatches == false then line(L["CHECK slot %d: API names differ"]:format(slot)) end
             if node.routeIDs and #node.routeIDs > 0 then
                 local path = { text(node.routeIDs[1].sourceID) }
                 for _, edge in ipairs(node.routeIDs) do path[#path + 1] = text(edge.destinationID) end
                 -- Keep long routes readable without dumping the individual API calls.
                 for start = 1, #path, 12 do
-                    line("Route to ID " .. text(node.nodeID) .. (start > 1 and " (continued)" or "")
-                        .. ": " .. table.concat(path, " -> ", start, math.min(start + 11, #path)))
+                    local heading = start > 1 and L["Route to ID %s (continued): %s"] or L["Route to ID %s: %s"]
+                    line(heading:format(text(node.nodeID), table.concat(path, " -> ", start, math.min(start + 11, #path))))
                 end
                 if not node.routeStartsAtCurrent or not node.routeEndsAtDestination then
-                    line("CHECK slot " .. slot .. ": route endpoints do not match current/destination IDs")
+                    line(L["CHECK slot %d: route endpoints do not match current/destination IDs"]:format(slot))
                 end
             elseif legacy.numRoutes.error or legacy.numRoutes.missing then
-                line("CHECK slot " .. slot .. ": GetNumRoutes=" .. value(legacy.numRoutes))
+                line(L["CHECK slot %d: GetNumRoutes=%s"]:format(slot, value(legacy.numRoutes)))
             end
-            if legacy.routesTruncated then line("CHECK slot " .. slot .. ": route limit reached") end
+            if legacy.routesTruncated then line(L["CHECK slot %d: route limit reached"]:format(slot)) end
         end
         if identity.selectedSlot then
-            line("Selection: slot " .. identity.selectedSlot .. " -> ID " .. text(identity.selectedNodeID))
+            line(L["Selection: slot %d -> ID %s"]:format(identity.selectedSlot, text(identity.selectedNodeID)))
         end
-        if data.nodesTruncated then line("CHECK: node limit reached") end
-        for _, issue in ipairs(identity.issues) do line("CHECK: " .. issue) end
+        if data.nodesTruncated then line(L["CHECK: node limit reached"]) end
+        for _, issue in ipairs(identity.issues) do line(L["CHECK: %s"]:format(issue)) end
     elseif kind == "client" then
-        line("Client: " .. (data.build.values and arguments(data.build.values) or value(data.build)))
+        line(L["Client: %s"]:format(data.build.values and arguments(data.build.values) or value(data.build)))
     elseif kind == "hook" then
-        line("Observe " .. data.name .. ": " .. (data.ok and "ready" or text(data.error)))
+        line(L["Observe %s: %s"]:format(data.name, data.ok and L["ready"] or text(data.error)))
     elseif kind == "event" or kind == "action" then
         line(kind:upper() .. " " .. data.name .. "(" .. arguments(data.args) .. ")")
     elseif kind == "selection" then
-        line("SELECT slot " .. data.slot .. " (" .. text(data.mouseButton) .. ", before click)")
+        line(L["SELECT slot %d (%s, before click)"]:format(data.slot, text(data.mouseButton)))
     elseif kind == "flight-state" then
-        line("FLIGHT " .. text(data.previous) .. " -> " .. text(data.onTaxi) .. "; session " .. data.mapSession)
+        line(L["FLIGHT %s -> %s; session %d"]:format(text(data.previous), text(data.onTaxi), data.mapSession))
     end
 end
 
@@ -439,21 +439,21 @@ SlashCmdList.ONFLIGHTTAXIDEBUG = function(input)
     elseif command == "clear" then
         local db = database()
         db.records, db.dropped = {}, 0
-        print("OnFlight taxi debug: saved captures cleared.")
+        print(L["OnFlight taxi debug: saved captures cleared."])
     elseif command == "verbose" then
         database().verbose = argument:lower() == "on"
-        print("OnFlight taxi debug: detailed chat " .. (database().verbose and "ON" or "OFF"))
+        print(L["OnFlight taxi debug: detailed chat %s"]:format(database().verbose and L["ON"] or L["OFF"]))
     elseif command == "snap" then
         local mapID = tonumber(argument)
         if argument ~= "" and (not mapID or mapID <= 0 or mapID ~= math.floor(mapID)) then
-            print("OnFlight taxi debug: mapID must be a positive integer.")
+            print(L["OnFlight taxi debug: mapID must be a positive integer."])
             return
         end
         snapshot("manual", mapID)
     elseif command ~= "status" then
-        print("OnFlight taxi debug: /oftaxi on | off | snap [mapID] | status | clear | verbose on/off")
+        print(L["OnFlight taxi debug: /oftaxi on | off | snap [mapID] | status | clear | verbose on/off"])
         return
     end
-    print("OnFlight taxi debug: " .. (enabled and "ON" or "OFF") .. "; " .. #database().records
-        .. " captures; /reload flushes SavedVariables.")
+    print(L["OnFlight taxi debug: %s; %d captures; /reload flushes SavedVariables."]:format(
+        enabled and L["ON"] or L["OFF"], #database().records))
 end

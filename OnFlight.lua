@@ -201,17 +201,17 @@ local function UpdateFlight(_, elapsed)
                 if flight.resumeRemaining then
                     addonCore:SendMessage("OnFlight_Taxi_RESUME", flight.sourceName, flight.destinationName,
                         duration, flight.resumeRemaining)
-                    addonCore:ChatMessage(L["Resume On Taxi:"], flight.sourceName, "-->", flight.destinationName)
+                    addonCore:ChatMessage(L["Resume On Taxi: %s --> %s"]:format(flight.sourceName, flight.destinationName))
                 else
                     addonCore:SendMessage("OnFlight_Taxi_Start", flight.sourceName, flight.destinationName, duration, false)
-                    addonCore:ChatMessage(L["On Taxi:"], flight.sourceName, "-->", flight.destinationName, "--", SecondsToTime(duration))
+                    addonCore:ChatMessage(L["On Taxi: %s --> %s -- %s"]:format(flight.sourceName, flight.destinationName, SecondsToTime(duration)))
                 end
             elseif flight.resumeRemaining then
                 addonCore:SendMessage("OnFlight_Taxi_RESUME", flight.sourceName, flight.destinationName, nil, nil, true)
-                addonCore:ChatMessage(L["Resume On Taxi:"], flight.sourceName, "-->", flight.destinationName)
+                addonCore:ChatMessage(L["Resume On Taxi: %s --> %s"]:format(flight.sourceName, flight.destinationName))
             else
                 addonCore:SendMessage("OnFlight_Taxi_Start", flight.sourceName, flight.destinationName, 0, true)
-                addonCore:ChatMessage(L["On Taxi:"], flight.sourceName .. " --> " .. flight.destinationName)
+                addonCore:ChatMessage(L["On Taxi: %s --> %s"]:format(flight.sourceName, flight.destinationName))
             end
         elseif flight.startedAt then
             if not flight.earlyExit then
@@ -220,10 +220,10 @@ local function UpdateFlight(_, elapsed)
                 times[flight.sourceID] = times[flight.sourceID] or {}
                 times[flight.sourceID][flight.destinationID] = math.floor(duration)
                 addonCore:SendMessage("OnFlight_Taxi_Stop", flight.sourceName, flight.destinationName, duration)
-                addonCore:ChatMessage(L["Off Taxi:"], flight.sourceName .. " --> " .. flight.destinationName, "--", SecondsToTime(duration))
+                addonCore:ChatMessage(L["Off Taxi: %s --> %s -- %s"]:format(flight.sourceName, flight.destinationName, SecondsToTime(duration)))
             else
                 addonCore:SendMessage("OnFlight_Taxi_EarlyExit", flight.sourceName, flight.destinationName, flight.earlyExit)
-                addonCore:ChatMessage(L["Taxi Ended Early:"], flight.earlyExit)
+                addonCore:ChatMessage(L["Taxi Ended Early: %s"]:format(flight.earlyExit))
             end
             return ResetFlight()
         end
@@ -459,12 +459,12 @@ end
 
 function addonCore:ParseGossipEndpoint(optionID, text)
     local value = text:match("^%s*(.-)%s*$")
-    if value == "" then return nil, "Enter a taxi-node ID or a custom location name." end
+    if value == "" then return nil, L["Enter a taxi-node ID or a custom location name."] end
     if value:match("^%d+$") then
         local id = tonumber(value)
         local name = self:GetTaxiNodeName(id)
         if name then return id, name end
-        return nil, "Unknown taxi-node ID. Check the ID or use a name. Saved value unchanged."
+        return nil, L["Unknown taxi-node ID. Check the ID or use a name. Saved value unchanged."]
     end
     return tostring(optionID) .. ":" .. value, value
 end
@@ -480,7 +480,7 @@ function addonCore:StartGossipFlight(optionID)
     local source, sourceName = self:GetGossipEndpoint(optionID, endpoints[1])
     local destination, destinationName = self:GetGossipEndpoint(optionID, endpoints[2])
     if not sourceName or not destinationName then
-        self:Print("Configure both gossip-flight endpoints in settings: " .. optionID)
+        self:Print(L["Configure both gossip-flight endpoints in settings: %s"]:format(optionID))
         return
     end
     self:StartAFlight(source, destination)
@@ -527,7 +527,7 @@ do
                     if GameTooltip:GetOwner() ~= frame then
                         GameTooltip:SetOwner(frame, "ANCHOR_RIGHT")
                     end
-                    GameTooltip:AddLine("gossipOptionID: " .. (frame.OnFlightGossipID or "??"))
+                    GameTooltip:AddLine(L["gossipOptionID: %s"]:format(frame.OnFlightGossipID or "??"))
                     GameTooltip:Show()
                 end
             end)
@@ -579,7 +579,7 @@ local gossipOptionTemplate = {
     args = {
         name = {
             order = 1,
-            name = "Gossip ID",
+            name = L["Gossip ID"],
             type = "input",
             get = function(info)
                 return info[#info - 1]
@@ -591,7 +591,7 @@ local gossipOptionTemplate = {
         sourceID = {
             order = 2,
             type = "input",
-            name = "Source Node ID",
+            name = L["Source Node ID"],
             validate = function(_, value)
                 local key, message = addonCore:ParseGossipEndpoint(0, value)
                 return key ~= nil or message
@@ -610,7 +610,7 @@ local gossipOptionTemplate = {
         destinationID = {
             order = 3,
             type = "input",
-            name = "Destination Node ID",
+            name = L["Destination Node ID"],
             validate = function(_, value)
                 local key, message = addonCore:ParseGossipEndpoint(0, value)
                 return key ~= nil or message
@@ -628,7 +628,7 @@ local gossipOptionTemplate = {
         },
         remove = {
             order = 4,
-            name = "Remove",
+            name = L["Remove"],
             type = "execute",
             func = function(info)
                 local id = tonumber(info[#info - 1])
@@ -655,7 +655,7 @@ local gossipOptionTemplate_AddNew = {
     args = {
         name = {
             order = 1,
-            name = "Gossip ID",
+            name = L["Gossip ID"],
             type = "input",
             get = addNew_Temp_get,
             set = addNew_Temp_set
@@ -663,7 +663,7 @@ local gossipOptionTemplate_AddNew = {
         sourceID = {
             order = 2,
             type = "input",
-            name = "Source Node ID",
+            name = L["Source Node ID"],
             validate = function(_, value)
                 local key, message = addonCore:ParseGossipEndpoint(0, value)
                 return key ~= nil or message
@@ -674,7 +674,7 @@ local gossipOptionTemplate_AddNew = {
         destinationID = {
             order = 3,
             type = "input",
-            name = "Destination Node ID",
+            name = L["Destination Node ID"],
             validate = function(_, value)
                 local key, message = addonCore:ParseGossipEndpoint(0, value)
                 return key ~= nil or message
@@ -684,7 +684,7 @@ local gossipOptionTemplate_AddNew = {
         },
         addNew = {
             order = 4,
-            name = "Add New",
+            name = L["Add New"],
             type = "execute",
             func = function()
                 local id = tonumber(addNew_Temp.name)
@@ -760,8 +760,8 @@ addonCore.configOptionsTable = {
                     order = 10
                 },
                 showGossipConfig = {
-                    name = "Show Diagnostic IDs",
-                    desc = "Show gossip option IDs and taxi-node IDs.",
+                    name = L["Show Diagnostic IDs"],
+                    desc = L["Show gossip option IDs and taxi-node IDs."],
                     type = "toggle",
                     order = 20,
                     get = function(info)
@@ -792,7 +792,7 @@ addonCore.configOptionsTable = {
             }
         },
         gossipConfigTab = {
-            name = "Gossip Configuration",
+            name = L["Gossip Configuration"],
             type = "group",
             order = 900,
             args = {}

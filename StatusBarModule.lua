@@ -143,7 +143,7 @@ local function timerBarOnUpdate(self, elapsed)
             self.textObj:SetText(disp_time(displayedTime))
         else
             local label = profile.shortNames and self.shortText or self.text
-            self.textObj:SetFormattedText("%s - %s", label, disp_time(displayedTime))
+            self.textObj:SetFormattedText(L["%s - %s"], label, disp_time(displayedTime))
         end
         local currentWidth = self:GetWidth()
         local width = math.max(self.textObj:GetStringWidth() + 30, profile.barWidth)
@@ -221,7 +221,7 @@ function statusBarModuleCore:SetupTimerBar()
             if IsShiftKeyDown() then
                 if frame.timeRemaining then
                     ChatFrameUtil.ActivateChat(DEFAULT_CHAT_FRAME.editBox)
-                    ChatFrameUtil.InsertLink(("[%s]: %s - %s"):format(L["OnFlight"], frame.shortText,
+                    ChatFrameUtil.InsertLink(L["[%s]: %s - %s"]:format(L["OnFlight"], frame.shortText,
                         disp_time(frame.timeRemaining)))
                 end
             end
@@ -266,11 +266,11 @@ function statusBarModuleCore:StartTimerBar(taxiSrcName, taxiDestName, duration, 
     timerFrame.timeRemaining = timeRemaining or duration
     timerFrame.unknownFlight = unknownFlight or false
 
-    timerFrame.text = ("%s --> %s"):format(taxiSrcName, taxiDestName)
+    timerFrame.text = L["%s --> %s"]:format(taxiSrcName, taxiDestName)
 
     local taxiSrcNameShort = taxiSrcName:gsub(L["DestParse"], "")
     local taxiDestNameShort = taxiDestName:gsub(L["DestParse"], "")
-    timerFrame.shortText = ("%s --> %s"):format(taxiSrcNameShort, taxiDestNameShort)
+    timerFrame.shortText = L["%s --> %s"]:format(taxiSrcNameShort, taxiDestNameShort)
 
     local statusBar = timerFrame.statusBar
     if unknownFlight then
@@ -303,15 +303,15 @@ end
 
 ---
 local optionsTable_SetPoint_Dictionary = {
-    ["TOPLEFT"] = "TOPLEFT",
-    ["TOP"] = "TOP",
-    ["TOPRIGHT"] = "TOPRIGHT",
-    ["LEFT"] = "LEFT",
-    ["CENTER"] = "CENTER",
-    ["RIGHT"] = "RIGHT",
-    ["BOTTOMLEFT"] = "BOTTOMLEFT",
-    ["BOTTOM"] = "BOTTOM",
-    ["BOTTOMRIGHT"] = "BOTTOMRIGHT",
+    ["TOPLEFT"] = L["TOPLEFT"],
+    ["TOP"] = L["TOP"],
+    ["TOPRIGHT"] = L["TOPRIGHT"],
+    ["LEFT"] = L["LEFT"],
+    ["CENTER"] = L["CENTER"],
+    ["RIGHT"] = L["RIGHT"],
+    ["BOTTOMLEFT"] = L["BOTTOMLEFT"],
+    ["BOTTOM"] = L["BOTTOM"],
+    ["BOTTOMRIGHT"] = L["BOTTOMRIGHT"],
 
 }
 local optionsTable_SetPoint_SortedList = {
@@ -395,7 +395,7 @@ addonCore.configOptionsTable.plugins[moduleName] = {
             },
             barOptions = {
                 type = "group",
-                name = "Bar Options",
+                name = L["Bar Options"],
                 inline = true,
                 order = 100,
                 args = {
@@ -416,7 +416,7 @@ addonCore.configOptionsTable.plugins[moduleName] = {
                             },
                             relativePoint = {
                                 type = "select",
-                                name = "World Frame Anchor Point",
+                                name = L["World Frame Anchor Point"],
                                 order = 30,
                                 desc = L["Status Bar is Always anchored to World Frame"],
                                 values = optionsTable_SetPoint_Dictionary,
@@ -425,7 +425,7 @@ addonCore.configOptionsTable.plugins[moduleName] = {
                             breakFlow = { type = "description", name = " ", order = 39 },
                             offsetX = {
                                 type = "range",
-                                name = "X Offset",
+                                name = L["X Offset"],
                                 order = 40,
                                 bigStep = 1,
                                 min = -1000,
@@ -435,7 +435,7 @@ addonCore.configOptionsTable.plugins[moduleName] = {
                             },
                             offsetY = {
                                 type = "range",
-                                name = "Y Offset",
+                                name = L["Y Offset"],
                                 order = 50,
                                 bigStep = 1,
                                 min = -1000,
@@ -575,7 +575,7 @@ addonCore.configOptionsTable.plugins[moduleName] = {
                         name = L["Start Known Flight"],
                         order = 1,
                         func = function()
-                            statusBarModuleCore:StartTimerBar("City1, Zone1", "City2, Zone2", 300)
+                            statusBarModuleCore:StartTimerBar(L["City1, Zone1"], L["City2, Zone2"], 300)
                         end
                     },
                     ["testUnknown"] = {
@@ -583,7 +583,7 @@ addonCore.configOptionsTable.plugins[moduleName] = {
                         name = L["Start Unknown Flight"],
                         order = 2,
                         func = function()
-                            statusBarModuleCore:StartTimerBar("Unknown1, Zone1", "Unknown2, Zone2",
+                            statusBarModuleCore:StartTimerBar(L["Unknown1, Zone1"], L["Unknown2, Zone2"],
                                 nil, nil, true)
                         end
                     },
