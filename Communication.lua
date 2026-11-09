@@ -1,6 +1,6 @@
 -- Forever group flight status. See PROTOCOL.md for the independent wire protocol.
 --luacheck: no max line length
---luacheck: globals LibStub C_ChatInfo CreateFrame GetTime GetServerTime IsInRaid IsInGroup UnitName wipe
+--luacheck: globals LibStub C_ChatInfo CreateFrame GetTime GetServerTime IsInRaid IsInGroup UnitFullName GetNormalizedRealmName wipe
 local _, addonCore = ...
 local module = addonCore:NewModule("Communication", "AceEvent-3.0")
 local PREFIX, STALE_SECONDS = "OnFlight", 180
@@ -14,11 +14,24 @@ local function PositiveInteger(value)
     return value and value > 0 and value < math.huge and value == math.floor(value)
 end
 
+local function IsSelf(sender)
+    local name, realm = UnitFullName("player")
+    realm = realm and realm ~= "" and realm:gsub("%s+", "") or GetNormalizedRealmName()
+    return sender == name or sender == name .. "-" .. realm
+end
+
 local function Broadcast(message)
     if IsInRaid(1) then
         C_ChatInfo.SendAddonMessage(PREFIX, message, "RAID")
     elseif IsInGroup(1) then
         C_ChatInfo.SendAddonMessage(PREFIX, message, "PARTY")
+    else
+        local name, realm = UnitFullName("player")
+        if realm and realm ~= "" then
+            realm = realm:gsub("%s+", "")
+            if realm ~= GetNormalizedRealmName() then name = name .. "-" .. realm end
+        end
+        C_ChatInfo.SendAddonMessage(PREFIX, message, "WHISPER", name)
     end
 end
 
@@ -52,7 +65,7 @@ function module:GetRemoteFlightProgress(sender)
 end
 
 function module:CHAT_MSG_ADDON(_, prefix, message, channel, sender)
-    if prefix ~= PREFIX or (channel ~= "PARTY" and channel ~= "RAID") or sender == UnitName("player") then return end
+    if prefix ~= PREFIX or (channel ~= "PARTY" and channel ~= "RAID") or IsSelf(sender) then return end
     local source, start, command, destination = message:match("^(%d+):(%d+):([^:]+):(%d+)$")
     if not source then return end
     local sourceID, startedAt, destinationID = tonumber(source), tonumber(start), tonumber(destination)

@@ -2,7 +2,9 @@
 
 Other Forever flight addons can implement this protocol using Blizzard addon messages alone. OnFlight and its libraries are not required.
 
-Register the addon-message prefix **`OnFlight`** with `C_ChatInfo.RegisterAddonMessagePrefix`. Send with `C_ChatInfo.SendAddonMessage` on `RAID` for a normal raid, otherwise `PARTY` for a normal party. Receive through `CHAT_MSG_ADDON`. No guild, whisper, or instance-chat transport is used.
+Register the addon-message prefix **`OnFlight`** with `C_ChatInfo.RegisterAddonMessagePrefix`. Send with `C_ChatInfo.SendAddonMessage` on `RAID` for a normal raid, otherwise `PARTY` for a normal party. While solo, send `WHISPER` to the local character. Select one channel per announcement; do not also whisper group announcements. No guild or instance-chat transport is used.
+
+Resolve the whisper target with Blizzard's player name and realm functions. A character on the local realm can use its unqualified name. Receive through `CHAT_MSG_ADDON`; independent displays should accept PARTY, RAID, and whispers from the local character. Do not accept whispers from other players as self-loop traffic. Recognize both qualified and unqualified forms of the local sender's name.
 
 ## Payload
 
@@ -43,7 +45,7 @@ Capture source, destination, boarding server timestamp, and advertised duration 
 - For an unknown duration, announce `U` on confirmed boarding and repeat the **identical payload** every 60 seconds while that flight continues. After a delayed update, send once and schedule the next announcement 60 seconds later. Never switch that flight from `U` to a number.
 - Send `E` only when the actual flight ends. Preserve the original source, boarding timestamp, and destination. An expired ETA, early-landing request, loading screen, or disabled display does not mean the flight ended.
 
-There are no roster-change messages, join announcements, sync requests, handshakes, acknowledgments, or immediate rebroadcasts when someone joins or leaves. Ordinary scheduled announcements may let late joiners discover a flight; discovery is not guaranteed. Thresholds still advance while solo. There is no deferred packet queue.
+There are no roster-change messages, join announcements, sync requests, handshakes, acknowledgments, or immediate rebroadcasts when someone joins or leaves. Ordinary scheduled announcements may let late joiners discover a flight; discovery is not guaranteed. The same schedule applies to solo self-whispers. There is no deferred packet queue.
 
 ## Receiving and expiry
 
