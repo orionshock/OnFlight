@@ -351,7 +351,7 @@ local function CreateWindow()
             if button == "LeftButton" and upInside then
                 selectedTab, selectedZone = key, nil
                 ClearSearch()
-                module:Refresh(true)
+                module:Refresh(true, key == "zones")
             end
         end)
         window.tabs[key] = tab
@@ -361,10 +361,10 @@ end
 function module:Open()
     if not addonCore:GetTaxiSession() then return end
     if not window then CreateWindow() end
-    selectedTab, selectedZone = "zones", nil
+    selectedTab, selectedZone = "favorites", nil
     ClearSearch()
     window:Show()
-    self:Refresh(true, true)
+    self:Refresh(true)
 end
 
 function module:TAXIMAP_OPENED()
