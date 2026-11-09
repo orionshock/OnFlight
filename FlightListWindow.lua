@@ -13,7 +13,9 @@ local zoneAtlas = "poi-traveldirections-arrow"
 local favoriteAtlas = "PetJournal-FavoritesIcon"
 
 -- Temporary presentation grouping only. Never used to identify a destination.
-local function GetDisplayZone(name)
+local function GetDisplayZone(name, nodeID)
+    -- These verified Moonglade nodes have the zone name but no comma suffix.
+    if nodeID == 49 or nodeID == 69 then return name end
     local suffix = name:match("^[^,]+,%s*([^,]*)")
     local zone = suffix and suffix:match("^%s*(.-)%s*$")
     return zone and zone ~= "" and zone or L["Special"]
@@ -41,7 +43,7 @@ local function HighlightZone(zone)
     local session = addonCore:GetTaxiSession()
     if not zone or not session or not window:IsShown() then return end
     for id, node in pairs(session.nodes) do
-        if GetDisplayZone(node.name) == zone then
+        if GetDisplayZone(node.name, id) == zone then
             local button = _G["TaxiButton" .. session.idToSlot[id]]
             if button then button:LockHighlight() end
         end
@@ -163,7 +165,7 @@ function module:Refresh(resetScroll)
         local node = id and session.nodes[id]
         local nodeType = TaxiNodeGetType(slot)
         if node and nodeType ~= "NONE" then
-            local zone = GetDisplayZone(node.name)
+            local zone = GetDisplayZone(node.name, id)
             if not zones[zone] then
                 zones[zone] = { count = 0 }
             end
