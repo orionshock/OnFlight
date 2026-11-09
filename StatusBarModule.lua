@@ -1,7 +1,6 @@
 --[[
     This Module's Entire Job is to handle the Status Bar
-]]
-local addonName, addonCore = ...
+]] local addonName, addonCore = ...
 local moduleName = "StatusBarModule"
 local statusBarModuleCore = addonCore:NewModule(moduleName, "AceEvent-3.0")
 
@@ -11,29 +10,54 @@ local LSM = LibStub("LibSharedMedia-3.0")
 local db
 local svDefaults = {
     profile = {
-        --Basic Bar Options
+        -- Basic Bar Options
         countUp = false,
         fillUp = false,
-        --Bar Background Color
-        backgroundColor = { r = 0.1, g = 0.1, b = 0.1, a = 0.6 },
-        --Bar Size Settings
+        -- Bar Background Color
+        backgroundColor = {
+            r = 0.1,
+            g = 0.1,
+            b = 0.1,
+            a = 0.6
+        },
+        -- Bar Size Settings
         barHeight = 30,
         barWidth = 300,
-        --Bar Settings
+        -- Bar Settings
         barTexture = "Blizzard",
-        barColor = { r = 0.5, g = 0.5, b = 0.8, a = 1.0 },
-        unknownFlightColor = { r = 0.2, g = 0.2, b = 0.4, a = 1.0 },
-        --Border Settings
+        barColor = {
+            r = 0.5,
+            g = 0.5,
+            b = 0.8,
+            a = 1.0
+        },
+        unknownFlightColor = {
+            r = 0.2,
+            g = 0.2,
+            b = 0.4,
+            a = 1.0
+        },
+        -- Border Settings
         borderTexture = "Blizzard Dialog",
-        borderColor = { r = 0.6, g = 0.6, b = 0.6, a = 1 },
-        --Basic Text Options
+        borderColor = {
+            r = 0.6,
+            g = 0.6,
+            b = 0.6,
+            a = 1
+        },
+        -- Basic Text Options
         compactMode = false,
         shortNames = true,
-        --Font Options
+        -- Font Options
         fontName = "2002 Bold",
         fontSize = 15,
-        fontColor = { r = 1, g = 1, b = 1, a = 1 },
-        --Bar Location
+        fontColor = {
+            r = 1,
+            g = 1,
+            b = 1,
+            a = 1
+        },
+        -- Bar Location
         barLocation = {
             offsetX = 0,
             offsetY = -170,
@@ -78,7 +102,9 @@ end
 function statusBarModuleCore:ShowCurrentFlight()
     local current = addonCore:GetCurrentFlight()
     local elapsed, remaining, duration = addonCore:GetCurrentFlightProgress()
-    if not current or elapsed == nil then return end
+    if not current or elapsed == nil then
+        return
+    end
     self:StartTimerBar(current.sourceName, current.destinationName, duration, remaining, not duration, true)
 end
 
@@ -95,7 +121,7 @@ function statusBarModuleCore:OnFlight_Taxi_Stop(event, ...)
 end
 
 function statusBarModuleCore:OnFlight_Taxi_RESUME(event, taxiSrcName, taxiDestName, taxiDuration, timeRemaining,
-                                                  unknownFlight, timeOnFlight)
+    unknownFlight, timeOnFlight)
     self:StartTimerBar(taxiSrcName, taxiDestName, taxiDuration, timeRemaining, unknownFlight, true)
 end
 
@@ -128,7 +154,9 @@ local function timerBarOnUpdate(self, elapsed)
         end
         displayedTime = timeOnFlight or self.countingUpwards
     else
-        if not self.isFlightDisplay then self.timeRemaining = self.timeRemaining - elapsed end
+        if not self.isFlightDisplay then
+            self.timeRemaining = self.timeRemaining - elapsed
+        end
         if self.timeRemaining <= 0 then
             statusBarModuleCore:StopTimerBar("timerBarOnUpdate timedout")
             return
@@ -147,8 +175,12 @@ local function timerBarOnUpdate(self, elapsed)
         end
         local currentWidth = self:GetWidth()
         local width = math.max(self.textObj:GetStringWidth() + 30, profile.barWidth)
-        if not self.unknownFlight then width = math.max(width, currentWidth) end
-        if width ~= currentWidth then self:SetWidth(width) end
+        if not self.unknownFlight then
+            width = math.max(width, currentWidth)
+        end
+        if width ~= currentWidth then
+            self:SetWidth(width)
+        end
     end
 
     if not self.unknownFlight then
@@ -158,7 +190,15 @@ local function timerBarOnUpdate(self, elapsed)
     end
 end
 
-local bdrop = { edgeSize = 16, insets = { left = 4, right = 4, top = 4, bottom = 4 } }
+local bdrop = {
+    edgeSize = 16,
+    insets = {
+        left = 4,
+        right = 4,
+        top = 4,
+        bottom = 4
+    }
+}
 local function ApplyLookAndFeel(self)
     local profile = db.profile
     local barTexture = LSM:Fetch("statusbar", profile.barTexture)
@@ -167,7 +207,9 @@ local function ApplyLookAndFeel(self)
 
     -- Invalidate text and width after any appearance or profile change.
     self.displayedSecond = nil
-    if self:GetWidth() ~= profile.barWidth then self:SetWidth(profile.barWidth) end
+    if self:GetWidth() ~= profile.barWidth then
+        self:SetWidth(profile.barWidth)
+    end
     self:SetHeight(profile.barHeight)
     local location = profile.barLocation
     self:ClearAllPoints()
@@ -215,44 +257,38 @@ function statusBarModuleCore:SetupTimerBar()
 
     ApplyLookAndFeel(OnFlightTimerFrame)
 
-    OnFlightTimerFrame:SetScript(
-        "OnMouseDown",
-        function(frame)
-            if IsShiftKeyDown() then
-                if frame.timeRemaining then
-                    ChatFrameUtil.ActivateChat(DEFAULT_CHAT_FRAME.editBox)
-                    ChatFrameUtil.InsertLink(L["[%s]: %s - %s"]:format(L["OnFlight"], frame.shortText,
-                        disp_time(frame.timeRemaining)))
-                end
+    OnFlightTimerFrame:SetScript("OnMouseDown", function(frame)
+        if IsShiftKeyDown() then
+            if frame.timeRemaining then
+                ChatFrameUtil.ActivateChat(DEFAULT_CHAT_FRAME.editBox)
+                ChatFrameUtil.InsertLink(L["[%s]: %s - %s"]:format(L["OnFlight"], frame.shortText,
+                    disp_time(frame.timeRemaining)))
             end
         end
-    )
+    end)
 
-    OnFlightTimerFrame:SetScript(
-        "OnDragStart",
-        function(frame)
-            if IsControlKeyDown() then
-                frame:StartMoving()
-            end
+    OnFlightTimerFrame:SetScript("OnDragStart", function(frame)
+        if IsControlKeyDown() then
+            frame:StartMoving()
         end
-    )
+    end)
 
-    OnFlightTimerFrame:SetScript(
-        "OnDragStop",
-        function(frame)
-            frame:StopMovingOrSizing()
-            local anchorPoint, _, relativePoint, offsetX, offsetY = frame:GetPoint()
-            local location = db.profile.barLocation
-            location.anchorPoint, location.relativePoint = anchorPoint, relativePoint
-            location.offsetX, location.offsetY = offsetX, offsetY
-            addonCore:RefreshSettings("bar_anchorPoint", "bar_relativePoint", "bar_offsetX", "bar_offsetY")
-        end
-    )
+    OnFlightTimerFrame:SetScript("OnDragStop", function(frame)
+        frame:StopMovingOrSizing()
+        local anchorPoint, _, relativePoint, offsetX, offsetY = frame:GetPoint()
+        local location = db.profile.barLocation
+        location.anchorPoint, location.relativePoint = anchorPoint, relativePoint
+        location.offsetX, location.offsetY = offsetX, offsetY
+        addonCore:RefreshSettings("bar_anchorPoint", "bar_relativePoint", "bar_offsetX", "bar_offsetY")
+    end)
     self.OnFlightTimerFrame = OnFlightTimerFrame
 end
 
-function statusBarModuleCore:StartTimerBar(taxiSrcName, taxiDestName, duration, timeRemaining, unknownFlight, isFlightDisplay) --Bar Text and Duration in seconds--
-    if not self:IsEnabled() then return end
+function statusBarModuleCore:StartTimerBar(taxiSrcName, taxiDestName, duration, timeRemaining, unknownFlight,
+    isFlightDisplay) -- Bar Text and Duration in seconds--
+    if not self:IsEnabled() then
+        return
+    end
     if not self.OnFlightTimerFrame then
         return
     end
@@ -290,7 +326,9 @@ function statusBarModuleCore:StartTimerBar(taxiSrcName, taxiDestName, duration, 
 end
 
 function statusBarModuleCore:StopTimerBar(reason)
-    if not self.OnFlightTimerFrame then return end
+    if not self.OnFlightTimerFrame then
+        return
+    end
     self.OnFlightTimerFrame:Hide()
     self.OnFlightTimerFrame.isFlightDisplay = false
     self.OnFlightTimerFrame.countingUpwards = 0
@@ -304,5 +342,7 @@ end
 
 ---
 function statusBarModuleCore:OnProfileUpdated()
-    if self.OnFlightTimerFrame then ApplyLookAndFeel(self.OnFlightTimerFrame) end
+    if self.OnFlightTimerFrame then
+        ApplyLookAndFeel(self.OnFlightTimerFrame)
+    end
 end

@@ -1,10 +1,10 @@
 -- Forever group flight status. See PROTOCOL.md for the independent wire protocol.
---luacheck: no max line length
---luacheck: globals LibStub C_ChatInfo CreateFrame GetTime GetServerTime IsInRaid IsInGroup UnitFullName GetNormalizedRealmName wipe
+-- luacheck: no max line length
+-- luacheck: globals LibStub C_ChatInfo CreateFrame GetTime GetServerTime IsInRaid IsInGroup UnitFullName GetNormalizedRealmName wipe
 local _, addonCore = ...
 local module = addonCore:NewModule("Communication", "AceEvent-3.0")
 local PREFIX, STALE_SECONDS = "OnFlight", 180
-local thresholds = { 0.3, 0.5, 0.7 }
+local thresholds = {0.3, 0.5, 0.7}
 local remoteFlights, ended = {}, {}
 local outgoing
 local timer = CreateFrame("Frame")
@@ -29,21 +29,25 @@ local function Broadcast(message)
         local name, realm = UnitFullName("player")
         if realm and realm ~= "" then
             realm = realm:gsub("%s+", "")
-            if realm ~= GetNormalizedRealmName() then name = name .. "-" .. realm end
+            if realm ~= GetNormalizedRealmName() then
+                name = name .. "-" .. realm
+            end
         end
         C_ChatInfo.SendAddonMessage(PREFIX, message, "WHISPER", name)
     end
 end
 
 local function Matches(flight, sourceID, startedAt, destinationID)
-    return flight.sourceID == sourceID and flight.startServerTime == startedAt
-        and flight.destinationID == destinationID
+    return flight.sourceID == sourceID and flight.startServerTime == startedAt and flight.destinationID == destinationID
 end
 
 local function RemoveRemote(sender, reason, now)
     local flight = remoteFlights[sender]
     remoteFlights[sender] = nil
-    ended[sender] = { startedAt = flight.startServerTime, expiresAt = now + STALE_SECONDS }
+    ended[sender] = {
+        startedAt = flight.startServerTime,
+        expiresAt = now + STALE_SECONDS
+    }
     module:SendMessage("OnFlight_RemoteFlightRemoved", sender, flight, reason)
 end
 
@@ -58,66 +62,106 @@ end
 
 function module:GetRemoteFlightProgress(sender)
     local flight = remoteFlights[sender]
-    if not flight then return end
+    if not flight then
+        return
+    end
     local elapsed = math.max(0, GetServerTime() - flight.startServerTime)
     local remaining = flight.duration and math.max(0, flight.duration - elapsed)
     return elapsed, remaining, flight.duration
 end
 
 function module:CHAT_MSG_ADDON(_, prefix, message, channel, sender)
-    if prefix ~= PREFIX or (channel ~= "PARTY" and channel ~= "RAID") or IsSelf(sender) then return end
+    if prefix ~= PREFIX or (channel ~= "PARTY" and channel ~= "RAID") or IsSelf(sender) then
+        return
+    end
     local source, start, command, destination = message:match("^(%d+):(%d+):([^:]+):(%d+)$")
-    if not source then return end
+    if not source then
+        return
+    end
     local sourceID, startedAt, destinationID = tonumber(source), tonumber(start), tonumber(destination)
-    if not PositiveInteger(sourceID) or not PositiveInteger(startedAt) or not PositiveInteger(destinationID) then return end
+    if not PositiveInteger(sourceID) or not PositiveInteger(startedAt) or not PositiveInteger(destinationID) then
+        return
+    end
     local duration
     if command ~= "U" and command ~= "E" then
-        if not command:match("^%d+$") then return end
+        if not command:match("^%d+$") then
+            return
+        end
         duration = tonumber(command)
-        if not PositiveInteger(duration) then return end
+        if not PositiveInteger(duration) then
+            return
+        end
     end
     local now = GetServerTime()
     local current = remoteFlights[sender]
     if command == "E" then
-        if current and Matches(current, sourceID, startedAt, destinationID) then RemoveRemote(sender, "E", now) end
+        if current and Matches(current, sourceID, startedAt, destinationID) then
+            RemoveRemote(sender, "E", now)
+        end
         return
     end
     local previous = ended[sender]
-    if previous and previous.expiresAt > now and startedAt <= previous.startedAt then return end
+    if previous and previous.expiresAt > now and startedAt <= previous.startedAt then
+        return
+    end
     if current then
         if Matches(current, sourceID, startedAt, destinationID) then
             -- Keep the original duration/unknown status, and don't reset displays.
-            if current.duration == duration then current.lastSeenAt = now end
+            if current.duration == duration then
+                current.lastSeenAt = now
+            end
             return
         end
-        if startedAt <= current.startServerTime then return end
+        if startedAt <= current.startServerTime then
+            return
+        end
     end
-    local flight = { sourceID = sourceID, destinationID = destinationID,
-        startServerTime = startedAt, duration = duration, lastSeenAt = now }
+    local flight = {
+        sourceID = sourceID,
+        destinationID = destinationID,
+        startServerTime = startedAt,
+        duration = duration,
+        lastSeenAt = now
+    }
     remoteFlights[sender] = flight
     self:SendMessage("OnFlight_RemoteFlightUpdated", sender, flight)
 end
 
 function module:FlightStarted()
     local flight = addonCore:GetCurrentFlight()
-    if not flight or not flight.startedAt or not flight.startServerTime then return end
-    if outgoing and outgoing.flight == flight then return end
+    if not flight or not flight.startedAt or not flight.startServerTime then
+        return
+    end
+    if outgoing and outgoing.flight == flight then
+        return
+    end
     -- Gossip custom endpoints have no numeric identity in this protocol.
-    if type(flight.sourceID) ~= "number" or type(flight.destinationID) ~= "number"
-        or not PositiveInteger(flight.sourceID) or not PositiveInteger(flight.destinationID) then return end
+    if type(flight.sourceID) ~= "number" or type(flight.destinationID) ~= "number" or
+        not PositiveInteger(flight.sourceID) or not PositiveInteger(flight.destinationID) then
+        return
+    end
     local _, _, duration = addonCore:GetCurrentFlightProgress()
     duration = duration and math.floor(duration)
-    if not PositiveInteger(duration) then duration = nil end
+    if not PositiveInteger(duration) then
+        duration = nil
+    end
     local format = "%d:%d:%s:%d"
-    outgoing = { flight = flight, duration = duration, nextThreshold = 1,
+    outgoing = {
+        flight = flight,
+        duration = duration,
+        nextThreshold = 1,
         nextAnnouncement = GetTime() + 60,
-        message = format:format(flight.sourceID, flight.startServerTime, duration and tostring(duration) or "U", flight.destinationID),
-        endMessage = format:format(flight.sourceID, flight.startServerTime, "E", flight.destinationID) }
+        message = format:format(flight.sourceID, flight.startServerTime, duration and tostring(duration) or "U",
+            flight.destinationID),
+        endMessage = format:format(flight.sourceID, flight.startServerTime, "E", flight.destinationID)
+    }
     Broadcast(outgoing.message)
 end
 
 function module:FlightEnded()
-    if not outgoing then return end
+    if not outgoing then
+        return
+    end
     Broadcast(outgoing.endMessage)
     outgoing = nil
 end
@@ -132,7 +176,9 @@ local function Update()
                 local index = outgoing.nextThreshold
                 if thresholds[index] and elapsed >= outgoing.duration * thresholds[index] then
                     -- One packet covers any thresholds crossed during a loading gap.
-                    repeat index = index + 1 until not thresholds[index] or elapsed < outgoing.duration * thresholds[index]
+                    repeat
+                        index = index + 1
+                    until not thresholds[index] or elapsed < outgoing.duration * thresholds[index]
                     outgoing.nextThreshold = index
                     Broadcast(outgoing.message)
                 end
@@ -149,14 +195,18 @@ local function Update()
         end
     end
     for sender, previous in pairs(ended) do
-        if now >= previous.expiresAt then ended[sender] = nil end
+        if now >= previous.expiresAt then
+            ended[sender] = nil
+        end
     end
 end
 
 local elapsedSinceUpdate = 0
 timer:SetScript("OnUpdate", function(_, elapsed)
     elapsedSinceUpdate = elapsedSinceUpdate + elapsed
-    if elapsedSinceUpdate < 1 then return end
+    if elapsedSinceUpdate < 1 then
+        return
+    end
     elapsedSinceUpdate = 0
     Update()
 end)
@@ -166,7 +216,9 @@ function module:OnInitialize()
 end
 
 function module:OnEnable()
-    if outgoing and outgoing.flight ~= addonCore:GetCurrentFlight() then outgoing = nil end
+    if outgoing and outgoing.flight ~= addonCore:GetCurrentFlight() then
+        outgoing = nil
+    end
     C_ChatInfo.RegisterAddonMessagePrefix(PREFIX)
     self:RegisterEvent("CHAT_MSG_ADDON")
     self:RegisterMessage("OnFlight_Taxi_Start", "FlightStarted")
@@ -182,6 +234,8 @@ function module:OnDisable()
     self:UnregisterAllEvents()
     self:UnregisterAllMessages()
     -- Keep the frozen announcement if re-enabled on this flight; never send a false E.
-    for sender in pairs(remoteFlights) do RemoveRemote(sender, "disabled", GetServerTime()) end
+    for sender in pairs(remoteFlights) do
+        RemoveRemote(sender, "disabled", GetServerTime())
+    end
     wipe(ended)
 end

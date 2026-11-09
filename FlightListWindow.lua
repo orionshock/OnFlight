@@ -16,15 +16,21 @@ local otherLocationsIcon = 132172 -- Original Special-group icon.
 -- Temporary presentation grouping only. Never used to identify a destination.
 local function GetDisplayZone(name, nodeID)
     -- These verified Moonglade nodes have the zone name but no comma suffix.
-    if nodeID == 49 or nodeID == 69 then return name end
+    if nodeID == 49 or nodeID == 69 then
+        return name
+    end
     local suffix = name:match("^[^,]+,%s*([^,]*)")
     local zone = suffix and suffix:match("^%s*(.-)%s*$")
     return zone and zone ~= "" and zone or L["Other Locations"]
 end
 
 local function ClearHover()
-    if hoveredButton and addonCore:GetTaxiSession() then TaxiNodeOnButtonLeave(hoveredButton) end
-    if hoveredRow then hoveredRow:SetID(0) end
+    if hoveredButton and addonCore:GetTaxiSession() then
+        TaxiNodeOnButtonLeave(hoveredButton)
+    end
+    if hoveredRow then
+        hoveredRow:SetID(0)
+    end
     hoveredButton = nil
     hoveredRow = nil
     GameTooltip:Hide()
@@ -42,11 +48,15 @@ end
 
 local function HighlightZone(zone)
     local session = addonCore:GetTaxiSession()
-    if not zone or not session or not window:IsShown() then return end
+    if not zone or not session or not window:IsShown() then
+        return
+    end
     for id, node in pairs(session.nodes) do
         if GetDisplayZone(node.name, id) == zone then
             local button = _G["TaxiButton" .. session.idToSlot[id]]
-            if button then button:LockHighlight() end
+            if button then
+                button:LockHighlight()
+            end
         end
     end
 end
@@ -54,14 +64,18 @@ end
 local function RowOnEnter(self)
     ClearHover()
     local session = addonCore:GetTaxiSession()
-    if not session then return end
+    if not session then
+        return
+    end
     if self.zone then
         HighlightZone(self.zone)
         return
     end
     local slot = session.idToSlot[self.nodeID]
     local button = slot and _G["TaxiButton" .. slot]
-    if not button then return end
+    if not button then
+        return
+    end
     hoveredButton = button
     -- Let Blizzard draw the map route, then own the tooltip on the visible row.
     -- DISTANT map buttons can be hidden, so they cannot own our row's tooltip.
@@ -89,7 +103,9 @@ end
 
 local function RowOnClick(self)
     local session = addonCore:GetTaxiSession()
-    if not session then return end
+    if not session then
+        return
+    end
     if self.zone then
         selectedZone = self.zone
         ClearSearch()
@@ -98,9 +114,13 @@ local function RowOnClick(self)
     end
     local id = self.nodeID
     local slot = session.idToSlot[id]
-    if not slot then return end
+    if not slot then
+        return
+    end
     local nodeType = TaxiNodeGetType(slot)
-    if nodeType ~= "REACHABLE" and nodeType ~= "CURRENT" then return end
+    if nodeType ~= "REACHABLE" and nodeType ~= "CURRENT" then
+        return
+    end
     if IsShiftKeyDown() then
         local favorites = addonCore.db.profile.favorites
         favorites[id] = not favorites[id] or nil
@@ -112,7 +132,9 @@ local function RowOnClick(self)
 end
 
 local function GetRow(index)
-    if rows[index] then return rows[index] end
+    if rows[index] then
+        return rows[index]
+    end
     local row = CreateFrame("Button", nil, window.content)
     row:SetHeight(ROW_HEIGHT)
     row:SetPoint("TOPLEFT", 0, -(index - 1) * ROW_HEIGHT)
@@ -151,14 +173,19 @@ end
 
 local function GetDurationText(sourceID, destinationID)
     local duration = addonCore:GetFlightDuration(sourceID, destinationID)
-    if duration then return SecondsToTime(duration) end
+    if duration then
+        return SecondsToTime(duration)
+    end
     local estimate = OnFlight_GetEstimatedTime(destinationID)
     return estimate and "~" .. SecondsToTime(estimate) or L["Unknown"]
 end
 
 function module:Refresh(resetScroll, focusCurrentZone)
     local session = addonCore:GetTaxiSession()
-    if not session then self:TAXIMAP_CLOSED() return end
+    if not session then
+        self:TAXIMAP_CLOSED()
+        return
+    end
     ClearHover()
     local query = window.search:GetText():lower()
     local favorites = addonCore.db.profile.favorites
@@ -171,27 +198,41 @@ function module:Refresh(resetScroll, focusCurrentZone)
         if node and nodeType ~= "NONE" then
             local zone = GetDisplayZone(node.name, id)
             if not zones[zone] then
-                zones[zone] = { count = 0 }
+                zones[zone] = {
+                    count = 0
+                }
             end
             local group = zones[zone]
             group.count = group.count + 1
             local nameMatches = node.name:lower():find(query, 1, true)
             group.matches = group.matches or nameMatches or zone:lower():find(query, 1, true)
-            if nodeType == "CURRENT" then group.current = true end
-            if nodeType == "DISTANT" then unknown = unknown + 1 end
+            if nodeType == "CURRENT" then
+                group.current = true
+            end
+            if nodeType == "DISTANT" then
+                unknown = unknown + 1
+            end
             total = total + 1
-            if nameMatches and ((selectedTab == "favorites" and favorites[id])
-                or (selectedTab == "zones" and selectedZone == zone)) then
-                destinations[#destinations + 1] = { id = id, name = node.name, type = nodeType }
+            if nameMatches and
+                ((selectedTab == "favorites" and favorites[id]) or (selectedTab == "zones" and selectedZone == zone)) then
+                destinations[#destinations + 1] = {
+                    id = id,
+                    name = node.name,
+                    type = nodeType
+                }
             end
         end
     end
     for zone, group in pairs(zones) do
-        if group.matches then zoneNames[#zoneNames + 1] = zone end
+        if group.matches then
+            zoneNames[#zoneNames + 1] = zone
+        end
     end
     table.sort(zoneNames)
     -- A new map/session may no longer contain the zone that was being viewed.
-    if selectedZone and not zones[selectedZone] then selectedZone = nil end
+    if selectedZone and not zones[selectedZone] then
+        selectedZone = nil
+    end
     window.back:SetShown(selectedTab == "zones" and selectedZone ~= nil)
     window.header:ClearAllPoints()
     if window.back:IsShown() then
@@ -201,7 +242,9 @@ function module:Refresh(resetScroll, focusCurrentZone)
     end
     window.header:SetPoint("RIGHT", window.search, "LEFT", -10, 0)
     window.header:SetText(selectedTab == "favorites" and L["Favorite Destinations"] or selectedZone or L["By Zone"])
-    for key, tab in pairs(window.tabs) do tab:SetChecked(key == selectedTab) end
+    for key, tab in pairs(window.tabs) do
+        tab:SetChecked(key == selectedTab)
+    end
 
     local zoneList = selectedTab == "zones" and not selectedZone
     local count = zoneList and #zoneNames or #destinations
@@ -246,7 +289,8 @@ function module:Refresh(resetScroll, focusCurrentZone)
             end
             row:SetEnabled(node.type == "REACHABLE" or node.type == "CURRENT")
             local available = node.type == "REACHABLE" or node.type == "CURRENT"
-            row.icon:SetTexture(node.type == "CURRENT" and currentIcon or node.type == "REACHABLE" and reachableIcon or unavailableIcon)
+            row.icon:SetTexture(node.type == "CURRENT" and currentIcon or node.type == "REACHABLE" and reachableIcon or
+                                    unavailableIcon)
             row.icon:SetTexCoord(0, 1, 0, 1)
             row.icon:SetDesaturated(not available)
             local tint = available and 1 or 0.5
@@ -270,7 +314,9 @@ function module:Refresh(resetScroll, focusCurrentZone)
     if query ~= "" then
         window.empty:SetText(zoneList and L["No zones match your search."] or L["No destinations match your search."])
     else
-        window.empty:SetText(selectedTab == "favorites" and L["No favorite destinations in this taxi session.\nShift-click an available destination in By Zone to add it."] or L["No destinations in this taxi session."])
+        window.empty:SetText(selectedTab == "favorites" and
+                                 L["No favorite destinations in this taxi session.\nShift-click an available destination in By Zone to add it."] or
+                                 L["No destinations in this taxi session."])
     end
     window.footer:SetFormattedText(L["Total: %d -- Unknown: %d"], total, unknown)
     local offset = resetScroll and 0 or window.scroll:GetVerticalScroll()
@@ -302,7 +348,9 @@ local function CreateWindow()
     background:SetAtlas("UI-Character-Info-General-BG")
     background:SetPoint("TOPLEFT", 2, -22)
     background:SetPoint("BOTTOMRIGHT", -2, 2)
-    window.CloseButton:SetScript("OnClick", function() window:Hide() end)
+    window.CloseButton:SetScript("OnClick", function()
+        window:Hide()
+    end)
     window:SetScript("OnHide", function()
         ClearHover()
         window.search:ClearFocus()
@@ -328,7 +376,9 @@ local function CreateWindow()
     window.search:SetPoint("RIGHT", window, "TOPRIGHT", -18, -46)
     -- Keep the native magnifier, instructions, clear button, and focus scripts.
     window.search:HookScript("OnTextChanged", function(self)
-        if not self.clearing and window:IsShown() then module:Refresh(true) end
+        if not self.clearing and window:IsShown() then
+            module:Refresh(true)
+        end
     end)
     window.scroll = CreateFrame("ScrollFrame", nil, window, "ScrollFrameTemplate")
     window.scroll:SetPoint("TOPLEFT", 16, -68)
@@ -352,7 +402,7 @@ local function CreateWindow()
     hint:SetPoint("BOTTOM", 0, 12)
     hint:SetText(L["Shift-click a destination to toggle favorites."])
     window.tabs = {}
-    for index, data in ipairs({ { "favorites", L["Favorites"], 134411 }, { "zones", L["By Zone"], 132172 } }) do
+    for index, data in ipairs({{"favorites", L["Favorites"], 134411}, {"zones", L["By Zone"], 132172}}) do
         local tab = CreateFrame("Frame", nil, window, "LargeSideTabButtonTemplate")
         tab:EnableMouse(true)
         tab:SetPoint("TOPLEFT", window, "TOPRIGHT", 0, -30 - (index - 1) * (tab:GetHeight() + 2))
@@ -372,8 +422,12 @@ local function CreateWindow()
 end
 
 function module:Open()
-    if not addonCore:GetTaxiSession() then return end
-    if not window then CreateWindow() end
+    if not addonCore:GetTaxiSession() then
+        return
+    end
+    if not window then
+        CreateWindow()
+    end
     selectedTab, selectedZone = "favorites", nil
     ClearSearch()
     window:Show()
@@ -387,16 +441,22 @@ end
 
 function module:TAXIMAP_CLOSED()
     selectedZone = nil
-    if window then window:Hide() end
+    if window then
+        window:Hide()
+    end
 end
 
 function module:OnEnable()
     self:RegisterMessage("OnFlight_TaxiMapReady", "TAXIMAP_OPENED")
     self:RegisterMessage("OnFlight_DiagnosticsChanged", function()
-        if window and window:IsShown() then self:Refresh(false) end
+        if window and window:IsShown() then
+            self:Refresh(false)
+        end
     end)
     self:RegisterEvent("TAXIMAP_CLOSED")
-    if addonCore:GetTaxiSession() then self:Open() end
+    if addonCore:GetTaxiSession() then
+        self:Open()
+    end
 end
 
 function module:OnDisable()
@@ -427,10 +487,18 @@ end)
 toggle:SetScript("OnLeave", GameTooltip_Hide)
 toggle:SetScript("OnClick", function(_, button)
     if button == "LeftButton" then
-        if not module:IsEnabled() then return end
-        if window and window:IsShown() then window:Hide() else module:Open() end
+        if not module:IsEnabled() then
+            return
+        end
+        if window and window:IsShown() then
+            window:Hide()
+        else
+            module:Open()
+        end
     else
-        if window then window:Hide() end
+        if window then
+            window:Hide()
+        end
         addonCore:ToggleSettings()
     end
 end)
