@@ -11,6 +11,7 @@ local reachableIcon = "Interface\\TaxiFrame\\UI-Taxi-Icon-White"
 local unavailableIcon = "Interface\\TaxiFrame\\UI-Taxi-Icon-Nub"
 local zoneAtlas = "poi-traveldirections-arrow"
 local favoriteAtlas = "PetJournal-FavoritesIcon"
+local otherLocationsIcon = 132172 -- Original Special-group icon.
 
 -- Temporary presentation grouping only. Never used to identify a destination.
 local function GetDisplayZone(name, nodeID)
@@ -18,7 +19,7 @@ local function GetDisplayZone(name, nodeID)
     if nodeID == 49 or nodeID == 69 then return name end
     local suffix = name:match("^[^,]+,%s*([^,]*)")
     local zone = suffix and suffix:match("^%s*(.-)%s*$")
-    return zone and zone ~= "" and zone or L["Special"]
+    return zone and zone ~= "" and zone or L["Other Locations"]
 end
 
 local function ClearHover()
@@ -211,6 +212,9 @@ function module:Refresh(resetScroll)
             row:SetEnabled(true)
             if group.current then
                 row.icon:SetTexture(currentIcon)
+                row.icon:SetTexCoord(0, 1, 0, 1)
+            elseif zone == L["Other Locations"] then
+                row.icon:SetTexture(otherLocationsIcon)
                 row.icon:SetTexCoord(0, 1, 0, 1)
             else
                 row.icon:SetAtlas(zoneAtlas)
