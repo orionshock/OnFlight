@@ -30,6 +30,13 @@ local function ClearHover()
     end
 end
 
+local function ClearSearch()
+    window.search.clearing = true
+    window.search:SetText("")
+    window.search:ClearFocus()
+    window.search.clearing = nil
+end
+
 local function RowOnEnter(self)
     ClearHover()
     local session = addonCore:GetTaxiSession()
@@ -71,6 +78,7 @@ local function RowOnClick(self)
     if not session then return end
     if self.zone then
         selectedZone = self.zone
+        ClearSearch()
         module:Refresh(true)
         return
     end
@@ -133,6 +141,7 @@ function module:Refresh(resetScroll)
     local session = addonCore:GetTaxiSession()
     if not session then self:TAXIMAP_CLOSED() return end
     ClearHover()
+    local query = window.search:GetText():lower()
     local favorites = addonCore.db.profile.favorites
     local destinations, zones, zoneNames = {}, {}, {}
     local total, unknown = 0, 0
@@ -144,18 +153,22 @@ function module:Refresh(resetScroll)
             local zone = GetDisplayZone(node.name)
             if not zones[zone] then
                 zones[zone] = { count = 0 }
-                zoneNames[#zoneNames + 1] = zone
             end
             local group = zones[zone]
             group.count = group.count + 1
+            local nameMatches = node.name:lower():find(query, 1, true)
+            group.matches = group.matches or nameMatches or zone:lower():find(query, 1, true)
             if nodeType == "CURRENT" then group.current = true end
             if nodeType == "DISTANT" then unknown = unknown + 1 end
             total = total + 1
-            if (selectedTab == "favorites" and favorites[id])
-                or (selectedTab == "zones" and selectedZone == zone) then
+            if nameMatches and ((selectedTab == "favorites" and favorites[id])
+                or (selectedTab == "zones" and selectedZone == zone)) then
                 destinations[#destinations + 1] = { id = id, name = node.name, type = nodeType }
             end
         end
+    end
+    for zone, group in pairs(zones) do
+        if group.matches then zoneNames[#zoneNames + 1] = zone end
     end
     table.sort(zoneNames)
     -- A new map/session may no longer contain the zone that was being viewed.
@@ -167,7 +180,7 @@ function module:Refresh(resetScroll)
     else
         window.header:SetPoint("LEFT", window, "TOPLEFT", 74, -46)
     end
-    window.header:SetPoint("RIGHT", window, "TOPRIGHT", -18, -46)
+    window.header:SetPoint("RIGHT", window.search, "LEFT", -10, 0)
     window.header:SetText(selectedTab == "favorites" and L["Favorite Destinations"] or selectedZone or L["By Zone"])
     for key, tab in pairs(window.tabs) do tab:SetChecked(key == selectedTab) end
 
@@ -219,7 +232,11 @@ function module:Refresh(resetScroll)
         rows[index]:Hide()
     end
     window.empty:SetShown(count == 0)
-    window.empty:SetText(selectedTab == "favorites" and L["No favorite destinations in this taxi session.\nShift-click an available destination in By Zone to add it."] or L["No destinations in this taxi session."])
+    if query ~= "" then
+        window.empty:SetText(zoneList and L["No zones match your search."] or L["No destinations match your search."])
+    else
+        window.empty:SetText(selectedTab == "favorites" and L["No favorite destinations in this taxi session.\nShift-click an available destination in By Zone to add it."] or L["No destinations in this taxi session."])
+    end
     window.footer:SetFormattedText(L["Total: %d -- Unknown: %d"], total, unknown)
     local offset = resetScroll and 0 or window.scroll:GetVerticalScroll()
     window.content:SetHeight(math.max(1, count * ROW_HEIGHT))
@@ -229,8 +246,9 @@ end
 local function CreateWindow()
     window = CreateFrame("Frame", "OnFlightDestinationWindow", UIParent, "PortraitFrameTemplate")
     window:Hide()
-    window:SetSize(420, 450)
-    window:SetPoint("TOPLEFT", TaxiFrame, "TOPRIGHT", 10, -5)
+    window:SetWidth(420)
+    window:SetPoint("TOPLEFT", TaxiFrame, "TOPRIGHT", 10, 0)
+    window:SetPoint("BOTTOMLEFT", TaxiFrame, "BOTTOMRIGHT", 10, 0)
     window:SetFrameStrata("HIGH")
     window:SetClampedToScreen(true)
     window:SetTitle(L["Flight Destinations"])
@@ -244,6 +262,7 @@ local function CreateWindow()
     window.CloseButton:SetScript("OnClick", function() window:Hide() end)
     window:SetScript("OnHide", function()
         ClearHover()
+        window.search:ClearFocus()
         for _, row in ipairs(rows) do
             row.nodeID, row.zone = nil, nil
             row:Hide()
@@ -253,18 +272,33 @@ local function CreateWindow()
     window.back:SetSize(85, 22)
     window.back:SetPoint("TOPLEFT", 74, -35)
     window.back:SetText("< " .. L["Back"])
-    window.back:SetScript("OnClick", function() selectedZone = nil; module:Refresh(true) end)
+    window.back:SetScript("OnClick", function()
+        selectedZone = nil
+        ClearSearch()
+        module:Refresh(true)
+    end)
     window.header = window:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     window.header:SetJustifyH("LEFT")
     window.header:SetWordWrap(false)
+    window.search = CreateFrame("EditBox", nil, window, "SearchBoxTemplate")
+    window.search:SetSize(115, 20)
+    window.search:SetPoint("RIGHT", window, "TOPRIGHT", -18, -46)
+    -- Keep the native magnifier, instructions, clear button, and focus scripts.
+    window.search:HookScript("OnTextChanged", function(self)
+        if not self.clearing and window:IsShown() then module:Refresh(true) end
+    end)
     window.scroll = CreateFrame("ScrollFrame", nil, window, "ScrollFrameTemplate")
     window.scroll:SetPoint("TOPLEFT", 16, -68)
     window.scroll:SetPoint("BOTTOMRIGHT", -35, 48)
     window.scroll:EnableMouseWheel(true)
     window.scroll:SetPanExtent(ROW_HEIGHT)
     window.content = CreateFrame("Frame", nil, window.scroll)
-    window.content:SetSize(369, 1)
+    window.content:SetSize(window.scroll:GetWidth(), 1)
     window.scroll:SetScrollChild(window.content)
+    window.scroll:HookScript("OnSizeChanged", function(self, width, height)
+        window.content:SetWidth(width)
+        self:SetVerticalScroll(math.min(self:GetVerticalScroll(), math.max(0, window.content:GetHeight() - height)))
+    end)
     window.empty = window.scroll:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     window.empty:SetPoint("TOPLEFT", 12, -20)
     window.empty:SetPoint("TOPRIGHT", -12, -20)
@@ -286,6 +320,7 @@ local function CreateWindow()
         tab:SetCustomOnMouseUpHandler(function(_, button, upInside)
             if button == "LeftButton" and upInside then
                 selectedTab, selectedZone = key, nil
+                ClearSearch()
                 module:Refresh(true)
             end
         end)
@@ -296,6 +331,7 @@ end
 function module:Open()
     if not addonCore:GetTaxiSession() then return end
     if not window then CreateWindow() end
+    ClearSearch()
     window:Show()
     self:Refresh(true)
 end
