@@ -189,3 +189,15 @@ L["Y Offset"] = true
 
 -- Pattern used only to shorten display names; never used for node identity.
 L["DestParse"] = ", .+"
+
+-- Broker launcher and minimap button.
+L["Show Minimap Button"] = true
+L["Shows the OnFlight minimap launcher. Left-click to open settings; drag to move it."] = true
+L["Flying"] = true
+L["OnFlight: %s"] = true
+L["OnFlight - Group Flights"] = true
+L["No flights reported"] = true
+L["Player / Destination"] = true
+L["Remaining"] = true
+L["%s (you)"] = true
+L["%s | %s"] = true

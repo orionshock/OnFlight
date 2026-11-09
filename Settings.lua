@@ -369,6 +369,13 @@ function addonCore:InitializeSettings()
         function() return self.db.profile.showChat end,
         function(value) self.db.profile.showChat = value end)
     Settings.CreateCheckbox(category, showChat, L["Reports when flights start, resume, finish, or end early. Includes timing information when available."])
+    local minimap = Register(category, "showMinimapButton", "boolean", L["Show Minimap Button"], true,
+        function() return not self.db.profile.minimap.hide end,
+        function(value)
+            self.db.profile.minimap.hide = not value
+            self:GetModule("LDBLauncher"):RefreshMinimapIcon()
+        end)
+    Settings.CreateCheckbox(category, minimap, L["Shows the OnFlight minimap launcher. Left-click to open settings; drag to move it."])
     local bar = self:GetModule("StatusBarModule")
     local enabled = Register(category, "StatusBarModule", "boolean", L["Enable Flight Timer Bar"], true,
         function() return self.db.profile.moduleState.StatusBarModule end,

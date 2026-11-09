@@ -15,6 +15,7 @@ Communication.lua
 StatusBarModule.lua
 Defaults.lua
 Settings.xml
+LDBLauncher.lua
 FlightListWindow.lua
 
 #@debug@

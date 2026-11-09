@@ -115,6 +115,7 @@ local svDefaults = {
         showGossipConfig = false,
         gossipdebug = false,
         favorites = {},
+        minimap = { hide = false, minimapPos = 225 },
         moduleState = {
             ["*"] = true,
         }

@@ -61,6 +61,16 @@ Calculate known progress using `GetServerTime() - startServerTime` and the origi
 
 OnFlight keeps communication state in memory. Reloading does not restore a local flight announcement. Disabling Communication sends no false `E`; other clients can expire that record normally. This protocol adds no flight restoration or reliability handshake.
 
+## Independent launcher receiver
+
+`LDBLauncher.lua` is a separate receiving implementation. It registers the prefix and listens directly to `CHAT_MSG_ADDON`, including the local player's PARTY/RAID messages and solo self-whispers. It does not read the flight tracker, Communication's records, or internal flight-start/stop messages, and it receives no direct local copy of outgoing payloads.
+
+Its single table holds one flight per sender. Repeated announcements update the last-heard time, newer flights replace older ones, and matching `E` removes a flight. It uses the same stale timeouts described above, with no recently-ended markers or reconciliation machinery. The reference receiver deliberately keeps delayed-packet handling small.
+
+The `OnFlight` LibDataBroker launcher shows the local self-received flight's countdown, or `Flying` for `U`. Its tooltip lists only received flights, including the local player, and resolves destination names through Blizzard's global taxi-node metadata. The minimap button uses LibDBIcon.
+
+LibDataBroker and LibDBIcon support this display only. They are **not protocol dependencies**: another addon needs only the shared prefix, four-field payload, Blizzard messaging functions, and server clock. The production Communication receiver continues to exclude self-originated messages from its remote records; the launcher intentionally accepts them.
+
 ## Local OnFlight consumers
 
 The separate `Communication` AceAddon module consumes existing `OnFlight_Taxi_Start`, `OnFlight_Taxi_RESUME`, `OnFlight_Taxi_Stop`, and `OnFlight_Taxi_EarlyExit` messages. Loading resumes do not duplicate an existing announcement. It does not depend on timer-bar visibility or its countdown expiring.
