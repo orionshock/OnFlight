@@ -84,12 +84,14 @@ local function RowOnClick(self)
     end
     local id = self.nodeID
     local slot = session.idToSlot[id]
-    if not slot or TaxiNodeGetType(slot) ~= "REACHABLE" then return end
+    if not slot then return end
+    local nodeType = TaxiNodeGetType(slot)
+    if nodeType ~= "REACHABLE" and nodeType ~= "CURRENT" then return end
     if IsShiftKeyDown() then
         local favorites = addonCore.db.profile.favorites
         favorites[id] = not favorites[id] or nil
         module:Refresh(false)
-    else
+    elseif nodeType == "REACHABLE" then
         -- The core's existing pre-call hook captures IDs and starts tracking.
         TakeTaxiNode(slot)
     end
@@ -209,7 +211,7 @@ function module:Refresh(resetScroll)
         else
             local node = destinations[index]
             row.nodeID = node.id
-            row:SetEnabled(node.type == "REACHABLE")
+            row:SetEnabled(node.type == "REACHABLE" or node.type == "CURRENT")
             local available = node.type == "REACHABLE" or node.type == "CURRENT"
             row.icon:SetTexture(node.type == "CURRENT" and currentIcon or node.type == "REACHABLE" and reachableIcon or unavailableIcon)
             row.icon:SetTexCoord(0, 1, 0, 1)
