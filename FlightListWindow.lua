@@ -275,13 +275,12 @@ local function CreateWindow()
     hint:SetPoint("BOTTOM", 0, 12)
     hint:SetText(L["Shift-click a destination to toggle favorites."])
     window.tabs = {}
-    for index, data in ipairs({ { "favorites", L["Favorites"], favoriteAtlas }, { "zones", L["By Zone"], zoneAtlas } }) do
+    for index, data in ipairs({ { "favorites", L["Favorites"], 134411 }, { "zones", L["By Zone"], 132172 } }) do
         local tab = CreateFrame("Frame", nil, window, "LargeSideTabButtonTemplate")
         tab:EnableMouse(true)
         tab:SetPoint("TOPLEFT", window, "TOPRIGHT", 0, -30 - (index - 1) * (tab:GetHeight() + 2))
-        tab.Icon:SetAtlas(data[3])
-        tab:SetFillToInterior(false)
-        tab.Icon:SetSize(32, 32)
+        tab.Icon:SetTexture(data[3])
+        tab:SetFillToInterior(true)
         tab.tooltipText = data[2]
         local key = data[1]
         tab:SetCustomOnMouseUpHandler(function(_, button, upInside)
