@@ -203,3 +203,13 @@ L["%s (you)"] = true
 L["%s | %s"] = true
 L["Left-click: Resend current flight"] = true
 L["Right-click: Open settings"] = true
+
+-- Optional Quartz display.
+L["Disable Quartz's Flight module to let its OnFlight module use the Player bar."] = true
+L["Enable Quartz's Player module before selecting the Quartz flight timer."] = true
+L["Flight Timer Display"] = true
+L["None"] = true
+L["Built-in Timer Bar"] = true
+L["Quartz"] = true
+L["Uses Quartz's Player bar for known-duration flights. Enable Player and disable the original Flight module in Quartz. Configure the bar's appearance there."] = true
+L["Choose a flight timer display. Quartz is available when installed. None hides OnFlight's timer bars; flight tracking, learning, and the broker display continue."] = true

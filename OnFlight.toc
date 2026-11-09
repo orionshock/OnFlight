@@ -2,6 +2,7 @@
 ## Title: OnFlight
 ## Notes: Taxi flight timer and destination list for WoW Forever.
 ## Dependencies: Blizzard_UIPanels_Game
+## OptionalDeps: Quartz
 ## Author: Orionshock
 ## Version: @project-version@
 ## SavedVariables: OnFlightSV, OnFlightTaxiDebugDB
@@ -17,6 +18,7 @@ Defaults.lua
 Settings.xml
 LDBLauncher.lua
 FlightListWindow.lua
+QuartzIntegration.lua
 
 #@debug@
 TaxiDebug.lua

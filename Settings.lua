@@ -8,6 +8,7 @@
 local addonName, addonCore = ...
 local LSM = LibStub("LibSharedMedia-3.0")
 local L = LibStub("AceLocale-3.0"):GetLocale(addonName)
+local Quartz3 = LibStub("AceAddon-3.0"):GetAddon("Quartz3", true)
 local statusBarModuleCore = addonCore:GetModule("StatusBarModule")
 local moduleName = "StatusBarModule"
 local settings = {}
@@ -36,10 +37,50 @@ function addonCore:RefreshSettings(...)
             Notify(settings[key])
             -- Short Names listens to Compact Mode as well as module enablement.
             if key == "StatusBarModule" then
+                Notify(settings.flightDisplay)
                 Notify(settings.bar_compactMode)
             end
         end
     end
+end
+
+function addonCore:GetFlightDisplay()
+    local profile = self.db.profile
+    -- Keep the existing bar preference until a display is explicitly selected.
+    local display = profile.flightDisplay or (profile.moduleState.StatusBarModule and "builtin" or "none")
+    return display == "quartz" and not Quartz3 and "builtin" or display
+end
+
+function addonCore:ApplyFlightDisplay()
+    local display = self:GetFlightDisplay()
+    local bar = self:GetModule("StatusBarModule")
+    local enabled = display == "builtin"
+    self.db.profile.moduleState.StatusBarModule = enabled
+    if enabled and not bar:IsEnabled() then
+        bar:Enable()
+    elseif not enabled and bar:IsEnabled() then
+        bar:Disable()
+    end
+    if Quartz3 then
+        Quartz3:SetModuleEnabled("OnFlight", display == "quartz")
+    end
+    self:RefreshSettings("StatusBarModule")
+end
+
+function addonCore:SetFlightDisplay(display)
+    if display == "quartz" then
+        if not Quartz3 then return end
+        if Quartz3:GetModule("Flight"):IsEnabled() then
+            Quartz3:Print(L["Disable Quartz's Flight module to let its OnFlight module use the Player bar."])
+            return
+        end
+        if not Quartz3:GetModule("Player"):IsEnabled() then
+            Quartz3:Print(L["Enable Quartz's Player module before selecting the Quartz flight timer."])
+            return
+        end
+    end
+    self.db.profile.flightDisplay = display
+    self:ApplyFlightDisplay()
 end
 
 function addonCore:RefreshDiagnostics()
@@ -443,13 +484,20 @@ function addonCore:InitializeSettings()
     Settings.CreateCheckbox(category, minimap,
         L["Shows the OnFlight minimap launcher. Left-click to resend your flight; right-click to open settings. Drag to move it."])
     local bar = self:GetModule("StatusBarModule")
-    local enabled = Register(category, "StatusBarModule", "boolean", L["Enable Flight Timer Bar"], true, function()
-        return self.db.profile.moduleState.StatusBarModule
+    local display = Register(category, "flightDisplay", "string", L["Flight Timer Display"], "builtin", function()
+        return self:GetFlightDisplay()
     end, function(value)
-        self:SetModuleStatus({"StatusBarModule"}, value)
+        self:SetFlightDisplay(value)
     end)
-    local enableControl = Settings.CreateCheckbox(category, enabled,
-        L["Shows OnFlight's built-in timer bar. Flight tracking and duration learning continue when disabled, and timing data remains available to other displays."])
+    local enableControl = Settings.CreateDropdown(category, display, function()
+        local options = Settings.CreateControlTextContainer()
+        options:Add("none", L["None"])
+        options:Add("builtin", L["Built-in Timer Bar"])
+        if Quartz3 then
+            options:Add("quartz", L["Quartz"], L["Uses Quartz's Player bar for known-duration flights. Enable Player and disable the original Flight module in Quartz. Configure the bar's appearance there."])
+        end
+        return options:GetData()
+    end, L["Choose a flight timer display. Quartz is available when installed. None hides OnFlight's timer bars; flight tracking, learning, and the broker display continue."])
     local barCategory, layout = Settings.RegisterVerticalLayoutSubcategory(category, L["Flight Timer Bar"])
     local function AddControl(initializer)
         initializer:SetParentInitializer(enableControl, function()
@@ -573,6 +621,7 @@ function addonCore:InitializeSettings()
     LibStub("AceConfigDialog-3.0"):AddToBlizOptions(addonName, L["Profiles"], category:GetID(), "profiles")
     CreateGossipPage(category)
     self:RefreshAdvOptions()
+    self:ApplyFlightDisplay()
     self:RefreshSettings()
 end
 

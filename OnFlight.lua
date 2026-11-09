@@ -494,6 +494,10 @@ function addonCore:GetFlightEndpointName(key)
 end
 
 function addonCore:SetModuleStatus(info, value)
+    if info[#info] == "StatusBarModule" then
+        self:SetFlightDisplay(value and "builtin" or "none")
+        return
+    end
     db.profile.moduleState[info[#info]] = value
     if value == true then
         addonCore:EnableModule(info[#info])
@@ -504,6 +508,7 @@ function addonCore:SetModuleStatus(info, value)
 end
 
 function addonCore:OnProfileUpdated()
+    self:ApplyFlightDisplay()
     for name, module in self:IterateModules() do
         local enabled = db.profile.moduleState[name]
         if enabled and not module:IsEnabled() then
