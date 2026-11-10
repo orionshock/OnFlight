@@ -213,3 +213,11 @@ L["Built-in Timer Bar"] = true
 L["Quartz"] = true
 L["Uses Quartz's Player bar for known-duration flights. Enable Player and disable the original Flight module in Quartz. Configure the bar's appearance there."] = true
 L["Choose a flight timer display. Quartz is available when installed. None hides OnFlight's timer bars; flight tracking, learning, and the broker display continue."] = true
+
+-- Taxi debug log messages.
+L["Route: %s"] = true
+L["%s: %s"] = true
+L["Flight selected: %s (ID %s) -> %s (ID %s)"] = true
+L["Early landing requested; waiting for the actual taxi exit."] = true
+L["OnFlight taxi debug: %s; %d log entries; /reload flushes SavedVariables."] = true
+L["Slot %d position: %s"] = true

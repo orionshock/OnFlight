@@ -1,9 +1,11 @@
 -- Opt-in live-client probe. /oftaxi on, off, snap [mapID], status, clear
 -- No taxi actions are invoked here; secure post-hooks only observe user/UI actions.
--- Compact captures persist in SavedVariables; chat shows concise summaries.
-local addonName = ...
+-- Timestamped log lines persist in SavedVariables; chat shows concise summaries.
+local addonName, addonCore = ...
 local L = LibStub("AceLocale-3.0"):GetLocale(addonName)
 local frame = CreateFrame("Frame")
+local messages = {}
+LibStub("AceEvent-3.0"):Embed(messages)
 local enabled, lastMapID = false, nil
 local hooks = {}
 local MAX_NODES, MAX_HOPS = 500, 100
@@ -15,7 +17,7 @@ local function database()
         OnFlightTaxiDebugDB = {}
     end
     local db = OnFlightTaxiDebugDB
-    db.version = 2
+    db.version = 3
     db.records = db.records or {}
     return db
 end
@@ -34,49 +36,7 @@ local function pack(...)
     }
 end
 
--- Copy API-owned tables now; preserve nil return positions via pack.n.
--- Expand vector objects into coordinates for readable chat output.
-local function copy(value, seen, depth)
-    local kind = type(value)
-    if kind ~= "table" and kind ~= "userdata" then
-        if kind == "function" or kind == "thread" then
-            return tostring(value)
-        end
-        return value
-    end
-    if depth > 12 then
-        return "<depth limit>"
-    end
-    if seen[value] then
-        return "<cycle>"
-    end
-    seen[value] = true
-    local result = {}
-    local ok, x, y = pcall(function()
-        return value:GetXY()
-    end)
-    if ok then
-        seen[value] = nil
-        return {
-            x = x,
-            y = y
-        }
-    end
-    if kind == "table" then
-        for k, v in pairs(value) do
-            if type(k) == "string" or type(k) == "number" then
-                if type(v) ~= "function" then
-                    result[k] = copy(v, seen, depth + 1)
-                end
-            end
-        end
-    elseif not ok then
-        result.opaque = tostring(value)
-    end
-    seen[value] = nil
-    return result
-end
-
+-- API results are inspected synchronously; only formatted strings enter SavedVariables.
 local function call(fn, ...)
     if type(fn) ~= "function" then
         return {
@@ -93,7 +53,7 @@ local function call(fn, ...)
         n = values.n - 1
     }
     for i = 2, values.n do
-        result[i - 1] = copy(values[i], {}, 0)
+        result[i - 1] = values[i]
     end
     return {
         values = result
@@ -134,186 +94,131 @@ local function arguments(args)
     return table.concat(parts, ", ")
 end
 
-local function compactSnapshot(data)
-    local identity = data.identity
-    local current = #identity.currentSlots == 1 and identity.slots[identity.currentSlots[1]]
-    local result = {
-        reason = data.reason,
-        mapID = first(data.mapID),
-        playerMapID = first(data.playerMapID),
-        mapOpen = data.mapOpen,
-        onTaxi = first(data.onTaxi),
-        npc = first(data.npcName),
-        npcGUID = first(data.npcGUID),
-        sourceID = current and current.nodeID,
-        selectedSlot = identity.selectedSlot,
-        destinationID = identity.selectedNodeID,
-        nodeCount = first(data.numNodes),
-        issues = identity.issues,
-        maps = {},
-        errors = {}
-    }
-    local function nodeSummary(slot, node)
-        local legacy = data.nodes[slot]
-        local route = {}
-        for hop, edge in ipairs(node.routeIDs or {}) do
-            if hop == 1 then
-                route[1] = edge.sourceID or "unresolved"
-            end
-            route[#route + 1] = edge.destinationID or "unresolved"
-        end
-        return {
-            slot = slot,
-            id = node.nodeID,
-            name = node.legacyName,
-            type = node.legacyType,
-            state = node.state,
-            direct = first(legacy.direct),
-            cost = first(legacy.cost),
-            route = #route > 0 and route or nil,
-            startsAtCurrent = node.routeStartsAtCurrent,
-            endsAtDestination = node.routeEndsAtDestination
-        }
-    end
-    -- Record the full slot directory only on open/manual capture, not on every action.
-    if data.reason == "TAXIMAP_OPENED" or data.reason == "manual" then
-        result.nodes = {}
-        for slot, node in ipairs(identity.slots) do
-            result.nodes[slot] = nodeSummary(slot, node)
-        end
-    end
-    local selected = identity.slots[identity.selectedSlot]
-    if selected then
-        result.selection = nodeSummary(identity.selectedSlot, selected)
-    end
-    for id, map in pairs(data.maps) do
-        result.maps[id] = {
-            allCount = listCount(map.all),
-            forMapCount = listCount(map.forMap)
-        }
-    end
-    local function errors(item, path)
-        if type(item) ~= "table" then
-            return
-        end
-        if item.error or item.missing then
-            result.errors[#result.errors + 1] = path .. ": " .. (item.error or "unavailable")
-        else
-            for key, child in pairs(item) do
-                errors(child, path .. "/" .. key)
-            end
-        end
-    end
-    errors(data, "snapshot")
-    if #result.errors == 0 then
-        result.errors = nil
-    end
-    return result
-end
-
 local function record(kind, data)
     local db = database()
-    db.sequence = (db.sequence or 0) + 1
-    local saved = kind == "snapshot" and compactSnapshot(data) or data
-    saved.kind, saved.sequence, saved.time = kind, db.sequence, GetTime()
-    saved.run, saved.mapSession = db.run or 0, mapSession
-    db.records[#db.records + 1] = saved
-    local prefix = "|cff66ccff" .. L["[Taxi %d]"]:format(db.sequence) .. "|r "
-    local function line(message)
-        print(prefix .. message)
+    local function save(message)
+        db.sequence = (db.sequence or 0) + 1
+        db.records[#db.records + 1] = ("%.3f [run %d, session %d, #%d] %s"):format(
+            GetTime(), db.run or 0, mapSession, db.sequence, message)
     end
-    if kind == "snapshot" and not db.verbose then
+    local function line(message, detail)
+        save(message)
+        if not detail or db.verbose then
+            print("|cff66ccff" .. L["[Taxi %d]"]:format(db.sequence) .. "|r " .. message)
+        end
+    end
+    local function route(ids)
+        local path = {}
+        for _, id in ipairs(ids) do
+            path[#path + 1] = text(id)
+        end
+        line(L["Route: %s"]:format(table.concat(path, " -> ")))
+    end
+    if kind == "snapshot" then
         local identity = data.identity
         local resolved = 0
         for _, node in ipairs(identity.slots) do
-            if node.resolved then
-                resolved = resolved + 1
-            end
+            if node.resolved then resolved = resolved + 1 end
         end
         line(L["%s: map=%s; %s; IDs=%d/%d; checks=%d"]:format(data.reason, value(data.mapID),
-            data.mapOpen and L["OPEN"] or L["CLOSED"], resolved, #data.nodes, #identity.issues))
-        if identity.selectedSlot then
-            line(L["Selected slot %d -> ID %s"]:format(identity.selectedSlot, text(identity.selectedNodeID)))
+            data.mapOpen and L["OPEN"] or L["CLOSED"], resolved, #data.nodes,
+            data.mapOpen and #identity.issues or 0))
+        if data.mapOpen or data.reason == "manual" then
+            line(L["Context: %s; player map=%s; %s; %s"]:format(value(data.npcName), value(data.playerMapID),
+                value(data.faction), value(data.locale)), true)
+            local mapIDs = {}
+            for id in pairs(data.maps) do mapIDs[#mapIDs + 1] = id end
+            table.sort(mapIDs)
+            for _, id in ipairs(mapIDs) do
+                local map = data.maps[id]
+                line(L["Map %d: GetAllTaxiNodes=%s; GetTaxiNodesForMap=%s"]:format(id, listCount(map.all),
+                    listCount(map.forMap)), true)
+                if data.reason == "manual" then
+                    -- Keep raw tables only on request, as readable JSON rather than SV table trees.
+                    -- The native serializer represents unsupported vector userdata as null.
+                    for _, api in ipairs({{"GetAllTaxiNodes", map.all}, {"GetTaxiNodesForMap", map.forMap}}) do
+                        local nodes = first(api[2])
+                        if type(nodes) == "table" then
+                            local ok, serialized = pcall(C_EncodingUtil.SerializeJSON, nodes,
+                                {ignoreSerializationErrors = true})
+                            save(("%s(%d) JSON: %s"):format(api[1], id,
+                                ok and serialized or ("ERROR: " .. text(serialized))))
+                        end
+                    end
+                end
+            end
         end
         local current = #identity.currentSlots == 1 and identity.slots[identity.currentSlots[1]]
         if current then
             line(L["At %s (ID %s)"]:format(text(current.legacyName), text(current.nodeID)))
         end
-        if #identity.issues > 0 then
-            line(L["CHECK: %s; full details saved"]:format(identity.issues[1]))
-        end
-        return
-    end
-    if kind == "snapshot" then
-        local identity = data.identity
-        line(L["%s — session %d; map %s; %s; flying=%s"]:format(data.reason, data.mapSession, value(data.mapID),
-            data.mapOpen and L["OPEN"] or L["CLOSED"], value(data.onTaxi)))
-        line(L["Context: %s; player map=%s; %s; %s"]:format(value(data.npcName), value(data.playerMapID),
-            value(data.faction), value(data.locale)))
-        local mapIDs = {}
-        for id in pairs(data.maps) do
-            mapIDs[#mapIDs + 1] = id
-        end
-        table.sort(mapIDs)
-        for _, id in ipairs(mapIDs) do
-            local map = data.maps[id]
-            line(L["Map %d: GetAllTaxiNodes=%s; GetTaxiNodesForMap=%s"]:format(id, listCount(map.all),
-                listCount(map.forMap)))
-        end
-        local resolved = 0
-        for _, node in ipairs(identity.slots) do
-            if node.resolved then
-                resolved = resolved + 1
-            end
-        end
-        line(L["IDs resolved: %d/%d slots; legacy nodes=%s"]:format(resolved, #data.nodes, value(data.numNodes)))
-        for slot, legacy in ipairs(data.nodes) do
-            local node = identity.slots[slot] or {}
-            local marker = first(legacy.type) == "CURRENT" and " " .. L["[HERE]"] or ""
-            if slot == identity.selectedSlot then
-                marker = marker .. " " .. L["[SELECTED]"]
-            end
-            line(L["Slot %d -> ID %s%s | %s | %s | direct=%s | cost=%s"]:format(slot, text(node.nodeID), marker,
-                value(legacy.name), value(legacy.type), value(legacy.direct), value(legacy.cost)))
-            if node.nameMatches == false then
-                line(L["CHECK slot %d: API names differ"]:format(slot))
-            end
-            if node.routeIDs and #node.routeIDs > 0 then
-                local path = {text(node.routeIDs[1].sourceID)}
-                for _, edge in ipairs(node.routeIDs) do
-                    path[#path + 1] = text(edge.destinationID)
+        for slot, node in ipairs(identity.slots) do
+            local selected = slot == identity.selectedSlot
+            -- Keep the directory once on open, and on explicit snapshots, not every event.
+            if selected or data.reason == "TAXIMAP_OPENED" or data.reason == "manual" then
+                local legacy = data.nodes[slot]
+                line(L["Slot %d -> ID %s%s | %s | %s | direct=%s | cost=%s"]:format(slot, text(node.nodeID),
+                    selected and " " .. L["[SELECTED]"] or "", text(node.legacyName), text(node.legacyType),
+                    value(legacy.direct), value(legacy.cost)), not selected)
+                if selected or data.reason == "manual" then
+                    line(L["Slot %d position: %s"]:format(slot,
+                        legacy.position.values and arguments(legacy.position.values) or value(legacy.position)), true)
                 end
-                -- Keep long routes readable without dumping the individual API calls.
-                for start = 1, #path, 12 do
-                    local heading = start > 1 and L["Route to ID %s (continued): %s"] or L["Route to ID %s: %s"]
-                    line(heading:format(text(node.nodeID),
-                        table.concat(path, " -> ", start, math.min(start + 11, #path))))
+                if node.routeIDs and #node.routeIDs > 0 then
+                    local ids = {node.routeIDs[1].sourceID or "unresolved"}
+                    for _, edge in ipairs(node.routeIDs) do
+                        ids[#ids + 1] = edge.destinationID or "unresolved"
+                    end
+                    -- Route details are useful for the selection or an explicit capture.
+                    route(ids)
+                    if not node.routeStartsAtCurrent or not node.routeEndsAtDestination then
+                        line(L["CHECK slot %d: route endpoints do not match current/destination IDs"]:format(slot))
+                    end
                 end
-                if not node.routeStartsAtCurrent or not node.routeEndsAtDestination then
-                    line(L["CHECK slot %d: route endpoints do not match current/destination IDs"]:format(slot))
-                end
-            elseif legacy.numRoutes.error or legacy.numRoutes.missing then
-                line(L["CHECK slot %d: GetNumRoutes=%s"]:format(slot, value(legacy.numRoutes)))
-            end
-            if legacy.routesTruncated then
-                line(L["CHECK slot %d: route limit reached"]:format(slot))
             end
         end
-        if identity.selectedSlot then
-            line(L["Selection: slot %d -> ID %s"]:format(identity.selectedSlot, text(identity.selectedNodeID)))
+        if data.nodesTruncated then line(L["CHECK: node limit reached"]) end
+        -- Empty API results after closing are expected, not mapping failures.
+        if data.mapOpen then
+            for index, issue in ipairs(identity.issues) do
+                line(L["CHECK: %s"]:format(issue), index > 1)
+            end
         end
-        if data.nodesTruncated then
-            line(L["CHECK: node limit reached"])
+        local function errors(result, label)
+            if result.error or result.missing then
+                line(L["%s: %s"]:format(label, value(result)))
+            end
         end
-        for _, issue in ipairs(identity.issues) do
-            line(L["CHECK: %s"]:format(issue))
+        errors(data.mapID, "GetTaxiMapID")
+        errors(data.numNodes, "NumTaxiNodes")
+        for id, map in pairs(data.maps) do
+            errors(map.all, "GetAllTaxiNodes(" .. id .. ")")
+            errors(map.forMap, "GetTaxiNodesForMap(" .. id .. ")")
+        end
+        local selected = identity.selectedSlot and data.nodes[identity.selectedSlot]
+        if selected then
+            errors(selected.numRoutes, "GetNumRoutes")
+            if selected.routesTruncated then
+                line(L["CHECK slot %d: route limit reached"]:format(identity.selectedSlot))
+            end
         end
     elseif kind == "client" then
         line(L["Client: %s"]:format(data.build.values and arguments(data.build.values) or value(data.build)))
     elseif kind == "hook" then
-        line(L["Observe %s: %s"]:format(data.name, data.ok and L["ready"] or text(data.error)))
-    elseif kind == "event" or kind == "action" then
+        line(L["Observe %s: %s"]:format(data.name, data.ok and L["ready"] or text(data.error)), data.ok)
+    elseif kind == "event" or kind == "action" or kind == "tracking" then
         line(kind:upper() .. " " .. data.name .. "(" .. arguments(data.args) .. ")")
+        if kind == "action" and data.name == "TakeTaxiNode" then
+            -- The core captured these IDs before Blizzard closed the taxi map.
+            local flight = addonCore:GetCurrentFlight()
+            if flight then
+                line(L["Flight selected: %s (ID %s) -> %s (ID %s)"]:format(text(flight.sourceName),
+                    text(flight.sourceID), text(flight.destinationName), text(flight.destinationID)))
+                route(flight.route)
+            end
+        elseif kind == "action" and data.name == "TaxiRequestEarlyLanding" then
+            line(L["Early landing requested; waiting for the actual taxi exit."])
+        end
     elseif kind == "selection" then
         line(L["SELECT slot %d (%s, before click)"]:format(data.slot, text(data.mouseButton)))
     elseif kind == "flight-state" then
@@ -520,21 +425,14 @@ snapshot = function(reason, requestedMapID, selectedSlot)
             routes = {}
         }
         data.nodes[slot] = node
-        -- Probe the optional destination-only coordinate form separately from each hop.
-        node.coordinates = {}
-        for _, name in ipairs({"TaxiGetSrcX", "TaxiGetSrcY", "TaxiGetDestX", "TaxiGetDestY"}) do
-            node.coordinates[name] = call(_G[name], slot)
-        end
         local routeCount = first(node.numRoutes)
         node.routesTruncated = type(routeCount) == "number" and routeCount > MAX_HOPS
-        for hop = 1, count(routeCount, MAX_HOPS) do
+        local captureRoute = slot == selectedSlot or reason == "manual"
+        for hop = 1, captureRoute and count(routeCount, MAX_HOPS) or 0 do
             local route = {
                 sourceSlot = call(TaxiGetNodeSlot, slot, hop, true),
                 destinationSlot = call(TaxiGetNodeSlot, slot, hop, false)
             }
-            for _, name in ipairs({"TaxiGetSrcX", "TaxiGetSrcY", "TaxiGetDestX", "TaxiGetDestY"}) do
-                route[name] = call(_G[name], slot, hop)
-            end
             node.routes[hop] = route
         end
     end
@@ -557,7 +455,7 @@ local function installHooks()
                 end
                 record("action", {
                     name = action,
-                    args = copy(pack(...), {}, 0)
+                    args = pack(...)
                 })
                 if action == "TakeTaxiNode" then
                     snapshot("TakeTaxiNode post-call", nil, (...))
@@ -571,6 +469,14 @@ local function installHooks()
             })
         end
     end
+end
+
+-- Observe the core's confirmed lifecycle as well as raw UnitOnTaxi transitions.
+for _, message in ipairs({"OnFlight_Taxi_Start", "OnFlight_Taxi_RESUME", "OnFlight_Taxi_Suspend",
+                          "OnFlight_Taxi_Stop", "OnFlight_Taxi_EarlyExit", "OnFlight_Taxi_FAILED_ENTRY"}) do
+    messages:RegisterMessage(message, function(event, ...)
+        if enabled then record("tracking", {name = event, args = pack(...)}) end
+    end)
 end
 
 frame:RegisterEvent("TAXIMAP_OPENED")
@@ -594,7 +500,7 @@ frame:SetScript("OnEvent", function(_, event, ...)
     end
     record("event", {
         name = event,
-        args = copy(pack(...), {}, 0)
+        args = pack(...)
     })
     snapshot(event)
 end)
@@ -610,7 +516,6 @@ frame:SetScript("OnUpdate", function()
             onTaxi = onTaxi
         })
         lastOnTaxi = onTaxi
-        snapshot("UnitOnTaxi changed")
     end
 end)
 
@@ -648,7 +553,7 @@ SlashCmdList.ONFLIGHTTAXIDEBUG = function(input)
         print(L["OnFlight taxi debug: /oftaxi on | off | snap [mapID] | status | clear | verbose on/off"])
         return
     end
-    print(L["OnFlight taxi debug: %s; %d captures; /reload flushes SavedVariables."]:format(enabled and L["ON"] or
+    print(L["OnFlight taxi debug: %s; %d log entries; /reload flushes SavedVariables."]:format(enabled and L["ON"] or
                                                                                                 L["OFF"],
         #database().records))
 end
