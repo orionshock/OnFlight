@@ -201,6 +201,12 @@ function addonCore:InitializeSettings()
         function(value) self.db.profile.showUnknownFlightPoints = value end)
     Settings.CreateCheckbox(category, showUnknown,
         L["Show unreachable flight points in the destination browser and mark their locations in red on the flight map. These destinations cannot be selected."])
+    local worldMaps = Register(category, "useWorldMapFlightMaps", "boolean",
+        L["Use World Map Style Flight Maps"], true,
+        function() return self.db.profile.useWorldMapFlightMaps end,
+        function(value) self.db.profile.useWorldMapFlightMaps = value end)
+    Settings.CreateCheckbox(category, worldMaps,
+        L["Use detailed continent artwork on the flight map instead of Blizzard's simplified taxi-map background."])
     local minimap = Register(category, "showMinimapButton", "boolean", L["Show Minimap Button"], true, function()
         return not self.db.profile.minimap.hide
     end, function(value)

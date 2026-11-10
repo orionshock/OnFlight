@@ -135,6 +135,7 @@ local svDefaults = {
     profile = {
         showChat = true,
         showUnknownFlightPoints = false,
+        useWorldMapFlightMaps = true,
         gossipConfig = false,
         showGossipConfig = false,
         gossipdebug = false,
