@@ -1,30 +1,38 @@
-# Flight-status interoperability protocol
+# OnFlight flight-status protocol
 
-Other Forever flight addons can implement this protocol using Blizzard addon messages alone. OnFlight and its libraries are not required.
+WoW Forever addons can exchange flight status using Blizzard addon messages. No OnFlight installation or shared library is required.
 
-Register the addon-message prefix **`OnFlight`** with `C_ChatInfo.RegisterAddonMessagePrefix`. Send with `C_ChatInfo.SendAddonMessage` on `RAID` for a normal raid, otherwise `PARTY` for a normal party. While solo, send `WHISPER` to the local character. Select one channel per announcement; do not also whisper group announcements. No guild or instance-chat transport is used.
+## Transport
 
-Resolve the self-whisper target with Forever's `NameUtil.GetUnmodifiedUnitFullName("player")`, which includes the character surname. Do not interpret the surname as a realm. Receive through `CHAT_MSG_ADDON`; the independent launcher accepts PARTY, RAID, and WHISPER packets without sender-name filtering or rewriting. It keeps each sender exactly as Blizzard supplies it.
+Register the prefix `OnFlight` with `C_ChatInfo.RegisterAddonMessagePrefix`. Send through `C_ChatInfo.SendAddonMessage` using one channel per announcement:
+
+- `RAID` when in a normal raid.
+- `PARTY` when in a normal party.
+- `WHISPER` to the local character when solo.
+
+Use `NameUtil.GetUnmodifiedUnitFullName("player")` for the self-whisper target. Forever names include surnames; do not treat the surname as a realm.
+
+Receive through `CHAT_MSG_ADDON`, whose first four arguments are prefix, payload, channel and sender. Accept the channels above and keep sender identities as Blizzard supplies them. Receivers may include their own announcements. Guild and instance-chat channels are not used.
+
+Delivery is best effort. There are no roster-triggered announcements, requests, handshakes or acknowledgments. Late joiners may discover flights through scheduled repeats; discovery is not guaranteed.
 
 ## Payload
 
-Every message contains exactly four colon-separated fields:
+Exactly four colon-separated fields:
 
 ```text
 sourceNodeID:startServerTime:durationOrCommand:destinationNodeID
 ```
 
-Source and destination are positive decimal integer Blizzard taxi-node IDs. `startServerTime` is the positive integer returned by `GetServerTime()` when boarding is confirmed. It uses shared server seconds, not a local `GetTime()` value.
+Source and destination are positive decimal integer Blizzard taxi-node IDs. Custom endpoint names are unsupported. The start time is `GetServerTime()` at confirmed boarding, in shared server seconds.
 
-The third field is exactly one of:
-
-| Value | Meaning |
+| Third field | Meaning |
 | --- | --- |
 | Positive decimal integer | Active flight with that measured duration in seconds |
 | `U` | Active flight with an unknown duration |
 | `E` | Flight actually ended, for any reason |
 
-Examples with illustrative IDs and timestamps:
+Examples:
 
 ```text
 22:1800000000:85:25
@@ -33,61 +41,29 @@ Examples with illustrative IDs and timestamps:
 25:1800000100:E:22
 ```
 
-Zero is invalid, including as a termination command. Reject empty fields, extra fields, fractional numbers, signs, and unrecognized commands. Commands are uppercase. There are no version fields or additional message types.
+Reject zero, empty or extra fields, fractional numbers, signs and unrecognized commands. Commands are uppercase. There are no additional fields or message types.
 
-Namespaced custom Gossip endpoints cannot be represented by numeric node IDs. Those flights remain local; OnFlight does not invent IDs or transmit endpoint names.
+## Sending
 
-## Sending schedule
+Keep the source, destination, boarding timestamp and advertised duration or `U` fixed throughout the flight.
 
-Capture source, destination, boarding server timestamp, and advertised duration once. Keep these values fixed for the flight.
+- Known duration: announce on confirmed boarding, then repeat the identical payload at 30%, 50% and 70% progress. Each threshold fires once. If several thresholds are crossed during a loading gap, send once and consume all crossed thresholds.
+- Unknown duration: announce `U` on confirmed boarding, then repeat the identical payload every 60 seconds. After a delayed update, send once and schedule the next repeat 60 seconds later. Never replace `U` with a number during that flight.
+- Actual end: send `E` with the original source, boarding timestamp and destination. ETA expiration, an early-landing request or a loading screen does not end a flight.
 
-- For a known duration, announce on confirmed boarding. Repeat the **identical payload** when elapsed time first crosses 30%, 50%, and 70% of that original duration. Each threshold fires at most once. If a loading gap crosses several thresholds, send once and consume the crossed thresholds; never replay them in a burst.
-- For an unknown duration, announce `U` on confirmed boarding and repeat the **identical payload** every 60 seconds while that flight continues. After a delayed update, send once and schedule the next announcement 60 seconds later. Never switch that flight from `U` to a number.
-- Send `E` only when the actual flight ends. Preserve the original source, boarding timestamp, and destination. An expired ETA, early-landing request, loading screen, or disabled display does not mean the flight ended.
+An optional manual resend repeats the original announcement without changing its timestamp or scheduled repeats. Use the same schedule for solo self-whispers.
 
-There are no roster-change messages, join announcements, sync requests, handshakes, acknowledgments, or immediate rebroadcasts when someone joins or leaves. Ordinary scheduled announcements may let late joiners discover a flight; discovery is not guaranteed. The same schedule applies to solo self-whispers. There is no deferred packet queue.
+## Receiving
 
-## Receiving and expiry
+Keep one active flight per sender. Source, boarding timestamp and destination identify the flight.
 
-Keep **one active flight per sender**, keyed by the sender supplied by Blizzard. Source, boarding timestamp, and destination identify that flight.
+- A strictly newer boarding timestamp replaces the current flight.
+- Identical repeats refresh the last-heard time without restarting progress.
+- Ignore older announcements and conflicting data at the same timestamp.
+- `E` removes only the matching flight. Ignore unmatched `E` messages.
 
-- A valid announcement with a strictly newer boarding timestamp replaces the current record.
-- An identical reannouncement refreshes its last-heard time without restarting progress or creating another record. Conflicting duration or endpoint data at the same timestamp is ignored. Older announcements cannot replace newer flights.
-- `E` removes only a matching active flight. Ignore unknown and unmatched `E` messages.
-- OnFlight retains one recently-ended timestamp per sender for 180 seconds. During that interval, ignore announcements at or before that timestamp. Stale removal uses the same small marker.
-- Unknown flights expire after 180 seconds without a matching announcement. Known flights expire after `max(180, advertisedDuration)` seconds without one. This accommodates the wider gaps between scheduled known-flight messages. Expiry is cleanup for missing traffic, not evidence of landing.
+Expire unknown flights after 180 seconds without a matching announcement. For known flights, use `max(180, duration)` seconds without one. Expiry cleans up missing traffic; it does not prove landing. A short recently-ended timestamp marker can prevent delayed announcements from restoring a completed flight.
 
-Calculate known progress using `GetServerTime() - startServerTime` and the original advertised duration. Reaching the ETA does **not** clear the record. Unknown flights have no advertised duration: display elapsed time, an indeterminate bar, or an in-flight indicator until matching `E` or stale expiry. Unknown never means zero seconds.
+Calculate elapsed time as `max(0, GetServerTime() - startServerTime)`. For known flights, remaining time is `max(0, duration - elapsed)`. Keep overdue flights active until matching `E` or stale expiry.
 
-OnFlight keeps communication state in memory. Reloading does not restore a local flight announcement. Disabling Communication sends no false `E`; other clients can expire that record normally. This protocol adds no flight restoration or reliability handshake.
-
-## Independent launcher receiver
-
-`LDBLauncher.lua` is a separate receiving implementation. It registers the prefix and listens directly to `CHAT_MSG_ADDON`, including the local player's PARTY/RAID messages and solo self-whispers. It does not read the flight tracker, Communication's records, or internal flight-start/stop messages, and it receives no direct local copy of outgoing payloads.
-
-Its single table holds one flight per sender. Repeated announcements update the last-heard time, newer flights replace older ones, and matching `E` removes a flight. It uses the same stale timeouts described above, with no recently-ended markers or reconciliation machinery. The reference receiver deliberately keeps delayed-packet handling small.
-
-Left-clicking the launcher requests an extra copy of Communication's frozen announcement through `RequestFlightAnnouncement()`. This local call sends no request message, changes no scheduling state, and supplies no flight data to the launcher. Right-click opens Settings. The receiver still updates only from `CHAT_MSG_ADDON`.
-
-The `OnFlight` LibDataBroker launcher shows the local self-received flight's countdown, or elapsed time counting up for `U`. Its tooltip lists only received flights, including the local player, shows `Flying` for unknown durations, and resolves destination names through Blizzard's global taxi-node metadata. The minimap button uses LibDBIcon.
-
-LibDataBroker and LibDBIcon support this display only. They are **not protocol dependencies**: another addon needs only the shared prefix, four-field payload, Blizzard messaging functions, and server clock. The production Communication receiver continues to exclude self-originated messages from its remote records; the launcher intentionally accepts them.
-
-## Local OnFlight consumers
-
-The separate `Communication` AceAddon module consumes existing `OnFlight_Taxi_Start`, `OnFlight_Taxi_RESUME`, `OnFlight_Taxi_Stop`, and `OnFlight_Taxi_EarlyExit` messages. Loading resumes do not duplicate an existing announcement. It does not depend on timer-bar visibility or its countdown expiring.
-
-Local addons and modules may observe these Ace messages:
-
-- `OnFlight_RemoteFlightUpdated(sender, flight)` for a new or newer accepted flight. Identical reannouncements do not emit this message.
-- `OnFlight_RemoteFlightRemoved(sender, flight, reason)` when removed. Reasons are `E`, `stale`, or `disabled`; only `E` reports an actual received end message.
-
-`Communication:GetRemoteFlight(sender)` and `GetRemoteFlights()` expose current records for reading. Each record contains `sourceID`, `destinationID`, `startServerTime`, `duration` (nil for unknown), and `lastSeenAt` in server seconds. Consumers must not modify them.
-
-`GetRemoteFlightProgress(sender)` returns elapsed seconds, remaining seconds, and advertised duration. Remaining time is clamped to zero for an overdue known flight while the record remains active. Both remaining time and duration are nil for unknown flights. There is no per-frame notification; displays can calculate progress as needed.
-
-## Separate guild version announcement
-
-Five seconds after Communication first enables during a load or reload, OnFlight sends its TOC `Version` value to `GUILD` using the separate **`OnFlightVersion`** prefix, provided the player is in a guild and Communication is enabled. This is an addon message, not a visible guild-chat message. It sends once per load, with no replies or guild-roster-triggered broadcasts.
-
-This notice is separate from the four-field flight protocol. Flight messages still use only the `OnFlight` prefix and their existing PARTY, RAID, or self-WHISPER transport.
+Unknown flights have no ETA. Display elapsed time or an in-flight indicator until matching `E` or stale expiry; unknown duration never means zero seconds.
