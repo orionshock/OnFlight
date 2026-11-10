@@ -89,6 +89,9 @@ function Flight:OnInitialize()
 end
 
 function Flight:OnEnable()
+    if addonCore:GetFlightDisplay() == "quartz" then
+        Quartz3:SetModuleEnabled("Flight", false)
+    end
     self:RegisterMessage("OnFlight_Taxi_Start", "ShowCurrentFlight")
     self:RegisterMessage("OnFlight_Taxi_RESUME", "ShowCurrentFlight")
     self:RegisterMessage("OnFlight_Taxi_Suspend", "EndFlight")

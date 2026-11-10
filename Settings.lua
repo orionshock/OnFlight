@@ -60,6 +60,9 @@ function addonCore:ApplyFlightDisplay()
         bar:Disable()
     end
     if Quartz3 then
+        if display == "quartz" then
+            Quartz3:SetModuleEnabled("Flight", false)
+        end
         Quartz3:SetModuleEnabled("OnFlight", display == "quartz")
     end
     self:RefreshSettings("StatusBarModule")
@@ -68,10 +71,6 @@ end
 function addonCore:SetFlightDisplay(display)
     if display == "quartz" then
         if not Quartz3 then return end
-        if Quartz3:GetModule("Flight"):IsEnabled() then
-            Quartz3:Print(L["Disable Quartz's Flight module to let its OnFlight module use the Player bar."])
-            return
-        end
         if not Quartz3:GetModule("Player"):IsEnabled() then
             Quartz3:Print(L["Enable Quartz's Player module before selecting the Quartz flight timer."])
             return
@@ -221,7 +220,8 @@ function addonCore:InitializeSettings()
         options:Add("none", L["None"])
         options:Add("builtin", L["Built-in Timer Bar"])
         if Quartz3 then
-            options:Add("quartz", L["Quartz"], L["Uses Quartz's Player bar for known-duration flights. Enable Player and disable the original Flight module in Quartz. Configure the bar's appearance there."])
+            options:Add("quartz", L["Quartz"],
+                L["Shows known flights on Quartz's Player bar and disables Quartz's original Flight module."])
         end
         return options:GetData()
     end, L["Choose a flight timer display. Quartz is available when installed. None hides OnFlight's timer bars; flight tracking, learning, and the broker display continue."])
