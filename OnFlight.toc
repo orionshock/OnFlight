@@ -13,12 +13,14 @@ locales\locales.xml
 OnFlight.lua
 GossipTravel.lua
 Communication.lua
-StatusBarModule.lua
+TimerBar.lua
 Defaults.lua
+GossipEditor.lua
+Commands.lua
 Settings.xml
-LDBLauncher.lua
-FlightListWindow.lua
-QuartzIntegration.lua
+Broker.lua
+Destinations.lua
+Quartz.lua
 
 #@debug@
 TaxiDebug.lua
