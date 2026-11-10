@@ -27,12 +27,9 @@ local function DestinationName(id)
 end
 
 local function TimeText(flight, now)
-    if not flight.duration then
-        return L["Flying"]
-    end
     local elapsed = math.max(0, now - flight.startServerTime)
-    local remaining = math.max(0, flight.duration - elapsed)
-    return ("%d:%02d"):format(math.floor(remaining / 60), remaining % 60)
+    local seconds = flight.duration and math.max(0, flight.duration - elapsed) or elapsed
+    return ("%d:%02d"):format(math.floor(seconds / 60), seconds % 60)
 end
 
 local function UpdateText()
@@ -55,7 +52,8 @@ local function RenderTooltip(tip)
         local now = GetServerTime()
         for _, sender in ipairs(senders) do
             local flight = flights[sender]
-            tip:AddDoubleLine(L["%s | %s"]:format(sender, DestinationName(flight.destinationID)), TimeText(flight, now),
+            tip:AddDoubleLine(L["%s | %s"]:format(sender, DestinationName(flight.destinationID)),
+                flight.duration and TimeText(flight, now) or L["Flying"],
                 1, 1, 1, 1, 1, 1)
         end
     end
