@@ -96,7 +96,9 @@ function addonCore:RefreshTaxiSession()
         return
     end
     for slot = 1, NumTaxiNodes() do
-        if TaxiNodeGetType(slot) ~= "NONE" and not session.slotToID[slot] then
+        local nodeType = TaxiNodeGetType(slot)
+        -- Some DISTANT placeholders have no node ID and cannot be destinations.
+        if nodeType ~= "NONE" and nodeType ~= "DISTANT" and not session.slotToID[slot] then
             return
         end
     end
