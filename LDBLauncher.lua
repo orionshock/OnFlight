@@ -1,4 +1,4 @@
--- Independent OnFlight wire receiver and broker display. See PROTOCOL.md.
+-- Independent OnFlight wire receiver and broker display. See docs/PROTOCOL.md.
 -- Flight data comes only from CHAT_MSG_ADDON, including our own received packets.
 -- luacheck: no max line length
 -- luacheck: globals LibStub C_ChatInfo C_TaxiMap CreateFrame GetTime GetServerTime NameUtil wipe

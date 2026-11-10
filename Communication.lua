@@ -1,4 +1,4 @@
--- Forever group flight status. See PROTOCOL.md for the independent wire protocol.
+-- Forever group flight status. See docs/PROTOCOL.md for the independent wire protocol.
 -- luacheck: no max line length
 -- luacheck: globals LibStub C_ChatInfo C_AddOns C_Timer IsInGuild CreateFrame GetTime GetServerTime IsInRaid IsInGroup NameUtil wipe
 local addonName, addonCore = ...
