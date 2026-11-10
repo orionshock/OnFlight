@@ -475,6 +475,11 @@ function addonCore:InitializeSettings()
     end)
     Settings.CreateCheckbox(category, showChat,
         L["Reports when flights start, resume, finish, or end early. Includes timing information when available."])
+    local showUnknown = Register(category, "showUnknownFlightPoints", "boolean", L["Show Unknown Flight Points"], false,
+        function() return self.db.profile.showUnknownFlightPoints end,
+        function(value) self.db.profile.showUnknownFlightPoints = value end)
+    Settings.CreateCheckbox(category, showUnknown,
+        L["Show unreachable flight points in the destination browser and mark their locations in red on the flight map. These destinations cannot be selected."])
     local minimap = Register(category, "showMinimapButton", "boolean", L["Show Minimap Button"], true, function()
         return not self.db.profile.minimap.hide
     end, function(value)

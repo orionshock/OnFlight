@@ -35,7 +35,70 @@ local function ClearHover()
     hoveredRow = nil
     GameTooltip:Hide()
     for slot = 1, NUM_TAXI_BUTTONS do
-        _G["TaxiButton" .. slot]:UnlockHighlight()
+        local button = _G["TaxiButton" .. slot]
+        button:UnlockHighlight()
+        if button.OnFlightUnknownClick then
+            button:GetNormalTexture():SetVertexColor(0.85, 0.1, 0.1)
+        end
+    end
+end
+
+local function UpdateUnknownButtons()
+    local session = addonCore:GetTaxiSession()
+    local show = module:IsEnabled() and window and window:IsShown() and session and
+        addonCore.db.profile.showUnknownFlightPoints
+    local count = NumTaxiNodes()
+    for slot = 1, NUM_TAXI_BUTTONS do
+        local button = _G["TaxiButton" .. slot]
+        local nodeType = slot <= count and TaxiNodeGetType(slot) or "NONE"
+        local id = session and session.slotToID[slot]
+        local node = id and session.nodes[id]
+        if show and nodeType == "DISTANT" and node and not node.name:match("^zz") then
+            if not button.OnFlightUnknownClick then
+                -- Keep native hover/highlighting, but remove only the taxi-selection action.
+                button.OnFlightUnknownClick = button:GetScript("OnClick")
+                button:SetScript("OnClick", nil)
+            end
+            button:SetNormalTexture(reachableIcon)
+            button:GetNormalTexture():SetVertexColor(0.85, 0.1, 0.1)
+            local highlight = button:GetHighlightTexture()
+            highlight:SetVertexColor(1, 0.2, 0.2)
+            highlight:SetAlpha(1)
+            button:Show()
+        elseif button.OnFlightUnknownClick then
+            button:SetScript("OnClick", button.OnFlightUnknownClick)
+            button.OnFlightUnknownClick = nil
+            button:UnlockHighlight()
+            button:GetNormalTexture():SetVertexColor(1, 1, 1)
+            button:GetHighlightTexture():SetVertexColor(1, 1, 1)
+            if TaxiButtonTypes[nodeType] then
+                button:SetNormalTexture(TaxiButtonTypes[nodeType].file)
+                button:GetHighlightTexture():SetAlpha(TaxiButtonTypes[nodeType].highlightBrightness)
+            end
+            if nodeType == "DISTANT" or nodeType == "NONE" then
+                button:Hide()
+            end
+        end
+    end
+end
+
+local function GetDurationText(sourceID, destinationID)
+    local duration = addonCore:GetFlightDuration(sourceID, destinationID)
+    if duration then
+        return SecondsToTime(duration)
+    end
+    local estimate = OnFlight_GetEstimatedTime(destinationID)
+    return estimate and "~" .. SecondsToTime(estimate) or L["Unknown"]
+end
+
+local function AddUnknownFlightInfo(slot)
+    local session = addonCore:GetTaxiSession()
+    if not session then return end
+    local id = session.slotToID[slot]
+    GameTooltip:AddLine(L["Unavailable"], 1, 1, 1, true)
+    GameTooltip:AddDoubleLine(L["Duration:"], GetDurationText(session.sourceID, id))
+    if addonCore.db.profile.showGossipConfig then
+        GameTooltip:AddLine(tostring(id), 0.6, 0.6, 0.6)
     end
 end
 
@@ -53,13 +116,50 @@ local function HighlightZone(zone)
     end
     for id, node in pairs(session.nodes) do
         if GetDisplayZone(node.name, id) == zone then
-            local button = _G["TaxiButton" .. session.idToSlot[id]]
-            if button then
-                button:LockHighlight()
+            local slot = session.idToSlot[id]
+            local nodeType = TaxiNodeGetType(slot)
+            local button = _G["TaxiButton" .. slot]
+            if nodeType == "DISTANT" then
+                if button and button.OnFlightUnknownClick and button:IsShown() then
+                    button:GetNormalTexture():SetVertexColor(1, 0.35, 0.35)
+                    button:LockHighlight()
+                end
+            elseif nodeType == "CURRENT" or nodeType == "REACHABLE" then
+                if button then
+                    button:LockHighlight()
+                end
             end
         end
     end
 end
+
+-- Blizzard hides DISTANT buttons during route updates. Restore only the requested points.
+hooksecurefunc("DrawOneHopLines", function()
+    if module:IsEnabled() then UpdateUnknownButtons() end
+end)
+hooksecurefunc("TaxiNodeOnButtonEnter", function(button)
+    if module:IsEnabled() and addonCore:GetTaxiSession() then
+        UpdateUnknownButtons()
+        if TaxiNodeGetType(button:GetID()) == "DISTANT" then
+            if button.OnFlightUnknownClick then
+                button:GetNormalTexture():SetVertexColor(1, 0.35, 0.35)
+            end
+            AddUnknownFlightInfo(button:GetID())
+            GameTooltip:Show()
+        end
+    end
+end)
+
+-- Both native taxi buttons and browser rows use this leave handler.
+hooksecurefunc("TaxiNodeOnButtonLeave", function(button)
+    if module:IsEnabled() and TaxiFrame:IsShown() and addonCore:GetTaxiSession() then
+        button:UnlockHighlight()
+        DrawOneHopLines()
+        if window and window:IsShown() then
+            HighlightZone(selectedTab == "zones" and (selectedZone or window.focusedZone))
+        end
+    end
+end)
 
 local function RowOnEnter(self)
     ClearHover()
@@ -72,13 +172,14 @@ local function RowOnEnter(self)
         return
     end
     local slot = session.idToSlot[self.nodeID]
-    local button = slot and _G["TaxiButton" .. slot]
+    if not slot then return end
+    local nodeType = TaxiNodeGetType(slot)
+    local button = _G["TaxiButton" .. slot]
     if not button then
         return
     end
     hoveredButton = button
     -- Let Blizzard draw the map route, then own the tooltip on the visible row.
-    -- DISTANT map buttons can be hidden, so they cannot own our row's tooltip.
     TaxiNodeOnButtonEnter(button)
     button:LockHighlight()
     hoveredRow = self
@@ -86,11 +187,12 @@ local function RowOnEnter(self)
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
     GameTooltip:ClearLines()
     GameTooltip:AddLine(session.nodes[self.nodeID].name, 1, 1, 1, true)
-    local nodeType = TaxiNodeGetType(slot)
     if nodeType == "REACHABLE" then
         GameTooltip_AddMoneyLine(GameTooltip, TaxiNodeCost(slot))
     elseif nodeType == "CURRENT" then
         GameTooltip:AddLine(TAXINODEYOUAREHERE, 1, 1, 1, true)
+    elseif nodeType == "DISTANT" then
+        AddUnknownFlightInfo(slot)
     end
     OnFlight_TaxiFrame_TooltipHook(self)
     GameTooltip:Show()
@@ -172,15 +274,6 @@ local function GetRow(index)
     return row
 end
 
-local function GetDurationText(sourceID, destinationID)
-    local duration = addonCore:GetFlightDuration(sourceID, destinationID)
-    if duration then
-        return SecondsToTime(duration)
-    end
-    local estimate = OnFlight_GetEstimatedTime(destinationID)
-    return estimate and "~" .. SecondsToTime(estimate) or L["Unknown"]
-end
-
 function module:Refresh(resetScroll, focusCurrentZone)
     local session = addonCore:GetTaxiSession()
     if not session then
@@ -188,15 +281,18 @@ function module:Refresh(resetScroll, focusCurrentZone)
         return
     end
     ClearHover()
+    UpdateUnknownButtons()
+    local profile = addonCore.db.profile
+    window.showUnknown:SetChecked(profile.showUnknownFlightPoints)
     local query = window.search:GetText():lower()
-    local favorites = addonCore.db.profile.favorites
+    local favorites = profile.favorites
     local destinations, zones, zoneNames = {}, {}, {}
-    local total, unknown = 0, 0
     for slot = 1, NumTaxiNodes() do
         local id = session.slotToID[slot]
         local node = id and session.nodes[id]
         local nodeType = TaxiNodeGetType(slot)
-        if node and nodeType ~= "NONE" then
+        if node and (nodeType == "CURRENT" or nodeType == "REACHABLE" or
+            (profile.showUnknownFlightPoints and nodeType == "DISTANT" and not node.name:match("^zz"))) then
             local zone = GetDisplayZone(node.name, id)
             if not zones[zone] then
                 zones[zone] = {
@@ -210,10 +306,6 @@ function module:Refresh(resetScroll, focusCurrentZone)
             if nodeType == "CURRENT" then
                 group.current = true
             end
-            if nodeType == "DISTANT" then
-                unknown = unknown + 1
-            end
-            total = total + 1
             if nameMatches and
                 ((selectedTab == "favorites" and favorites[id]) or (selectedTab == "zones" and selectedZone == zone)) then
                 destinations[#destinations + 1] = {
@@ -319,7 +411,6 @@ function module:Refresh(resetScroll, focusCurrentZone)
                                  L["No favorite destinations in this taxi session.\nShift-click an available destination in By Zone to add it."] or
                                  L["No destinations in this taxi session."])
     end
-    window.footer:SetFormattedText(L["Total: %d -- Unknown: %d"], total, unknown)
     local offset = resetScroll and 0 or window.scroll:GetVerticalScroll()
     if focusIndex then
         offset = math.max(0, (focusIndex - 1) * ROW_HEIGHT - (window.scroll:GetHeight() - ROW_HEIGHT) / 2)
@@ -328,7 +419,12 @@ function module:Refresh(resetScroll, focusCurrentZone)
     -- Update the scroll range before positioning after a short Favorites list.
     window.scroll:UpdateScrollChildRect()
     window.scroll:SetVerticalScroll(math.min(offset, math.max(0, count * ROW_HEIGHT - window.scroll:GetHeight())))
-    window.focusedZone = focusIndex and zoneNames[focusIndex]
+    if resetScroll then
+        window.focusedZone = nil
+    end
+    if focusIndex then
+        window.focusedZone = zoneNames[focusIndex]
+    end
     HighlightZone(selectedTab == "zones" and (selectedZone or window.focusedZone))
 end
 
@@ -354,6 +450,7 @@ local function CreateWindow()
     end)
     window:SetScript("OnHide", function()
         ClearHover()
+        UpdateUnknownButtons()
         window.search:ClearFocus()
         for _, row in ipairs(rows) do
             row.nodeID, row.zone = nil, nil
@@ -397,8 +494,15 @@ local function CreateWindow()
     window.empty:SetPoint("TOPLEFT", 12, -20)
     window.empty:SetPoint("TOPRIGHT", -12, -20)
     window.empty:SetJustifyH("CENTER")
-    window.footer = window:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    window.footer:SetPoint("BOTTOM", 0, 28)
+    window.showUnknown = CreateFrame("CheckButton", nil, window, "UICheckButtonTemplate")
+    window.showUnknown:SetSize(24, 24)
+    window.showUnknown:SetPoint("BOTTOMLEFT", 16, 20)
+    window.showUnknown.Text:SetText(L["Show Unknown Flight Points"])
+    window.showUnknown:SetHitRectInsets(0, -window.showUnknown.Text:GetStringWidth(), 0, 0)
+    window.showUnknown:SetScript("OnClick", function(self)
+        addonCore.db.profile.showUnknownFlightPoints = self:GetChecked()
+        module:Refresh(false)
+    end)
     local hint = window:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     hint:SetPoint("BOTTOM", 0, 12)
     hint:SetText(L["Shift-click a destination to toggle favorites."])
@@ -441,6 +545,7 @@ function module:TAXIMAP_OPENED()
 end
 
 function module:TAXIMAP_CLOSED()
+    UpdateUnknownButtons()
     selectedZone = nil
     if window then
         window:Hide()

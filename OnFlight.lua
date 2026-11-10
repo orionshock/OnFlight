@@ -132,6 +132,7 @@ local svDefaults = {
     char = {},
     profile = {
         showChat = true,
+        showUnknownFlightPoints = false,
         gossipConfig = false,
         showGossipConfig = false,
         gossipdebug = false,
