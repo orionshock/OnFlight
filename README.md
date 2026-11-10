@@ -20,4 +20,4 @@ OnFlight tracks taxi flights and learns their durations as you travel.
 
 - Use **Gossip Configuration** to configure dialogue-triggered flights. **Show Diagnostic IDs** helps identify dialogue options and taxi nodes.
 
-See [PROTOCOL.md](PROTOCOL.md) for the public flight-status protocol.
+See [PROTOCOL.md](docs/PROTOCOL.md) for the public flight-status protocol.

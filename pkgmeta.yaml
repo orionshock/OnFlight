@@ -22,7 +22,7 @@ externals:
 ignore:
     - .gitignore
     - TaxiDebug.lua
-    - docs/README.md
+    - README.md
     - pkgmeta.yaml
     - .github
     - .previews
