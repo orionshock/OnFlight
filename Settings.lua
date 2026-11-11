@@ -72,7 +72,7 @@ function addonCore:SetFlightDisplay(display)
     if display == "quartz" then
         if not Quartz3 then return end
         if not Quartz3:GetModule("Player"):IsEnabled() then
-            Quartz3:Print(L["Enable Quartz's Player module before selecting the Quartz flight timer."])
+            print(self.OnFlightPrefixText, L["Enable Quartz's Player module before selecting the Quartz flight timer."])
             return
         end
     end
@@ -353,7 +353,7 @@ function addonCore:InitializeSettings()
         L["Restores the current profile's timer-bar appearance and position defaults. Other OnFlight settings and learned flight times stay unchanged."])
     LibStub("AceConfigDialog-3.0"):AddToBlizOptions(addonName, L["Profiles"], category:GetID(), "profiles")
     self:CreateGossipSettings(category, Register)
-    self:RefreshAdvOptions()
+    self:RefreshGossipEditor()
     self:ApplyFlightDisplay()
     self:RefreshSettings()
 end

@@ -54,7 +54,6 @@ local function CommitEndpoint(input)
     end
     if row.optionID then
         addonCore.db.global.gossipTriggered[row.optionID][input.endpoint] = key
-        LibStub("AceConfigRegistry-3.0"):NotifyChange(addonName)
     end
     -- New-row values remain in the form until Add supplies the real gossip ID.
     input:SetText(type(key) == "number" and tostring(key) or message)
@@ -123,7 +122,7 @@ function addonCore:RefreshGossipEditor(optionID)
             if not row.remove then
                 row.remove = MakeButton(row, L["Remove"], 80, function()
                     self.db.global.gossipTriggered[row.optionID] = nil
-                    self:RefreshAdvOptions(row.optionID)
+                    self:RefreshGossipEditor(row.optionID)
                 end)
                 row.remove:SetPoint("TOPRIGHT", -8, 0)
             end
@@ -246,7 +245,7 @@ function addonCore:CreateGossipSettings(parentCategory, register)
             new[index].feedback:SetText("")
             new[index]:ClearFocus()
         end
-        addonCore:RefreshAdvOptions(id)
+        addonCore:RefreshGossipEditor(id)
     end)
     new.add:SetPoint("TOPRIGHT", -8, 0)
 

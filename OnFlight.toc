@@ -23,6 +23,4 @@ Broker.lua
 Destinations.lua
 Quartz.lua
 
-#@debug@
 TaxiDebug.lua
-#@end-debug@

@@ -36,7 +36,7 @@ taxiDestName --Full Proper name from API for where we are going
 -- luacheck: globals UnitFactionGroup string UnitOnTaxi UnitInVehicle CreateFrame tostringall GetTime GetServerTime date SecondsToTime abs hooksecurefunc
 -- luacheck: globals C_SummonInfo OnFlight_GetEstimatedTime TaxiFrame TaxiGetNodeSlot OnFlight_TaxiFrame_TooltipHook GameTooltip wipe
 local addonName, addonCore = ...
-addonCore = LibStub("AceAddon-3.0"):NewAddon(addonCore, "OnFlight", "AceConsole-3.0", "AceEvent-3.0")
+addonCore = LibStub("AceAddon-3.0"):NewAddon(addonCore, "OnFlight", "AceEvent-3.0")
 addonCore.OnFlightPrefixText = "|cff0040ffOn|cFF00FF00Flight|r|r"
 _G[addonName] = addonCore
 
@@ -134,6 +134,7 @@ local svDefaults = {
     char = {},
     profile = {
         showChat = true,
+        taxiDebug = false,
         showUnknownFlightPoints = false,
         useWorldMapFlightMaps = true,
         gossipConfig = false,
@@ -181,6 +182,7 @@ end
 
 function addonCore:OnEnable()
     self:InitializeSettings()
+    self:UpdateTaxiDebug()
     self:RegisterEvent("TAXIMAP_OPENED")
     self:RegisterEvent("TAXIMAP_CLOSED")
     self:RegisterEvent("PLAYER_ENTERING_WORLD")
@@ -504,20 +506,6 @@ function addonCore:GetFlightEndpointName(key)
     end
 end
 
-function addonCore:SetModuleStatus(info, value)
-    if info[#info] == "StatusBarModule" then
-        self:SetFlightDisplay(value and "builtin" or "none")
-        return
-    end
-    db.profile.moduleState[info[#info]] = value
-    if value == true then
-        addonCore:EnableModule(info[#info])
-    else
-        addonCore:DisableModule(info[#info])
-    end
-    self:RefreshSettings(info[#info])
-end
-
 function addonCore:OnProfileUpdated()
     self:ApplyFlightDisplay()
     for name, module in self:IterateModules() do
@@ -530,4 +518,5 @@ function addonCore:OnProfileUpdated()
     end
     self:RefreshSettings()
     self:RefreshDiagnostics()
+    self:UpdateTaxiDebug()
 end

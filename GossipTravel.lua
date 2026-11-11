@@ -28,7 +28,7 @@ function addonCore:StartGossipFlight(optionID)
     local source, sourceName = self:GetGossipEndpoint(optionID, endpoints[1])
     local destination, destinationName = self:GetGossipEndpoint(optionID, endpoints[2])
     if not sourceName or not destinationName then
-        self:Print(L["Configure both gossip-flight endpoints in settings: %s"]:format(optionID))
+        print(self.OnFlightPrefixText, L["Configure both gossip-flight endpoints in settings: %s"]:format(optionID))
         return
     end
     self:StartAFlight(source, destination)

@@ -1,4 +1,4 @@
--- Opt-in live-client probe. /oftaxi on, off, snap [mapID], status, clear
+-- Opt-in live-client probe, controlled by the current OnFlight profile.
 -- No taxi actions are invoked here; secure post-hooks only observe user/UI actions.
 -- Timestamped log lines persist in SavedVariables; chat shows concise summaries.
 local addonName, addonCore = ...
@@ -103,7 +103,7 @@ local function record(kind, data)
     end
     local function line(message, detail)
         save(message)
-        if not detail or db.verbose then
+        if not detail then
             print("|cff66ccff" .. L["[Taxi %d]"]:format(db.sequence) .. "|r " .. message)
         end
     end
@@ -123,7 +123,7 @@ local function record(kind, data)
         line(L["%s: map=%s; %s; IDs=%d/%d; checks=%d"]:format(data.reason, value(data.mapID),
             data.mapOpen and L["OPEN"] or L["CLOSED"], resolved, #data.nodes,
             data.mapOpen and #identity.issues or 0))
-        if data.mapOpen or data.reason == "manual" then
+        if data.mapOpen then
             line(L["Context: %s; player map=%s; %s; %s"]:format(value(data.npcName), value(data.playerMapID),
                 value(data.faction), value(data.locale)), true)
             local mapIDs = {}
@@ -133,19 +133,6 @@ local function record(kind, data)
                 local map = data.maps[id]
                 line(L["Map %d: GetAllTaxiNodes=%s; GetTaxiNodesForMap=%s"]:format(id, listCount(map.all),
                     listCount(map.forMap)), true)
-                if data.reason == "manual" then
-                    -- Keep raw tables only on request, as readable JSON rather than SV table trees.
-                    -- The native serializer represents unsupported vector userdata as null.
-                    for _, api in ipairs({{"GetAllTaxiNodes", map.all}, {"GetTaxiNodesForMap", map.forMap}}) do
-                        local nodes = first(api[2])
-                        if type(nodes) == "table" then
-                            local ok, serialized = pcall(C_EncodingUtil.SerializeJSON, nodes,
-                                {ignoreSerializationErrors = true})
-                            save(("%s(%d) JSON: %s"):format(api[1], id,
-                                ok and serialized or ("ERROR: " .. text(serialized))))
-                        end
-                    end
-                end
             end
         end
         local current = #identity.currentSlots == 1 and identity.slots[identity.currentSlots[1]]
@@ -154,13 +141,13 @@ local function record(kind, data)
         end
         for slot, node in ipairs(identity.slots) do
             local selected = slot == identity.selectedSlot
-            -- Keep the directory once on open, and on explicit snapshots, not every event.
-            if selected or data.reason == "TAXIMAP_OPENED" or data.reason == "manual" then
+            -- Keep the directory once on open, not every event.
+            if selected or data.reason == "TAXIMAP_OPENED" then
                 local legacy = data.nodes[slot]
                 line(L["Slot %d -> ID %s%s | %s | %s | direct=%s | cost=%s"]:format(slot, text(node.nodeID),
                     selected and " " .. L["[SELECTED]"] or "", text(node.legacyName), text(node.legacyType),
                     value(legacy.direct), value(legacy.cost)), not selected)
-                if selected or data.reason == "manual" then
+                if selected then
                     line(L["Slot %d position: %s"]:format(slot,
                         legacy.position.values and arguments(legacy.position.values) or value(legacy.position)), true)
                 end
@@ -366,14 +353,14 @@ local function observeButtons(nodeCount)
                         mouseButton = mouseButton,
                         phase = "PreClick"
                     })
-                    snapshot("TaxiButton PreClick", nil, self:GetID())
+                    snapshot("TaxiButton PreClick", self:GetID())
                 end
             end)
         end
     end
 end
 
-snapshot = function(reason, requestedMapID, selectedSlot)
+snapshot = function(reason, selectedSlot)
     local data = {
         reason = reason,
         mapOpen = frame.mapOpen,
@@ -398,7 +385,6 @@ snapshot = function(reason, requestedMapID, selectedSlot)
     for _, id in pairs({
         current = currentMapID,
         previous = lastMapID,
-        requested = requestedMapID,
         player = first(data.playerMapID)
     }) do
         if type(id) == "number" and id > 0 then
@@ -427,7 +413,7 @@ snapshot = function(reason, requestedMapID, selectedSlot)
         data.nodes[slot] = node
         local routeCount = first(node.numRoutes)
         node.routesTruncated = type(routeCount) == "number" and routeCount > MAX_HOPS
-        local captureRoute = slot == selectedSlot or reason == "manual"
+        local captureRoute = slot == selectedSlot
         for hop = 1, captureRoute and count(routeCount, MAX_HOPS) or 0 do
             local route = {
                 sourceSlot = call(TaxiGetNodeSlot, slot, hop, true),
@@ -458,7 +444,7 @@ local function installHooks()
                     args = pack(...)
                 })
                 if action == "TakeTaxiNode" then
-                    snapshot("TakeTaxiNode post-call", nil, (...))
+                    snapshot("TakeTaxiNode post-call", (...))
                 end
             end)
             hooks[name] = ok
@@ -471,43 +457,19 @@ local function installHooks()
     end
 end
 
--- Observe the core's confirmed lifecycle as well as raw UnitOnTaxi transitions.
-for _, message in ipairs({"OnFlight_Taxi_Start", "OnFlight_Taxi_RESUME", "OnFlight_Taxi_Suspend",
-                          "OnFlight_Taxi_Stop", "OnFlight_Taxi_EarlyExit", "OnFlight_Taxi_FAILED_ENTRY"}) do
-    messages:RegisterMessage(message, function(event, ...)
-        if enabled then record("tracking", {name = event, args = pack(...)}) end
-    end)
-end
-
-frame:RegisterEvent("TAXIMAP_OPENED")
-frame:RegisterEvent("TAXIMAP_CLOSED")
-frame:RegisterEvent("PLAYER_LOGIN")
 frame:SetScript("OnEvent", function(_, event, ...)
-    if event == "PLAYER_LOGIN" then
-        local db = database()
-        db.run = (db.run or 0) + 1
-        if db.enabled then
-            SlashCmdList.ONFLIGHTTAXIDEBUG("on")
-        end
-        return
-    end
     if event == "TAXIMAP_OPENED" then
         mapSession = mapSession + 1
     end
     frame.mapOpen = event == "TAXIMAP_OPENED"
-    if not enabled then
-        return
-    end
     record("event", {
         name = event,
         args = pack(...)
     })
     snapshot(event)
 end)
-frame:SetScript("OnUpdate", function()
-    if not enabled then
-        return
-    end
+
+local function OnUpdate()
     local onTaxi = first(call(UnitOnTaxi, "player"))
     if onTaxi ~= lastOnTaxi then
         record("flight-state", {
@@ -517,43 +479,41 @@ frame:SetScript("OnUpdate", function()
         })
         lastOnTaxi = onTaxi
     end
-end)
+end
 
-SLASH_ONFLIGHTTAXIDEBUG1 = "/oftaxi"
-SlashCmdList.ONFLIGHTTAXIDEBUG = function(input)
-    local command, argument = (input or ""):match("^%s*(%S*)%s*(.-)%s*$")
-    command = command:lower()
-    if command == "on" then
-        enabled = true
-        database().enabled = true
-        lastOnTaxi = first(call(UnitOnTaxi, "player"))
-        record("client", {
-            build = call(GetBuildInfo)
-        })
-        installHooks()
-        snapshot("enabled")
-    elseif command == "off" then
-        enabled = false
-        database().enabled = false
-    elseif command == "clear" then
-        local db = database()
-        db.records, db.dropped = {}, 0
-        print(L["OnFlight taxi debug: saved captures cleared."])
-    elseif command == "verbose" then
-        database().verbose = argument:lower() == "on"
-        print(L["OnFlight taxi debug: detailed chat %s"]:format(database().verbose and L["ON"] or L["OFF"]))
-    elseif command == "snap" then
-        local mapID = tonumber(argument)
-        if argument ~= "" and (not mapID or mapID <= 0 or mapID ~= math.floor(mapID)) then
-            print(L["OnFlight taxi debug: mapID must be a positive integer."])
-            return
-        end
-        snapshot("manual", mapID)
-    elseif command ~= "status" then
-        print(L["OnFlight taxi debug: /oftaxi on | off | snap [mapID] | status | clear | verbose on/off"])
+function addonCore:UpdateTaxiDebug()
+    local active = self.db.profile.taxiDebug == true
+    if active == enabled then return end
+    enabled = active
+    if not enabled then
+        frame:UnregisterAllEvents()
+        frame:SetScript("OnUpdate", nil)
+        messages:UnregisterAllMessages()
+        frame.mapOpen, lastOnTaxi = nil, nil
         return
     end
-    print(L["OnFlight taxi debug: %s; %d log entries; /reload flushes SavedVariables."]:format(enabled and L["ON"] or
-                                                                                                L["OFF"],
-        #database().records))
+
+    local db = database()
+    db.run = (db.run or 0) + 1
+    frame.mapOpen = TaxiFrame:IsShown()
+    if frame.mapOpen then mapSession = mapSession + 1 end
+    frame:RegisterEvent("TAXIMAP_OPENED")
+    frame:RegisterEvent("TAXIMAP_CLOSED")
+    frame:SetScript("OnUpdate", OnUpdate)
+    for _, message in ipairs({"OnFlight_Taxi_Start", "OnFlight_Taxi_RESUME", "OnFlight_Taxi_Suspend",
+                              "OnFlight_Taxi_Stop", "OnFlight_Taxi_EarlyExit", "OnFlight_Taxi_FAILED_ENTRY"}) do
+        messages:RegisterMessage(message, function(event, ...)
+            record("tracking", {name = event, args = pack(...)})
+        end)
+    end
+    lastOnTaxi = first(call(UnitOnTaxi, "player"))
+    record("client", {build = call(GetBuildInfo)})
+    installHooks()
+    snapshot("enabled")
+end
+
+function addonCore:ClearTaxiDebugLog()
+    local db = database()
+    db.records = {}
+    db.sequence = 0
 end
