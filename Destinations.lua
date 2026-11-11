@@ -437,7 +437,10 @@ function module:Refresh(resetScroll, focusCurrentZone)
             row.label:SetText(node.name)
             row.label:SetTextColor(tint, tint, tint)
             if node.type == "REACHABLE" then
-                row.detail:SetFormattedText(L["Duration: %s"], GetDurationText(session.sourceID, node.id))
+                local durationText = GetDurationText(session.sourceID, node.id)
+                local slot = session.idToSlot[node.id]
+                local cost = slot and TaxiNodeCost(slot)
+                row.detail:SetText(cost and durationText .. " · " .. GetCoinTextureString(cost) or durationText)
             else
                 row.detail:SetText(node.type == "CURRENT" and TAXINODEYOUAREHERE or L["Unavailable"])
             end
