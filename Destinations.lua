@@ -5,6 +5,51 @@ local window, hoveredButton, hoveredRow
 local rows = {}
 local selectedTab, selectedZone = "favorites", nil
 local ROW_HEIGHT = 40
+local taxiWidth = TaxiFrame:GetWidth()
+local taxiPanelWidth = GetUIPanelWidthUnscaled(TaxiFrame)
+-- Reserve 430 pixels for the destination pane and its outer border.
+local browserExtent = 430
+local expandedWidth = taxiWidth + browserExtent
+local expandedPanelWidth = taxiPanelWidth + browserExtent + C_Texture.GetAtlasInfo("common-sidetab").width
+
+local taxiBorder = {
+    TopLeftCorner = TaxiFrame.TopLeftCorner,
+    TopRightCorner = TaxiFrame.TopRightCorner,
+    BottomLeftCorner = TaxiFrame.BotLeftCorner,
+    BottomRightCorner = TaxiFrame.BotRightCorner,
+    TopEdge = TaxiFrame.TopBorder,
+    BottomEdge = TaxiFrame.BottomBorder,
+    LeftEdge = TaxiFrame.LeftBorder,
+    RightEdge = TaxiFrame.RightBorder,
+    Center = TaxiFrame.Bg,
+}
+local leftBorderLayer
+
+local function StyleTaxiFrame()
+    -- NineSlice's legacy lookup lets the modern border reuse TaxiFrame's existing regions.
+    TaxiFrame.GetNineSlicePiece = function(_, piece)
+        return taxiBorder[piece]
+    end
+    for piece, texture in pairs(taxiBorder) do
+        if piece ~= "Center" then
+            texture:SetDrawLayer("OVERLAY")
+        end
+    end
+    NineSliceUtil.ApplyLayoutByName(TaxiFrame, "ButtonFrameTemplateNoPortrait")
+    TaxiFrame.GetNineSlicePiece = nil
+    TaxiFrame.TitleBg:Hide()
+
+    -- The detailed map is a child frame, so its textures otherwise cover the left edge.
+    if not leftBorderLayer then
+        leftBorderLayer = CreateFrame("Frame", nil, TaxiFrame)
+        leftBorderLayer:SetAllPoints(TaxiFrame)
+        leftBorderLayer:EnableMouse(false)
+        TaxiFrame.TopLeftCorner:SetParent(leftBorderLayer)
+        TaxiFrame.BotLeftCorner:SetParent(leftBorderLayer)
+        TaxiFrame.LeftBorder:SetParent(leftBorderLayer)
+    end
+    leftBorderLayer:SetFrameLevel(TaxiRouteMap:GetFrameLevel() + 2)
+end
 -- Shared taxi art from TaxiFrame.lua; the green location marker is unchanged.
 local currentIcon = 137033
 local reachableIcon = "Interface\\TaxiFrame\\UI-Taxi-Icon-White"
@@ -331,7 +376,7 @@ function module:Refresh(resetScroll, focusCurrentZone)
     if window.back:IsShown() then
         window.header:SetPoint("LEFT", window.back, "RIGHT", 8, 0)
     else
-        window.header:SetPoint("LEFT", window, "TOPLEFT", 74, -46)
+        window.header:SetPoint("LEFT", window, "TOPLEFT", 16, -46)
     end
     window.header:SetPoint("RIGHT", window.search, "LEFT", -10, 0)
     window.header:SetText(selectedTab == "favorites" and L["Favorite Destinations"] or selectedZone or L["By Zone"])
@@ -429,25 +474,16 @@ function module:Refresh(resetScroll, focusCurrentZone)
 end
 
 local function CreateWindow()
-    window = CreateFrame("Frame", "OnFlightDestinationWindow", UIParent, "PortraitFrameTemplate")
+    window = CreateFrame("Frame", "OnFlightDestinationWindow", TaxiFrame)
     window:Hide()
-    window:SetWidth(420)
-    window:SetPoint("TOPLEFT", TaxiFrame, "TOPRIGHT", 10, 0)
-    window:SetPoint("BOTTOMLEFT", TaxiFrame, "BOTTOMRIGHT", 10, 0)
-    window:SetFrameStrata("HIGH")
+    window:SetPoint("TOPLEFT", TaxiFrame.InsetBg, "TOPRIGHT", 0, 24)
+    window:SetPoint("BOTTOMRIGHT", TaxiFrame, "BOTTOMRIGHT", 0, 0)
     window:EnableMouse(true)
-    window:SetClampedToScreen(true)
-    window:SetTitle(L["Flight Destinations"])
-    window:SetPortraitToAsset(132172)
-    window:SetBorder("PortraitFrameTemplate")
-    -- CharacterFrame artwork; no CharacterFrame mixins or global registrations.
+    -- The existing CharacterFrame artwork remains behind the destination list.
     local background = window:CreateTexture(nil, "BACKGROUND")
     background:SetAtlas("UI-Character-Info-General-BG")
-    background:SetPoint("TOPLEFT", 2, -22)
+    background:SetPoint("TOPLEFT", 0, -24)
     background:SetPoint("BOTTOMRIGHT", -2, 2)
-    window.CloseButton:SetScript("OnClick", function()
-        window:Hide()
-    end)
     window:SetScript("OnHide", function()
         ClearHover()
         UpdateUnknownButtons()
@@ -459,7 +495,7 @@ local function CreateWindow()
     end)
     window.back = CreateFrame("Button", nil, window, "UIPanelButtonTemplate")
     window.back:SetSize(85, 22)
-    window.back:SetPoint("TOPLEFT", 74, -35)
+    window.back:SetPoint("TOPLEFT", 16, -35)
     window.back:SetText(L["< Back"])
     window.back:SetScript("OnClick", function()
         selectedZone = nil
@@ -510,7 +546,7 @@ local function CreateWindow()
     for index, data in ipairs({{"favorites", L["Favorites"], 134411}, {"zones", L["By Zone"], 132172}}) do
         local tab = CreateFrame("Frame", nil, window, "LargeSideTabButtonTemplate")
         tab:EnableMouse(true)
-        tab:SetPoint("TOPLEFT", window, "TOPRIGHT", 0, -30 - (index - 1) * (tab:GetHeight() + 2))
+        tab:SetPoint("TOPLEFT", TaxiFrame, "TOPRIGHT", 0, -30 - (index - 1) * (tab:GetHeight() + 2))
         tab.Icon:SetTexture(data[3])
         tab:SetFillToInterior(true)
         tab.tooltipText = data[2]
@@ -553,6 +589,16 @@ function module:TAXIMAP_CLOSED()
 end
 
 function module:OnEnable()
+    StyleTaxiFrame()
+    -- Keep Blizzard's 580x580 taxi map fixed while its outer frame grows.
+    TaxiFrame.InsetBg:ClearAllPoints()
+    TaxiFrame.InsetBg:SetPoint("TOPLEFT", TaxiFrame, "TOPLEFT", 4, -24)
+    TaxiFrame.InsetBg:SetPoint("BOTTOMRIGHT", TaxiFrame, "TOPLEFT", 584, -604)
+    TaxiFrame:SetWidth(expandedWidth)
+    SetUIPanelAttribute(TaxiFrame, "width", expandedPanelWidth)
+    if TaxiFrame:IsShown() then
+        UpdateUIPanelPositions(TaxiFrame)
+    end
     self:RegisterMessage("OnFlight_TaxiMapReady", "TAXIMAP_OPENED")
     self:RegisterMessage("OnFlight_DiagnosticsChanged", function()
         if window and window:IsShown() then
@@ -569,11 +615,19 @@ function module:OnDisable()
     self:UnregisterAllMessages()
     self:UnregisterAllEvents()
     self:TAXIMAP_CLOSED()
+    TaxiFrame.InsetBg:ClearAllPoints()
+    TaxiFrame.InsetBg:SetPoint("TOPLEFT", TaxiFrame, "TOPLEFT", 4, -24)
+    TaxiFrame.InsetBg:SetPoint("BOTTOMRIGHT", TaxiFrame, "BOTTOMRIGHT", -6, 4)
+    TaxiFrame:SetWidth(taxiWidth)
+    SetUIPanelAttribute(TaxiFrame, "width", taxiPanelWidth)
+    if TaxiFrame:IsShown() then
+        UpdateUIPanelPositions(TaxiFrame)
+    end
 end
 
 local toggle = CreateFrame("Button", "OnFlight_TaxiFrameToggleButton", TaxiFrame)
 toggle:SetSize(32, 32)
-toggle:SetPoint("CENTER", TaxiFrame, "TOPRIGHT", -60, -45)
+toggle:SetPoint("CENTER", TaxiFrame, "TOPLEFT", taxiWidth - 60, -45)
 toggle:SetFrameLevel(TaxiFrame:GetFrameLevel() + 5)
 toggle:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 local icon = toggle:CreateTexture(nil, "BACKGROUND")
