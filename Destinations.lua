@@ -319,18 +319,7 @@ local function GetRow(index)
     return row
 end
 
-function module:Refresh(resetScroll, focusCurrentZone)
-    local session = addonCore:GetTaxiSession()
-    if not session then
-        self:TAXIMAP_CLOSED()
-        return
-    end
-    ClearHover()
-    UpdateUnknownButtons()
-    local profile = addonCore.db.profile
-    window.showUnknown:SetChecked(profile.showUnknownFlightPoints)
-    local query = window.search:GetText():lower()
-    local favorites = profile.favorites
+local function GetVisibleRows(session, profile, query)
     local destinations, zones, zoneNames = {}, {}, {}
     for slot = 1, NumTaxiNodes() do
         local id = session.slotToID[slot]
@@ -352,7 +341,7 @@ function module:Refresh(resetScroll, focusCurrentZone)
                 group.current = true
             end
             if nameMatches and
-                ((selectedTab == "favorites" and favorites[id]) or (selectedTab == "zones" and selectedZone == zone)) then
+                ((selectedTab == "favorites" and profile.favorites[id]) or (selectedTab == "zones" and selectedZone == zone)) then
                 destinations[#destinations + 1] = {
                     id = id,
                     name = node.name,
@@ -367,6 +356,69 @@ function module:Refresh(resetScroll, focusCurrentZone)
         end
     end
     table.sort(zoneNames)
+    return destinations, zones, zoneNames
+end
+
+local function SetZoneRow(row, zone, group)
+    row.zone = zone
+    row:SetEnabled(true)
+    if group.current then
+        row.icon:SetTexture(currentIcon)
+        row.icon:SetTexCoord(0, 1, 0, 1)
+    elseif zone == L["Other Locations"] then
+        row.icon:SetTexture(otherLocationsIcon)
+        row.icon:SetTexCoord(0, 1, 0, 1)
+    else
+        row.icon:SetAtlas(zoneAtlas)
+    end
+    row.icon:SetDesaturated(false)
+    row.icon:SetVertexColor(1, 1, 1)
+    row.favorite:Hide()
+    row.label:SetText(zone)
+    row.label:SetTextColor(1, 1, 1)
+    row.detail:SetFormattedText(L["%d destinations"], group.count)
+end
+
+local function SetDestinationRow(row, node, session, profile)
+    row.nodeID = node.id
+    if profile.showGossipConfig then
+        row.nodeNumber:SetText(tostring(node.id))
+        row.nodeNumber:Show()
+        row.detail:SetPoint("BOTTOMRIGHT", -row.nodeNumber:GetStringWidth() - 14, 4)
+    end
+    local available = node.type == "REACHABLE" or node.type == "CURRENT"
+    row:SetEnabled(available)
+    row.icon:SetTexture(node.type == "CURRENT" and currentIcon or node.type == "REACHABLE" and reachableIcon or
+                            unavailableIcon)
+    row.icon:SetTexCoord(0, 1, 0, 1)
+    row.icon:SetDesaturated(not available)
+    local tint = available and 1 or 0.5
+    row.icon:SetVertexColor(tint, tint, tint)
+    row.favorite:SetShown(profile.favorites[node.id] == true)
+    row.label:SetText(node.name)
+    row.label:SetTextColor(tint, tint, tint)
+    if node.type == "REACHABLE" then
+        local durationText = GetDurationText(session.sourceID, node.id)
+        local slot = session.idToSlot[node.id]
+        local cost = slot and TaxiNodeCost(slot)
+        row.detail:SetText(cost and durationText .. " · " .. GetCoinTextureString(cost) or durationText)
+    else
+        row.detail:SetText(node.type == "CURRENT" and TAXINODEYOUAREHERE or L["Unavailable"])
+    end
+end
+
+function module:Refresh(resetScroll, focusCurrentZone)
+    local session = addonCore:GetTaxiSession()
+    if not session then
+        self:TAXIMAP_CLOSED()
+        return
+    end
+    ClearHover()
+    UpdateUnknownButtons()
+    local profile = addonCore.db.profile
+    window.showUnknown:SetChecked(profile.showUnknownFlightPoints)
+    local query = window.search:GetText():lower()
+    local destinations, zones, zoneNames = GetVisibleRows(session, profile, query)
     -- A new map/session may no longer contain the zone that was being viewed.
     if selectedZone and not zones[selectedZone] then
         selectedZone = nil
@@ -396,54 +448,13 @@ function module:Refresh(resetScroll, focusCurrentZone)
         if zoneList then
             local zone = zoneNames[index]
             local group = zones[zone]
-            row.zone = zone
-            row:SetEnabled(true)
-            if group.current then
-                row.icon:SetTexture(currentIcon)
-                row.icon:SetTexCoord(0, 1, 0, 1)
-                if focusCurrentZone then
-                    focusIndex = index
-                    row:LockHighlight()
-                end
-            elseif zone == L["Other Locations"] then
-                row.icon:SetTexture(otherLocationsIcon)
-                row.icon:SetTexCoord(0, 1, 0, 1)
-            else
-                row.icon:SetAtlas(zoneAtlas)
+            SetZoneRow(row, zone, group)
+            if group.current and focusCurrentZone then
+                focusIndex = index
+                row:LockHighlight()
             end
-            row.icon:SetDesaturated(false)
-            row.icon:SetVertexColor(1, 1, 1)
-            row.favorite:Hide()
-            row.label:SetText(zone)
-            row.label:SetTextColor(1, 1, 1)
-            row.detail:SetFormattedText(L["%d destinations"], group.count)
         else
-            local node = destinations[index]
-            row.nodeID = node.id
-            if addonCore.db.profile.showGossipConfig then
-                row.nodeNumber:SetText(tostring(node.id))
-                row.nodeNumber:Show()
-                row.detail:SetPoint("BOTTOMRIGHT", -row.nodeNumber:GetStringWidth() - 14, 4)
-            end
-            row:SetEnabled(node.type == "REACHABLE" or node.type == "CURRENT")
-            local available = node.type == "REACHABLE" or node.type == "CURRENT"
-            row.icon:SetTexture(node.type == "CURRENT" and currentIcon or node.type == "REACHABLE" and reachableIcon or
-                                    unavailableIcon)
-            row.icon:SetTexCoord(0, 1, 0, 1)
-            row.icon:SetDesaturated(not available)
-            local tint = available and 1 or 0.5
-            row.icon:SetVertexColor(tint, tint, tint)
-            row.favorite:SetShown(favorites[node.id] == true)
-            row.label:SetText(node.name)
-            row.label:SetTextColor(tint, tint, tint)
-            if node.type == "REACHABLE" then
-                local durationText = GetDurationText(session.sourceID, node.id)
-                local slot = session.idToSlot[node.id]
-                local cost = slot and TaxiNodeCost(slot)
-                row.detail:SetText(cost and durationText .. " · " .. GetCoinTextureString(cost) or durationText)
-            else
-                row.detail:SetText(node.type == "CURRENT" and TAXINODEYOUAREHERE or L["Unavailable"])
-            end
+            SetDestinationRow(row, destinations[index], session, profile)
         end
         row:Show()
     end

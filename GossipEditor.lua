@@ -280,7 +280,7 @@ function addonCore:CreateGossipSettings(parentCategory, register)
     end)
 end
 
--- Text input validation is shared by the native and command editors.
+-- Validate endpoint text entered in the native gossip editor.
 function addonCore:ParseGossipEndpoint(optionID, text)
     local value = text:match("^%s*(.-)%s*$")
     if value == "" then
