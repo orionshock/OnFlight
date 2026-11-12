@@ -21,3 +21,12 @@ OnFlight tracks taxi flights and learns their durations as you travel.
 - Use **Gossip Configuration** to configure dialogue-triggered flights. **Show Diagnostic IDs** helps identify dialogue options and taxi nodes.
 
 See [PROTOCOL.md](docs/PROTOCOL.md) for the public flight-status protocol.
+
+## Media control dependency
+
+The native Settings media previews use LibSharedMediaControls-1.0. Its single
+runtime Lua file is tracked under `libs/LibSharedMediaControls-1.0` so source
+checkouts can load it with OnFlight's existing libraries. `pkgmeta.yaml` pins the
+Git external to the same upstream revision for release packaging. When updating
+this dependency, update the pin and tracked file together. The upstream Lua file
+contains its MIT notice; the standalone demo and dependency copies are excluded.

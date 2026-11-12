@@ -15,6 +15,10 @@ externals:
     libs/AceGUI-3.0: https://repos.curseforge.com/wow/ace3/trunk/AceGUI-3.0
     libs/AceLocale-3.0: https://repos.curseforge.com/wow/ace3/trunk/AceLocale-3.0
     libs/LibSharedMedia-3.0: https://repos.wowace.com/wow/libsharedmedia-3-0/trunk/LibSharedMedia-3.0
+    libs/LibSharedMediaControls-1.0:
+        url: https://github.com/orionshock/LibSharedMediaControls-1.0.git
+        type: git
+        commit: 1761a4317abf784facf75a4acc1d51cfa4fd0fcb
     libs/LibDataBroker-1.1: https://github.com/tekkub/libdatabroker-1-1
     libs/LibDBIcon-1.0: https://repos.wowace.com/wow/libdbicon-1-0/trunk/LibDBIcon-1.0
 
@@ -25,3 +29,9 @@ ignore:
     - .github
     - .previews
     - .vscode
+    - libs/LibSharedMediaControls-1.0/Demo.lua
+    - libs/LibSharedMediaControls-1.0/LibSharedMediaControls-1.0.toc
+    - libs/LibSharedMediaControls-1.0/README.md
+    - libs/LibSharedMediaControls-1.0/LICENSE
+    - libs/LibSharedMediaControls-1.0/AGENT.MD
+    - libs/LibSharedMediaControls-1.0/libs
