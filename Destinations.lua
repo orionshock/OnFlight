@@ -5,57 +5,11 @@ local window, hoveredButton, hoveredRow
 local rows = {}
 local selectedTab, selectedZone = "favorites", nil
 local ROW_HEIGHT = 40
-local taxiWidth = TaxiFrame:GetWidth()
-local taxiPanelWidth = GetUIPanelWidthUnscaled(TaxiFrame)
--- Reserve 430 pixels for the destination pane and its outer border.
-local browserExtent = 430
-local expandedWidth = taxiWidth + browserExtent
-local expandedPanelWidth = taxiPanelWidth + browserExtent + C_Texture.GetAtlasInfo("common-sidetab").width
-
-local taxiBorder = {
-    TopLeftCorner = TaxiFrame.TopLeftCorner,
-    TopRightCorner = TaxiFrame.TopRightCorner,
-    BottomLeftCorner = TaxiFrame.BotLeftCorner,
-    BottomRightCorner = TaxiFrame.BotRightCorner,
-    TopEdge = TaxiFrame.TopBorder,
-    BottomEdge = TaxiFrame.BottomBorder,
-    LeftEdge = TaxiFrame.LeftBorder,
-    RightEdge = TaxiFrame.RightBorder,
-    Center = TaxiFrame.Bg,
-}
-local leftBorderLayer
-
-local function StyleTaxiFrame()
-    -- NineSlice's legacy lookup lets the modern border reuse TaxiFrame's existing regions.
-    TaxiFrame.GetNineSlicePiece = function(_, piece)
-        return taxiBorder[piece]
-    end
-    for piece, texture in pairs(taxiBorder) do
-        if piece ~= "Center" then
-            texture:SetDrawLayer("OVERLAY")
-        end
-    end
-    NineSliceUtil.ApplyLayoutByName(TaxiFrame, "ButtonFrameTemplateNoPortrait")
-    TaxiFrame.GetNineSlicePiece = nil
-    TaxiFrame.TitleBg:Hide()
-
-    -- The detailed map is a child frame, so its textures otherwise cover the left edge.
-    if not leftBorderLayer then
-        leftBorderLayer = CreateFrame("Frame", nil, TaxiFrame)
-        leftBorderLayer:SetAllPoints(TaxiFrame)
-        leftBorderLayer:EnableMouse(false)
-        TaxiFrame.TopLeftCorner:SetParent(leftBorderLayer)
-        TaxiFrame.BotLeftCorner:SetParent(leftBorderLayer)
-        TaxiFrame.LeftBorder:SetParent(leftBorderLayer)
-    end
-    leftBorderLayer:SetFrameLevel(TaxiRouteMap:GetFrameLevel() + 2)
-end
 -- Shared taxi art from TaxiFrame.lua; the green location marker is unchanged.
 local currentIcon = 137033
 local reachableIcon = "Interface\\TaxiFrame\\UI-Taxi-Icon-White"
 local unavailableIcon = "Interface\\TaxiFrame\\UI-Taxi-Icon-Nub"
 local zoneAtlas = "poi-traveldirections-arrow"
-local favoriteAtlas = "PetJournal-FavoritesIcon"
 local otherLocationsIcon = 132172 -- Original Special-group icon.
 
 -- Temporary presentation grouping only. Never used to identify a destination.
@@ -283,35 +237,7 @@ local function GetRow(index)
     if rows[index] then
         return rows[index]
     end
-    local row = CreateFrame("Button", nil, window.content)
-    row:SetHeight(ROW_HEIGHT)
-    row:SetPoint("TOPLEFT", 0, -(index - 1) * ROW_HEIGHT)
-    row:SetPoint("TOPRIGHT", 0, -(index - 1) * ROW_HEIGHT)
-    row:SetMotionScriptsWhileDisabled(true)
-    local background = row:CreateTexture(nil, "BACKGROUND")
-    background:SetAtlas("UI-Character-Info-Line-Bounce")
-    background:SetAllPoints()
-    row:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
-    row.icon = row:CreateTexture(nil, "ARTWORK")
-    row.icon:SetSize(16, 16)
-    row.icon:SetPoint("TOPLEFT", 6, -3)
-    row.favorite = row:CreateTexture(nil, "OVERLAY")
-    row.favorite:SetAtlas(favoriteAtlas)
-    row.favorite:SetSize(16, 16)
-    row.favorite:SetPoint("TOPRIGHT", -6, -3)
-    row.label = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    row.label:SetPoint("TOPLEFT", 28, -3)
-    row.label:SetPoint("TOPRIGHT", -28, -3)
-    row.label:SetJustifyH("LEFT")
-    row.label:SetWordWrap(false)
-    row.detail = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    row.detail:SetPoint("BOTTOMLEFT", 28, 4)
-    row.detail:SetPoint("BOTTOMRIGHT", -6, 4)
-    row.detail:SetJustifyH("LEFT")
-    row.detail:SetWordWrap(false)
-    row.nodeNumber = row:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-    row.nodeNumber:SetPoint("BOTTOMRIGHT", -6, 4)
-    row.nodeNumber:SetJustifyH("RIGHT")
+    local row = addonCore.CreateDestinationRow(window, index, ROW_HEIGHT)
     row:SetScript("OnClick", RowOnClick)
     row:SetScript("OnEnter", RowOnEnter)
     row:SetScript("OnLeave", RowOnLeave)
@@ -488,16 +414,7 @@ function module:Refresh(resetScroll, focusCurrentZone)
 end
 
 local function CreateWindow()
-    window = CreateFrame("Frame", "OnFlightDestinationWindow", TaxiFrame)
-    window:Hide()
-    window:SetPoint("TOPLEFT", TaxiFrame.InsetBg, "TOPRIGHT", 0, 24)
-    window:SetPoint("BOTTOMRIGHT", TaxiFrame, "BOTTOMRIGHT", 0, 0)
-    window:EnableMouse(true)
-    -- The existing CharacterFrame artwork remains behind the destination list.
-    local background = window:CreateTexture(nil, "BACKGROUND")
-    background:SetAtlas("UI-Character-Info-General-BG")
-    background:SetPoint("TOPLEFT", 0, -24)
-    background:SetPoint("BOTTOMRIGHT", -2, 2)
+    window = addonCore:CreateDestinationFrame()
     window:SetScript("OnHide", function()
         ClearHover()
         UpdateUnknownButtons()
@@ -507,64 +424,22 @@ local function CreateWindow()
             row:Hide()
         end
     end)
-    window.back = CreateFrame("Button", nil, window, "UIPanelButtonTemplate")
-    window.back:SetSize(85, 22)
-    window.back:SetPoint("TOPLEFT", 16, -35)
-    window.back:SetText(L["< Back"])
     window.back:SetScript("OnClick", function()
         selectedZone = nil
         ClearSearch()
         module:Refresh(true)
     end)
-    window.header = window:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    window.header:SetJustifyH("LEFT")
-    window.header:SetWordWrap(false)
-    window.search = CreateFrame("EditBox", nil, window, "SearchBoxTemplate")
-    window.search:SetSize(115, 20)
-    window.search:SetPoint("RIGHT", window, "TOPRIGHT", -18, -46)
-    -- Keep the native magnifier, instructions, clear button, and focus scripts.
     window.search:HookScript("OnTextChanged", function(self)
         if not self.clearing and window:IsShown() then
             module:Refresh(true)
         end
     end)
-    window.scroll = CreateFrame("ScrollFrame", nil, window, "ScrollFrameTemplate")
-    window.scroll:SetPoint("TOPLEFT", 16, -68)
-    window.scroll:SetPoint("BOTTOMRIGHT", -35, 48)
-    window.scroll:EnableMouseWheel(true)
     window.scroll:SetPanExtent(ROW_HEIGHT)
-    window.content = CreateFrame("Frame", nil, window.scroll)
-    window.content:SetSize(window.scroll:GetWidth(), 1)
-    window.scroll:SetScrollChild(window.content)
-    window.scroll:HookScript("OnSizeChanged", function(self, width, height)
-        window.content:SetWidth(width)
-        self:SetVerticalScroll(math.min(self:GetVerticalScroll(), math.max(0, window.content:GetHeight() - height)))
-    end)
-    window.empty = window.scroll:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    window.empty:SetPoint("TOPLEFT", 12, -20)
-    window.empty:SetPoint("TOPRIGHT", -12, -20)
-    window.empty:SetJustifyH("CENTER")
-    window.showUnknown = CreateFrame("CheckButton", nil, window, "UICheckButtonTemplate")
-    window.showUnknown:SetSize(24, 24)
-    window.showUnknown:SetPoint("BOTTOMLEFT", 16, 20)
-    window.showUnknown.Text:SetText(L["Show Unknown Flight Points"])
-    window.showUnknown:SetHitRectInsets(0, -window.showUnknown.Text:GetStringWidth(), 0, 0)
     window.showUnknown:SetScript("OnClick", function(self)
         addonCore.db.profile.showUnknownFlightPoints = self:GetChecked()
         module:Refresh(false)
     end)
-    local hint = window:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    hint:SetPoint("BOTTOM", 0, 12)
-    hint:SetText(L["Shift-click a destination to toggle favorites."])
-    window.tabs = {}
-    for index, data in ipairs({{"favorites", L["Favorites"], 134411}, {"zones", L["By Zone"], 132172}}) do
-        local tab = CreateFrame("Frame", nil, window, "LargeSideTabButtonTemplate")
-        tab:EnableMouse(true)
-        tab:SetPoint("TOPLEFT", TaxiFrame, "TOPRIGHT", 0, -30 - (index - 1) * (tab:GetHeight() + 2))
-        tab.Icon:SetTexture(data[3])
-        tab:SetFillToInterior(true)
-        tab.tooltipText = data[2]
-        local key = data[1]
+    for key, tab in pairs(window.tabs) do
         tab:SetCustomOnMouseUpHandler(function(_, button, upInside)
             if button == "LeftButton" and upInside then
                 selectedTab, selectedZone = key, nil
@@ -572,7 +447,6 @@ local function CreateWindow()
                 module:Refresh(true, key == "zones")
             end
         end)
-        window.tabs[key] = tab
     end
 end
 
@@ -603,16 +477,7 @@ function module:TAXIMAP_CLOSED()
 end
 
 function module:OnEnable()
-    StyleTaxiFrame()
-    -- Keep Blizzard's 580x580 taxi map fixed while its outer frame grows.
-    TaxiFrame.InsetBg:ClearAllPoints()
-    TaxiFrame.InsetBg:SetPoint("TOPLEFT", TaxiFrame, "TOPLEFT", 4, -24)
-    TaxiFrame.InsetBg:SetPoint("BOTTOMRIGHT", TaxiFrame, "TOPLEFT", 584, -604)
-    TaxiFrame:SetWidth(expandedWidth)
-    SetUIPanelAttribute(TaxiFrame, "width", expandedPanelWidth)
-    if TaxiFrame:IsShown() then
-        UpdateUIPanelPositions(TaxiFrame)
-    end
+    addonCore.ExpandTaxiFrame()
     self:RegisterMessage("OnFlight_TaxiMapReady", "TAXIMAP_OPENED")
     self:RegisterMessage("OnFlight_DiagnosticsChanged", function()
         if window and window:IsShown() then
@@ -629,29 +494,10 @@ function module:OnDisable()
     self:UnregisterAllMessages()
     self:UnregisterAllEvents()
     self:TAXIMAP_CLOSED()
-    TaxiFrame.InsetBg:ClearAllPoints()
-    TaxiFrame.InsetBg:SetPoint("TOPLEFT", TaxiFrame, "TOPLEFT", 4, -24)
-    TaxiFrame.InsetBg:SetPoint("BOTTOMRIGHT", TaxiFrame, "BOTTOMRIGHT", -6, 4)
-    TaxiFrame:SetWidth(taxiWidth)
-    SetUIPanelAttribute(TaxiFrame, "width", taxiPanelWidth)
-    if TaxiFrame:IsShown() then
-        UpdateUIPanelPositions(TaxiFrame)
-    end
+    addonCore.RestoreTaxiFrame()
 end
 
-local toggle = CreateFrame("Button", "OnFlight_TaxiFrameToggleButton", TaxiFrame)
-toggle:SetSize(32, 32)
-toggle:SetPoint("CENTER", TaxiFrame, "TOPLEFT", taxiWidth - 60, -45)
-toggle:SetFrameLevel(TaxiFrame:GetFrameLevel() + 5)
-toggle:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-local icon = toggle:CreateTexture(nil, "BACKGROUND")
-icon:SetTexture(132172)
-icon:SetSize(20, 20)
-icon:SetPoint("CENTER")
-local border = toggle:CreateTexture(nil, "OVERLAY")
-border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
-border:SetSize(54, 54)
-border:SetPoint("TOPLEFT")
+local toggle = addonCore:CreateTaxiFrameToggle()
 toggle:SetScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_TOPLEFT")
     GameTooltip:AddLine(L["Left Click to Toggle Flight Destinations View"], 1, 1, 1)

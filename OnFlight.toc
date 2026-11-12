@@ -12,6 +12,7 @@ embeds.xml
 locales\locales.xml
 OnFlight.lua
 TaxiMapArtwork.lua
+TaxiMapFrame.lua
 GossipTravel.lua
 Communication.lua
 TimerBar.lua
@@ -20,6 +21,7 @@ GossipEditor.lua
 Commands.lua
 Settings.xml
 Broker.lua
+DestinationFrame.lua
 Destinations.lua
 Quartz.lua
 
