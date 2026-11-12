@@ -305,40 +305,48 @@ function addonCore:InitializeSettings()
         return not bar.db.profile.compactMode
     end)
     Heading(L["Appearance"])
-    local colorEntries = {{"backgroundColor", L["Background Color"],
-                             L["Color behind the bar fill. Keeps the current transparency."]},
-                          {"barColor", L["Known Flight Color"],
-                             L["Bar fill used for the countdown when OnFlight has a measured flight duration."]},
-                          {"unknownFlightColor", L["Unknown Flight Color"],
-                             L["Bar fill used when no measured duration is saved for the flight's source and destination. The timer shows elapsed time instead of time remaining."]},
-                          {"borderColor", L["Border Color"],
-                             L["Color of the frame edge. Choose its artwork with Border Texture."]},
-                          {"fontColor", L["Font Color"], L["Color shared by location names and the timer text."]}}
-    local colors = {}
-    -- Register companions before selectors; create their controls in the existing order below.
-    for _, entry in ipairs(colorEntries) do
-        colors[entry[1]] = BarSetting(entry[1], "string", entry[2], false, true)
+    local function ColorControl(setting, tooltip)
+        layout:AddInitializer(AddControl(Settings.CreateControlInitializer("OnFlightSettingsColorTemplate", setting,
+            nil, tooltip)))
     end
-    local fontSize = BarSetting("fontSize", "number", L["Font Size"])
+    Heading(L["Bar"])
+    local barColor = BarSetting("barColor", "string", L["Known Flight Color"], false, true)
     AddControl(LSMC:CreateStatusbarDropdown(barCategory,
         BarSetting("barTexture", "string", L["Bar Texture"]),
         L["Artwork used for the bar fill and background. Choices come from LibSharedMedia and may include textures supplied by other addons."],
-        colors.barColor))
+        barColor))
+    ColorControl(barColor, L["Bar fill used for the countdown when OnFlight has a measured flight duration."])
+    ColorControl(BarSetting("unknownFlightColor", "string", L["Unknown Flight Color"], false, true),
+        L["Bar fill used when no measured duration is saved for the flight's source and destination. The timer shows elapsed time instead of time remaining."])
+    ColorControl(BarSetting("backgroundColor", "string", L["Background Color"], false, true),
+        L["Color behind the bar fill. Keeps the current transparency."])
+
+    Heading(L["Border"])
+    local borderColor = BarSetting("borderColor", "string", L["Border Color"], false, true)
     AddControl(LSMC:CreateBorderDropdown(barCategory,
         BarSetting("borderTexture", "string", L["Border Texture"]),
         L["Artwork around the edge of the timer bar. Choices come from LibSharedMedia and may include borders supplied by other addons."],
-        colors.borderColor))
+        borderColor))
+    ColorControl(borderColor, L["Color of the frame edge. Choose its artwork with Border Texture."])
+
+    Heading(L["Text"])
+    local fontSize = BarSetting("fontSize", "number", L["Font Size"])
+    local fontColor = BarSetting("fontColor", "string", L["Font Color"], false, true)
+    local fontOutline = BarSetting("fontOutline", "string", L["Font Outline"])
     AddControl(LSMC:CreateFontDropdown(barCategory, BarSetting("fontName", "string", L["Font"]),
         L["Typeface for location names and the timer. Choices come from LibSharedMedia and may include fonts supplied by other addons."],
-        fontSize, colors.fontColor))
+        fontSize, fontColor, fontOutline))
     layout:AddInitializer(AddControl(Settings.CreateControlInitializer("OnFlightSettingsFontSizeTemplate", fontSize,
         nil,
         L["Size of the location names and timer text. Enter a positive number, then press Enter or click away to apply."])))
-    for _, entry in ipairs(colorEntries) do
-        local setting = colors[entry[1]]
-        layout:AddInitializer(AddControl(Settings.CreateControlInitializer("OnFlightSettingsColorTemplate", setting,
-            nil, entry[3])))
-    end
+    ColorControl(fontColor, L["Color shared by location names and the timer text."])
+    AddControl(Settings.CreateDropdown(barCategory, fontOutline, function()
+        local options = Settings.CreateControlTextContainer()
+        options:Add("", L["None"])
+        options:Add("OUTLINE", L["Outline"])
+        options:Add("THICKOUTLINE", L["Thick Outline"])
+        return options:GetData()
+    end, L["Outline style shared by location names and the timer text."]))
     Heading(L["Preview and Reset"])
     Button(L["Preview Known Flight"], function()
         bar:StartTimerBar(L["City1, Zone1"], L["City2, Zone2"], 300)

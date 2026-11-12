@@ -51,6 +51,7 @@ local svDefaults = {
         -- Font Options
         fontName = "2002 Bold",
         fontSize = 15,
+        fontOutline = "",
         fontColor = {
             r = 1,
             g = 1,
@@ -225,7 +226,8 @@ local function ApplyLookAndFeel(self)
     local color = self.unknownFlight and profile.unknownFlightColor or profile.barColor
     self.statusBar:SetStatusBarColor(color.r, color.g, color.b, color.a)
     self.spark:SetHeight(profile.barHeight)
-    self.textObj:SetFont(LSM:Fetch("font", profile.fontName), tonumber(profile.fontSize) or svDefaults.profile.fontSize)
+    self.textObj:SetFont(LSM:Fetch("font", profile.fontName), tonumber(profile.fontSize) or svDefaults.profile.fontSize,
+        profile.fontOutline)
     local font = profile.fontColor
     self.textObj:SetTextColor(font.r, font.g, font.b, font.a)
 end
