@@ -327,7 +327,7 @@ local function SetDestinationRow(row, node, session, profile)
         local durationText = GetDurationText(session.sourceID, node.id)
         local slot = session.idToSlot[node.id]
         local cost = slot and TaxiNodeCost(slot)
-        row.detail:SetText(cost and durationText .. " · " .. GetCoinTextureString(cost) or durationText)
+        row.detail:SetText(cost and durationText .. " · " .. C_CurrencyInfo.GetCoinTextureString(cost) or durationText)
     else
         row.detail:SetText(node.type == "CURRENT" and TAXINODEYOUAREHERE or L["Unavailable"])
     end
