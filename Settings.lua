@@ -293,7 +293,7 @@ function addonCore:InitializeSettings()
         L["Moves the bar from its anchor position. Positive values move up; negative values move down."])
     Slider("barWidth", L["Minimum Width"], 10, 1000, 10, false,
         L["The bar grows wider when needed to fit its text. This sets its minimum width."])
-    Slider("barHeight", L["Height"], 10, 300, 1, false, L["Vertical size of the timer bar, including its border."])
+    Slider("barHeight", L["Height"], 20, 300, 1, false, L["Vertical size of the timer bar, including its border."])
     Heading(L["Display"])
     local compact = AddControl(Settings.CreateCheckbox(barCategory,
         BarSetting("compactMode", "boolean", L["Compact Mode"]),

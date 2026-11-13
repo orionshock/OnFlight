@@ -211,7 +211,8 @@ local function ApplyLookAndFeel(self)
     if self:GetWidth() ~= profile.barWidth then
         self:SetWidth(profile.barWidth)
     end
-    self:SetHeight(profile.barHeight)
+    local height = math.max(20, profile.barHeight)
+    self:SetHeight(height)
     local location = profile.barLocation
     self:ClearAllPoints()
     self:SetPoint(location.anchorPoint, UIParent, location.relativePoint, location.offsetX, location.offsetY)
