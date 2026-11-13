@@ -1,6 +1,7 @@
 -- Forever group flight status. See docs/PROTOCOL.md for the independent wire protocol.
 -- luacheck: no max line length
 -- luacheck: globals LibStub C_ChatInfo C_AddOns C_Timer IsInGuild CreateFrame GetTime GetServerTime IsInRaid IsInGroup NameUtil wipe
+-- luacheck: globals LE_PARTY_CATEGORY_INSTANCE LE_PARTY_CATEGORY_HOME
 local addonName, addonCore = ...
 local module = addonCore:NewModule("Communication", "AceEvent-3.0")
 local PREFIX, STALE_SECONDS = "OnFlight", 180
@@ -21,9 +22,11 @@ local function IsSelf(sender)
 end
 
 local function Broadcast(message)
-    if IsInRaid(1) then
+    if IsInGroup(LE_PARTY_CATEGORY_INSTANCE) then
+        C_ChatInfo.SendAddonMessage(PREFIX, message, "INSTANCE_CHAT")
+    elseif IsInRaid(LE_PARTY_CATEGORY_HOME) then
         C_ChatInfo.SendAddonMessage(PREFIX, message, "RAID")
-    elseif IsInGroup(1) then
+    elseif IsInGroup(LE_PARTY_CATEGORY_HOME) then
         C_ChatInfo.SendAddonMessage(PREFIX, message, "PARTY")
     else
         C_ChatInfo.SendAddonMessage(PREFIX, message, "WHISPER", NameUtil.GetUnmodifiedUnitFullName("player"))
@@ -50,7 +53,7 @@ function module:GetRemoteFlights()
 end
 
 function module:CHAT_MSG_ADDON(_, prefix, message, channel, sender)
-    if prefix ~= PREFIX or (channel ~= "PARTY" and channel ~= "RAID") or IsSelf(sender) then
+    if prefix ~= PREFIX or (channel ~= "PARTY" and channel ~= "RAID" and channel ~= "INSTANCE_CHAT") or IsSelf(sender) then
         return
     end
     local source, start, command, destination = message:match("^(%d+):(%d+):([^:]+):(%d+)$")

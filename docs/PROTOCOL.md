@@ -2,10 +2,11 @@
 
 ## Transport
 
-Prefix: `OnFlight`. Send to normal `RAID`, otherwise normal `PARTY`, or
-self-`WHISPER` when solo. OnFlight receives only party/raid announcements and
-ignores its own. Sender identity is the unmodified full character name, including
-Forever surnames. No guild or instance-chat distribution.
+Prefix: `OnFlight`. Send to `INSTANCE_CHAT` when in an instance group, otherwise
+normal `RAID`, normal `PARTY`, or self-`WHISPER` when solo. Use one channel per
+announcement. OnFlight receives `INSTANCE_CHAT`, `RAID`, and `PARTY` announcements
+and ignores its own. Sender identity is the unmodified full character name,
+including Forever surnames. No guild distribution.
 
 Delivery and late discovery are best effort. No requests, acknowledgments, or
 roster-triggered announcements. Gossip flights are not shared.
@@ -62,6 +63,7 @@ remove an active flight; wait for matching `E` or stale expiry.
 
 `_G.FlightTimes` is the public integration interface, independent of timer display.
 Local flight state remains available when sharing is disabled.
+Instance-group members use the active roster's `partyN` or `raidN` tokens.
 
 ```lua
 FlightTimes:GetFlightInfo(unit) -- flight table or nil; player, partyN, raidN

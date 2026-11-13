@@ -23,6 +23,7 @@ function API:GetTaxiNodeName(nodeID)
 end
 
 local function SenderUnit(sender)
+    -- The default group APIs use the active roster, including instance groups.
     local prefix = IsInRaid() and "raid" or "party"
     for i = 1, GetNumGroupMembers() do
         local unit = prefix .. i

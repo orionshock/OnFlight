@@ -134,7 +134,6 @@ function module:OnInitialize()
         OnLeave = LeaveTooltip
     })
     DBIcon:Register("OnFlight", broker, addonCore.db.profile.minimap)
-    DBIcon:Hide("OnFlight") -- Enablement follows initialization, after the profile exists.
     addonCore.db.RegisterCallback(self, "OnProfileChanged", "RefreshMinimapIcon")
     addonCore.db.RegisterCallback(self, "OnProfileCopied", "RefreshMinimapIcon")
     addonCore.db.RegisterCallback(self, "OnProfileReset", "RefreshMinimapIcon")
