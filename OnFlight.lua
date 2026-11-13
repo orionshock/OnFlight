@@ -160,6 +160,21 @@ function addonCore:OnInitialize()
     playerFaction = UnitFactionGroup("player")
     self.db = LibStub("AceDB-3.0"):New("OnFlightSV", svDefaults, true)
     db = self.db
+    -- Preserve all profiles when renaming the timer module and its AceDB namespace.
+    local namespaces = db.sv.namespaces
+    if namespaces and namespaces.StatusBarModule then
+        namespaces.TimerBar = namespaces.TimerBar or namespaces.StatusBarModule
+        namespaces.StatusBarModule = nil
+    end
+    for _, profile in pairs(db.profiles) do
+        local state = profile.moduleState
+        if state and rawget(state, "StatusBarModule") ~= nil then
+            if rawget(state, "TimerBar") == nil then
+                state.TimerBar = state.StatusBarModule
+            end
+            state.StatusBarModule = nil
+        end
+    end
     -- Flights only survive loading screens within this Lua session, never a reload/login.
     wipe(db.char)
     db.global.flightTimes[playerFaction] = db.global.flightTimes[playerFaction] or {}

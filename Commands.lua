@@ -23,11 +23,11 @@ SlashCmdList.ONFLIGHT = function(input)
             addonCore:OpenSettings()
         end
     elseif command == "test known" then
-        addonCore:GetModule("StatusBarModule"):TogglePreview(false)
+        addonCore:GetModule("TimerBar"):TogglePreview(false)
     elseif command == "test unknown" then
-        addonCore:GetModule("StatusBarModule"):TogglePreview(true)
+        addonCore:GetModule("TimerBar"):TogglePreview(true)
     elseif command == "test stop" then
-        addonCore:GetModule("StatusBarModule"):StopPreview()
+        addonCore:GetModule("TimerBar"):StopPreview()
     elseif command == "debug" then
         local profile = addonCore.db.profile
         profile.taxiDebug = not profile.taxiDebug

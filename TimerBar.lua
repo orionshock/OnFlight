@@ -1,10 +1,10 @@
 --[[
     This Module's Entire Job is to handle the Status Bar
 ]]
--- luacheck: globals LibStub FlightTimes GetTime
+-- luacheck: globals LibStub
 local addonName, addonCore = ...
-local moduleName = "StatusBarModule"
-local statusBarModuleCore = addonCore:NewModule(moduleName)
+local moduleName = "TimerBar"
+local timerBar = addonCore:NewModule(moduleName)
 
 local L = LibStub("AceLocale-3.0"):GetLocale(addonName)
 local LSM = LibStub("LibSharedMedia-3.0")
@@ -69,9 +69,9 @@ local svDefaults = {
         }
     }
 }
-statusBarModuleCore.svDefaults = svDefaults
+timerBar.svDefaults = svDefaults
 
-function statusBarModuleCore:OnInitialize()
+function timerBar:OnInitialize()
     self.db = addonCore.db:RegisterNamespace(moduleName, svDefaults)
     db = self.db
     self:SetEnabledState(addonCore.db.profile.moduleState[moduleName])
@@ -81,51 +81,37 @@ function statusBarModuleCore:OnInitialize()
     db.RegisterCallback(self, "OnProfileCopied", "OnProfileUpdated")
 end
 
-function statusBarModuleCore:OnEnable()
+function timerBar:OnEnable()
     if not self.OnFlightTimerFrame then
         self:SetupTimerBar()
     end
-    FlightTimes:RegisterCallback("FlightStarted", self.FlightStarted, self)
-    FlightTimes:RegisterCallback("FlightStopped", self.FlightStopped, self)
-    addonCore:RegisterCallback("OnFlight_Taxi_RESUME", function(owner)
-        owner:ShowCurrentFlight()
-    end, self)
+    addonCore:RegisterCallback("OnFlight_Taxi_Start", self.ShowCurrentFlight, self)
+    addonCore:RegisterCallback("OnFlight_Taxi_RESUME", self.ShowCurrentFlight, self)
+    addonCore:RegisterCallback("OnFlight_Taxi_Stop", self.StopTimerBar, self)
+    addonCore:RegisterCallback("OnFlight_Taxi_EarlyExit", self.StopTimerBar, self)
+    addonCore:RegisterCallback("OnFlight_Taxi_FAILED_ENTRY", self.StopTimerBar, self)
     addonCore:RegisterCallback("OnFlight_Taxi_Suspend", function(owner)
         owner.OnFlightTimerFrame:Hide()
-    end, self)
-    addonCore:RegisterCallback("OnFlight_Taxi_FAILED_ENTRY", function(owner)
-        owner:StopTimerBar("Failed entry")
     end, self)
     self:ShowCurrentFlight()
 end
 
-function statusBarModuleCore:OnDisable()
-    FlightTimes:UnregisterCallback("FlightStarted", self)
-    FlightTimes:UnregisterCallback("FlightStopped", self)
+function timerBar:OnDisable()
+    addonCore:UnregisterCallback("OnFlight_Taxi_Start", self)
     addonCore:UnregisterCallback("OnFlight_Taxi_RESUME", self)
-    addonCore:UnregisterCallback("OnFlight_Taxi_Suspend", self)
+    addonCore:UnregisterCallback("OnFlight_Taxi_Stop", self)
+    addonCore:UnregisterCallback("OnFlight_Taxi_EarlyExit", self)
     addonCore:UnregisterCallback("OnFlight_Taxi_FAILED_ENTRY", self)
+    addonCore:UnregisterCallback("OnFlight_Taxi_Suspend", self)
     self:StopTimerBar("Module disabled")
 end
 
 -- Rebuild presentation if enabled after the flight started or after a loading screen.
-function statusBarModuleCore:ShowCurrentFlight(flight)
-    flight = flight or FlightTimes:GetFlightInfo("player")
-    if not flight then return end
-    local duration = flight.duration ~= "U" and flight.duration or nil
-    local remaining = duration and duration - (GetTime() - flight.startTime)
-    -- Custom gossip labels belong to OnFlight's presentation, not the public taxi names.
+function timerBar:ShowCurrentFlight()
     local current = addonCore:GetCurrentFlight()
-    self:StartTimerBar(flight.sourceName or current.sourceName,
-        flight.destinationName or current.destinationName, duration, remaining, not duration, true)
-end
-
-function statusBarModuleCore:FlightStarted(unit, flight)
-    if unit == "player" then self:ShowCurrentFlight(flight) end
-end
-
-function statusBarModuleCore:FlightStopped(unit)
-    if unit == "player" then self:StopTimerBar("Flight stopped") end
+    local elapsed, remaining, duration = addonCore:GetCurrentFlightProgress()
+    if not current or elapsed == nil then return end
+    self:StartTimerBar(current.sourceName, current.destinationName, duration, remaining, not duration, true)
 end
 
 local function disp_time(time)
@@ -137,14 +123,15 @@ end
 local function timerBarOnUpdate(self, elapsed)
     local timeOnFlight
     if self.isFlightDisplay then
-        local flight = FlightTimes:GetFlightInfo("player")
-        if not flight then
-            statusBarModuleCore:StopTimerBar("No active flight")
+        timeOnFlight, self.timeRemaining, self.duration = addonCore:GetCurrentFlightProgress()
+        if timeOnFlight == nil then
+            timerBar:StopTimerBar("No active flight progress")
             return
         end
-        timeOnFlight = GetTime() - flight.startTime
-        self.duration = flight.duration ~= "U" and flight.duration or nil
-        self.timeRemaining = self.duration and self.duration - timeOnFlight
+        local current = addonCore:GetCurrentFlight()
+        if self.timeRemaining and current.resumeRemaining then
+            self.timeRemaining = current.resumeRemaining - timeOnFlight
+        end
     end
     local profile = db.profile
     local displayedTime
@@ -159,7 +146,7 @@ local function timerBarOnUpdate(self, elapsed)
             self.timeRemaining = self.timeRemaining - elapsed
         end
         if self.timeRemaining <= 0 then
-            statusBarModuleCore:StopTimerBar("timerBarOnUpdate timedout")
+            timerBar:StopTimerBar("timerBarOnUpdate timedout")
             return
         end
         displayedTime = self.timeRemaining
@@ -233,7 +220,7 @@ local function ApplyLookAndFeel(self)
     self.textObj:SetTextColor(font.r, font.g, font.b, font.a)
 end
 
-function statusBarModuleCore:SetupTimerBar()
+function timerBar:SetupTimerBar()
     local OnFlightTimerFrame = CreateFrame("Frame", "OnFlightTimerFrame", UIParent, "BackdropTemplate")
     local statusBar = CreateFrame("StatusBar", "OnFlightTimerFrameStatusBar", OnFlightTimerFrame)
     LowerFrameLevel(statusBar)
@@ -288,7 +275,7 @@ function statusBarModuleCore:SetupTimerBar()
 end
 
 -- Previews own only presentation; the core's flight record always takes precedence.
-function statusBarModuleCore:TogglePreview(unknownFlight)
+function timerBar:TogglePreview(unknownFlight)
     if not self:IsEnabled() or addonCore:GetCurrentFlight() then
         return
     end
@@ -306,13 +293,13 @@ function statusBarModuleCore:TogglePreview(unknownFlight)
     self.previewMode = mode
 end
 
-function statusBarModuleCore:StopPreview()
+function timerBar:StopPreview()
     if self.previewMode then
         self:StopTimerBar("Preview stopped")
     end
 end
 
-function statusBarModuleCore:StartTimerBar(taxiSrcName, taxiDestName, duration, timeRemaining, unknownFlight,
+function timerBar:StartTimerBar(taxiSrcName, taxiDestName, duration, timeRemaining, unknownFlight,
     isFlightDisplay) -- Bar Text and Duration in seconds--
     if not self:IsEnabled() then
         return
@@ -356,7 +343,7 @@ function statusBarModuleCore:StartTimerBar(taxiSrcName, taxiDestName, duration, 
     timerFrame:Show()
 end
 
-function statusBarModuleCore:StopTimerBar(reason)
+function timerBar:StopTimerBar(reason)
     self.previewMode = nil
     if not self.OnFlightTimerFrame then
         return
@@ -373,7 +360,7 @@ function statusBarModuleCore:StopTimerBar(reason)
 end
 
 ---
-function statusBarModuleCore:OnProfileUpdated()
+function timerBar:OnProfileUpdated()
     if self.OnFlightTimerFrame then
         ApplyLookAndFeel(self.OnFlightTimerFrame)
     end

@@ -9,7 +9,7 @@ local addonName, addonCore = ...
 local LSMC = LibStub("LibSharedMediaControls-1.0")
 local L = LibStub("AceLocale-3.0"):GetLocale(addonName)
 local Quartz3 = LibStub("AceAddon-3.0"):GetAddon("Quartz3", true)
-local statusBarModuleCore = addonCore:GetModule("StatusBarModule")
+local timerBar = addonCore:GetModule("TimerBar")
 local settings = {}
 
 local function Register(category, key, kind, name, default, get, set)
@@ -34,7 +34,7 @@ function addonCore:RefreshSettings(...)
             local key = select(index, ...)
             Notify(settings[key])
             -- Short Names listens to Compact Mode as well as module enablement.
-            if key == "StatusBarModule" then
+            if key == "TimerBar" then
                 Notify(settings.flightDisplay)
                 Notify(settings.bar_compactMode)
             end
@@ -45,15 +45,15 @@ end
 function addonCore:GetFlightDisplay()
     local profile = self.db.profile
     -- Keep the existing bar preference until a display is explicitly selected.
-    local display = profile.flightDisplay or (profile.moduleState.StatusBarModule and "builtin" or "none")
+    local display = profile.flightDisplay or (profile.moduleState.TimerBar and "builtin" or "none")
     return display == "quartz" and not Quartz3 and "builtin" or display
 end
 
 function addonCore:ApplyFlightDisplay()
     local display = self:GetFlightDisplay()
-    local bar = self:GetModule("StatusBarModule")
+    local bar = self:GetModule("TimerBar")
     local enabled = display == "builtin"
-    self.db.profile.moduleState.StatusBarModule = enabled
+    self.db.profile.moduleState.TimerBar = enabled
     if enabled and not bar:IsEnabled() then
         bar:Enable()
     elseif not enabled and bar:IsEnabled() then
@@ -65,7 +65,7 @@ function addonCore:ApplyFlightDisplay()
         end
         Quartz3:SetModuleEnabled("OnFlight", display == "quartz")
     end
-    self:RefreshSettings("StatusBarModule")
+    self:RefreshSettings("TimerBar")
 end
 
 function addonCore:SetFlightDisplay(display)
@@ -89,7 +89,7 @@ function addonCore:RefreshDiagnostics()
 end
 
 function addonCore:ResetBarSettings()
-    statusBarModuleCore.db:ResetProfile(true)
+    timerBar.db:ResetProfile(true)
     addonCore:RefreshSettings()
 end
 
@@ -215,7 +215,7 @@ function addonCore:InitializeSettings()
     end)
     Settings.CreateCheckbox(category, minimap,
         L["Left-click to resend your flight. Right-click for settings. Drag to move."])
-    local bar = self:GetModule("StatusBarModule")
+    local bar = self:GetModule("TimerBar")
     local display = Register(category, "flightDisplay", "string", L["Flight Timer Display"], "builtin", function()
         return self:GetFlightDisplay()
     end, function(value)
