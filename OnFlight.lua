@@ -1,44 +1,35 @@
---[[
-    New OnFlight System
-    Main Addon handles the Flight System
-        Hooks,
-        Figuring out when we're on flights and get off them
-        Send Events via AceEvent when things happen.
-
-        StatusBarMdoule handles the display
-Events:
-
-OnFlight_Taxi_Start
-taxiSrcName --Full Proper name from API for where we started
-taxiDestName --Full Proper name from API for where we are going
-taxiDuration --Time in seconds from DB for how long the flight is.
-    --if duration is 0 then it's an Unknown Flight--
-unknownFlight -- true if there is no duration
-
-OnFlight_Taxi_Stop
-taxiSrcName --Full Proper name from API for where we started
-taxiDestName --Full Proper name from API for where we are going
-taxiDuration --Time in seconds from DB for how long the flight is.
-
-OnFlight_Taxi_EarlyExit
---Fired when any condtion happens that would prematurly exit a flight
-taxiSrcName --Full Proper name from API for where we started
-taxiDestName --Full Proper name from API for where we are going
-reason -- why did we exit early, a Displayable Name
-
-OnFlight_Taxi_FAILED_ENTRY
---Fired when we think we're about to get on a fligth but it dosn't work
-taxiSrcName --Full Proper name from API for where we started
-taxiDestName --Full Proper name from API for where we are going
-
-]] -- luacheck: no max line length
--- luacheck: globals LibStub InCombatLockdown TaxiNodeName GetNumRoutes NumTaxiNodes TaxiNodeGetType
--- luacheck: globals UnitFactionGroup string UnitOnTaxi UnitInVehicle CreateFrame tostringall GetTime GetServerTime date SecondsToTime abs hooksecurefunc
+-- Flight detection, duration learning, and the shared native callback registry.
+-- luacheck: no max line length
+-- luacheck: globals LibStub TaxiNodeName GetNumRoutes NumTaxiNodes TaxiNodeGetType
+-- luacheck: globals UnitFactionGroup UnitOnTaxi UnitInVehicle CreateFrame tostringall GetTime GetServerTime SecondsToTime abs hooksecurefunc string
 -- luacheck: globals C_SummonInfo OnFlight_GetEstimatedTime TaxiFrame TaxiGetNodeSlot OnFlight_TaxiFrame_TooltipHook GameTooltip wipe
+-- luacheck: globals CreateFromMixins CallbackRegistryMixin C_TaxiMap GetTaxiMapID TakeTaxiNode
 local addonName, addonCore = ...
 addonCore = LibStub("AceAddon-3.0"):NewAddon(addonCore, "OnFlight", "AceEvent-3.0")
 addonCore.OnFlightPrefixText = "|cff0040ffOn|cFF00FF00Flight|r|r"
 _G[addonName] = addonCore
+
+local callbacks = CreateFromMixins(CallbackRegistryMixin)
+callbacks:OnLoad()
+callbacks:GenerateCallbackEvents({
+    "FlightStarted", "FlightStopped",
+    "OnFlight_Taxi_Start", "OnFlight_Taxi_Stop", "OnFlight_Taxi_EarlyExit",
+    "OnFlight_Taxi_FAILED_ENTRY", "OnFlight_Taxi_RESUME", "OnFlight_Taxi_Suspend",
+    "OnFlight_RemoteFlightUpdated", "OnFlight_RemoteFlightRemoved",
+    "OnFlight_TaxiMapReady", "OnFlight_DiagnosticsChanged"
+})
+
+function addonCore:RegisterCallback(event, callback, owner, ...)
+    return callbacks:RegisterCallback(event, callback, owner, ...)
+end
+
+function addonCore:UnregisterCallback(event, owner)
+    callbacks:UnregisterCallback(event, owner)
+end
+
+function addonCore:TriggerEvent(event, ...)
+    callbacks:TriggerEvent(event, ...)
+end
 
 local L = LibStub("AceLocale-3.0"):GetLocale(addonName)
 
@@ -190,9 +181,6 @@ function addonCore:OnEnable()
     self:RegisterEvent("LFG_PROPOSAL_DONE")
 end
 
--- function addonCore:OnDisable()
--- end
-
 function addonCore:ChatMessage(...)
     if not self.db.profile.showChat then
         return
@@ -225,21 +213,21 @@ local function UpdateFlight(_, elapsed)
             local duration = addonCore:GetFlightDuration(flight.sourceID, flight.destinationID)
             if duration then
                 if flight.resumeRemaining then
-                    addonCore:SendMessage("OnFlight_Taxi_RESUME", flight.sourceName, flight.destinationName, duration,
+                    addonCore:TriggerEvent("OnFlight_Taxi_RESUME", flight.sourceName, flight.destinationName, duration,
                         flight.resumeRemaining)
                     addonCore:ChatMessage(L["Resume On Taxi: %s --> %s"]:format(flight.sourceName,
                         flight.destinationName))
                 else
-                    addonCore:SendMessage("OnFlight_Taxi_Start", flight.sourceName, flight.destinationName, duration,
+                    addonCore:TriggerEvent("OnFlight_Taxi_Start", flight.sourceName, flight.destinationName, duration,
                         false)
                     addonCore:ChatMessage(L["On Taxi: %s --> %s -- %s"]:format(flight.sourceName,
                         flight.destinationName, SecondsToTime(duration)))
                 end
             elseif flight.resumeRemaining then
-                addonCore:SendMessage("OnFlight_Taxi_RESUME", flight.sourceName, flight.destinationName, nil, nil, true)
+                addonCore:TriggerEvent("OnFlight_Taxi_RESUME", flight.sourceName, flight.destinationName, nil, nil, true)
                 addonCore:ChatMessage(L["Resume On Taxi: %s --> %s"]:format(flight.sourceName, flight.destinationName))
             else
-                addonCore:SendMessage("OnFlight_Taxi_Start", flight.sourceName, flight.destinationName, 0, true)
+                addonCore:TriggerEvent("OnFlight_Taxi_Start", flight.sourceName, flight.destinationName, 0, true)
                 addonCore:ChatMessage(L["On Taxi: %s --> %s"]:format(flight.sourceName, flight.destinationName))
             end
         elseif flight.startedAt then
@@ -248,11 +236,11 @@ local function UpdateFlight(_, elapsed)
                 local times = db.global.flightTimes[playerFaction]
                 times[flight.sourceID] = times[flight.sourceID] or {}
                 times[flight.sourceID][flight.destinationID] = math.floor(duration)
-                addonCore:SendMessage("OnFlight_Taxi_Stop", flight.sourceName, flight.destinationName, duration)
+                addonCore:TriggerEvent("OnFlight_Taxi_Stop", flight.sourceName, flight.destinationName, duration)
                 addonCore:ChatMessage(L["Off Taxi: %s --> %s -- %s"]:format(flight.sourceName, flight.destinationName,
                     SecondsToTime(duration)))
             else
-                addonCore:SendMessage("OnFlight_Taxi_EarlyExit", flight.sourceName, flight.destinationName,
+                addonCore:TriggerEvent("OnFlight_Taxi_EarlyExit", flight.sourceName, flight.destinationName,
                     flight.earlyExit)
                 addonCore:ChatMessage(L["Taxi Ended Early: %s"]:format(flight.earlyExit))
             end
@@ -262,7 +250,7 @@ local function UpdateFlight(_, elapsed)
     if not flight.onTaxi then
         flight.elapsedNotOnFlight = (flight.elapsedNotOnFlight or 0) + elapsed
         if flight.elapsedNotOnFlight > 5 then
-            addonCore:SendMessage("OnFlight_Taxi_FAILED_ENTRY", flight.sourceName, flight.destinationName)
+            addonCore:TriggerEvent("OnFlight_Taxi_FAILED_ENTRY", flight.sourceName, flight.destinationName)
             ResetFlight()
         end
     end
@@ -403,7 +391,7 @@ function addonCore:TAXIMAP_OPENED(event, uiMapSystem)
                     tb.OnFlighted = true
                 end
             end
-            self:SendMessage("OnFlight_TaxiMapReady")
+            self:TriggerEvent("OnFlight_TaxiMapReady")
         end
     end
     -- Poll only until the open map has populated its slot mappings.
@@ -431,7 +419,7 @@ function addonCore:PLAYER_ENTERING_WORLD(event, isInitialLogin, isReloadingUi)
             -- World-entry resume uses the measured duration and full elapsed time.
             flight.resumeRemaining = nil
             local elapsed, remaining, duration = self:GetCurrentFlightProgress()
-            self:SendMessage("OnFlight_Taxi_RESUME", flight.sourceName, flight.destinationName, duration, remaining,
+            self:TriggerEvent("OnFlight_Taxi_RESUME", flight.sourceName, flight.destinationName, duration, remaining,
                 not duration, elapsed)
         end
     end
@@ -444,7 +432,7 @@ function addonCore:PLAYER_LEAVING_WORLD(event)
     -- UnitOnTaxi may briefly be false during a transfer. Keep the timing origin.
     flight.suspended = true
     flightMonitor:SetScript("OnUpdate", nil)
-    self:SendMessage("OnFlight_Taxi_Suspend")
+    self:TriggerEvent("OnFlight_Taxi_Suspend")
 end
 
 ---External / Internal APIs
@@ -461,12 +449,6 @@ end
 
 function addonCore:IsOnFlight()
     return flight ~= nil and not flight.suspended
-end
-
-function addonCore:GetCurrentFlightDetail()
-    if self:IsOnFlight() then
-        return flight.sourceName, flight.destinationName
-    end
 end
 
 function addonCore:GetCurrentFlightProgress()

@@ -41,26 +41,12 @@ local function RemoveRemote(sender, reason, now)
         startedAt = flight.startServerTime,
         expiresAt = now + STALE_SECONDS
     }
-    module:SendMessage("OnFlight_RemoteFlightRemoved", sender, flight, reason)
-end
-
-function module:GetRemoteFlight(sender)
-    return remoteFlights[sender]
+    addonCore:TriggerEvent("OnFlight_RemoteFlightRemoved", sender, flight, reason)
 end
 
 -- Consumers may read these records; only this module changes them.
 function module:GetRemoteFlights()
     return remoteFlights
-end
-
-function module:GetRemoteFlightProgress(sender)
-    local flight = remoteFlights[sender]
-    if not flight then
-        return
-    end
-    local elapsed = math.max(0, GetServerTime() - flight.startServerTime)
-    local remaining = flight.duration and math.max(0, flight.duration - elapsed)
-    return elapsed, remaining, flight.duration
 end
 
 function module:CHAT_MSG_ADDON(_, prefix, message, channel, sender)
@@ -117,12 +103,12 @@ function module:CHAT_MSG_ADDON(_, prefix, message, channel, sender)
         lastSeenAt = now
     }
     remoteFlights[sender] = flight
-    self:SendMessage("OnFlight_RemoteFlightUpdated", sender, flight)
+    addonCore:TriggerEvent("OnFlight_RemoteFlightUpdated", sender, flight)
 end
 
 function module:FlightStarted()
     local flight = addonCore:GetCurrentFlight()
-    if not flight or not flight.startedAt or not flight.startServerTime then
+    if not flight or flight.gossip or not flight.startedAt or not flight.startServerTime then
         return
     end
     if outgoing and outgoing.flight == flight then
@@ -229,10 +215,10 @@ function module:OnEnable()
         end)
     end
     self:RegisterEvent("CHAT_MSG_ADDON")
-    self:RegisterMessage("OnFlight_Taxi_Start", "FlightStarted")
-    self:RegisterMessage("OnFlight_Taxi_RESUME", "FlightStarted")
-    self:RegisterMessage("OnFlight_Taxi_Stop", "FlightEnded")
-    self:RegisterMessage("OnFlight_Taxi_EarlyExit", "FlightEnded")
+    addonCore:RegisterCallback("OnFlight_Taxi_Start", self.FlightStarted, self)
+    addonCore:RegisterCallback("OnFlight_Taxi_RESUME", self.FlightStarted, self)
+    addonCore:RegisterCallback("OnFlight_Taxi_Stop", self.FlightEnded, self)
+    addonCore:RegisterCallback("OnFlight_Taxi_EarlyExit", self.FlightEnded, self)
     elapsedSinceUpdate = 0
     timer:Show()
 end
@@ -240,7 +226,10 @@ end
 function module:OnDisable()
     timer:Hide()
     self:UnregisterAllEvents()
-    self:UnregisterAllMessages()
+    addonCore:UnregisterCallback("OnFlight_Taxi_Start", self)
+    addonCore:UnregisterCallback("OnFlight_Taxi_RESUME", self)
+    addonCore:UnregisterCallback("OnFlight_Taxi_Stop", self)
+    addonCore:UnregisterCallback("OnFlight_Taxi_EarlyExit", self)
     -- Keep the frozen announcement if re-enabled on this flight; never send a false E.
     for sender in pairs(remoteFlights) do
         RemoveRemote(sender, "disabled", GetServerTime())

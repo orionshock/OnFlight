@@ -78,7 +78,7 @@ local function ShowArtwork()
     shownArtwork = frame
 end
 
-addonCore:RegisterMessage("OnFlight_TaxiMapReady", ShowArtwork)
+addonCore:RegisterCallback("OnFlight_TaxiMapReady", ShowArtwork, addonCore)
 TaxiFrame:HookScript("OnHide", HideArtwork)
 
 -- A displayed taxi map can change without the frame closing.

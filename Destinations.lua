@@ -478,12 +478,12 @@ end
 
 function module:OnEnable()
     addonCore.ExpandTaxiFrame()
-    self:RegisterMessage("OnFlight_TaxiMapReady", "TAXIMAP_OPENED")
-    self:RegisterMessage("OnFlight_DiagnosticsChanged", function()
+    addonCore:RegisterCallback("OnFlight_TaxiMapReady", self.TAXIMAP_OPENED, self)
+    addonCore:RegisterCallback("OnFlight_DiagnosticsChanged", function(owner)
         if window and window:IsShown() then
-            self:Refresh(false)
+            owner:Refresh(false)
         end
-    end)
+    end, self)
     self:RegisterEvent("TAXIMAP_CLOSED")
     if addonCore:GetTaxiSession() then
         self:Open()
@@ -491,7 +491,8 @@ function module:OnEnable()
 end
 
 function module:OnDisable()
-    self:UnregisterAllMessages()
+    addonCore:UnregisterCallback("OnFlight_TaxiMapReady", self)
+    addonCore:UnregisterCallback("OnFlight_DiagnosticsChanged", self)
     self:UnregisterAllEvents()
     self:TAXIMAP_CLOSED()
     addonCore.RestoreTaxiFrame()

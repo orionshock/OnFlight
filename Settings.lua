@@ -85,7 +85,7 @@ function addonCore:RefreshDiagnostics()
     if owner and owner.OnFlightGossipID and not (self.db.profile.showGossipConfig or self.db.profile.gossipdebug) then
         GameTooltip:Hide()
     end
-    self:SendMessage("OnFlight_DiagnosticsChanged")
+    self:TriggerEvent("OnFlight_DiagnosticsChanged")
 end
 
 function addonCore:ResetBarSettings()

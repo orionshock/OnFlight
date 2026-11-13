@@ -32,6 +32,7 @@ function addonCore:StartGossipFlight(optionID)
         return
     end
     self:StartAFlight(source, destination)
+    self:GetCurrentFlight().gossip = true
 end
 
 do

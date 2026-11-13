@@ -4,8 +4,8 @@
 local addonName, addonCore = ...
 local L = LibStub("AceLocale-3.0"):GetLocale(addonName)
 local frame = CreateFrame("Frame")
-local messages = {}
-LibStub("AceEvent-3.0"):Embed(messages)
+local trackingEvents = {"OnFlight_Taxi_Start", "OnFlight_Taxi_RESUME", "OnFlight_Taxi_Suspend",
+                        "OnFlight_Taxi_Stop", "OnFlight_Taxi_EarlyExit", "OnFlight_Taxi_FAILED_ENTRY"}
 local enabled, lastMapID = false, nil
 local hooks = {}
 local MAX_NODES, MAX_HOPS = 500, 100
@@ -488,7 +488,9 @@ function addonCore:UpdateTaxiDebug()
     if not enabled then
         frame:UnregisterAllEvents()
         frame:SetScript("OnUpdate", nil)
-        messages:UnregisterAllMessages()
+        for _, event in ipairs(trackingEvents) do
+            addonCore:UnregisterCallback(event, frame)
+        end
         frame.mapOpen, lastOnTaxi = nil, nil
         return
     end
@@ -500,11 +502,10 @@ function addonCore:UpdateTaxiDebug()
     frame:RegisterEvent("TAXIMAP_OPENED")
     frame:RegisterEvent("TAXIMAP_CLOSED")
     frame:SetScript("OnUpdate", OnUpdate)
-    for _, message in ipairs({"OnFlight_Taxi_Start", "OnFlight_Taxi_RESUME", "OnFlight_Taxi_Suspend",
-                              "OnFlight_Taxi_Stop", "OnFlight_Taxi_EarlyExit", "OnFlight_Taxi_FAILED_ENTRY"}) do
-        messages:RegisterMessage(message, function(event, ...)
-            record("tracking", {name = event, args = pack(...)})
-        end)
+    for _, event in ipairs(trackingEvents) do
+        addonCore:RegisterCallback(event, function(_, name, ...)
+            record("tracking", {name = name, args = pack(...)})
+        end, frame, event)
     end
     lastOnTaxi = first(call(UnitOnTaxi, "player"))
     record("client", {build = call(GetBuildInfo)})

@@ -16,6 +16,7 @@ TaxiMapArtwork.lua
 TaxiMapFrame.lua
 GossipTravel.lua
 Communication.lua
+FlightTimes.lua
 TimerBar.lua
 Defaults.lua
 GossipEditor.lua

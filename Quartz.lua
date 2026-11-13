@@ -16,7 +16,7 @@
 	with this program; if not, write to the Free Software Foundation, Inc.,
 	51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 ]]
--- Adapted for OnFlight on 2026-11-09: local flight messages replace InFlight hooks.
+-- OnFlight flight callbacks replace InFlight hooks.
 -- luacheck: globals LibStub UnitCastingInfo UnitChannelInfo
 local addonName, addonCore = ...
 local Quartz3 = LibStub("AceAddon-3.0"):GetAddon("Quartz3", true)
@@ -25,7 +25,7 @@ if not Quartz3 then return end
 local L = LibStub("AceLocale-3.0"):GetLocale("Quartz3")
 local OL = LibStub("AceLocale-3.0"):GetLocale(addonName)
 local MODNAME = "OnFlight"
-local Flight = Quartz3:NewModule(MODNAME, "AceHook-3.0", "AceEvent-3.0")
+local Flight = Quartz3:NewModule(MODNAME, "AceHook-3.0")
 local Player = Quartz3:GetModule("Player")
 local unpack = unpack
 local db, getOptions
@@ -92,12 +92,12 @@ function Flight:OnEnable()
     if addonCore:GetFlightDisplay() == "quartz" then
         Quartz3:SetModuleEnabled("Flight", false)
     end
-    self:RegisterMessage("OnFlight_Taxi_Start", "ShowCurrentFlight")
-    self:RegisterMessage("OnFlight_Taxi_RESUME", "ShowCurrentFlight")
-    self:RegisterMessage("OnFlight_Taxi_Suspend", "EndFlight")
-    self:RegisterMessage("OnFlight_Taxi_Stop", "EndFlight")
-    self:RegisterMessage("OnFlight_Taxi_EarlyExit", "EndFlight")
-    self:RegisterMessage("OnFlight_Taxi_FAILED_ENTRY", "EndFlight")
+    addonCore:RegisterCallback("OnFlight_Taxi_Start", self.ShowCurrentFlight, self)
+    addonCore:RegisterCallback("OnFlight_Taxi_RESUME", self.ShowCurrentFlight, self)
+    addonCore:RegisterCallback("OnFlight_Taxi_Suspend", self.EndFlight, self)
+    addonCore:RegisterCallback("OnFlight_Taxi_Stop", self.EndFlight, self)
+    addonCore:RegisterCallback("OnFlight_Taxi_EarlyExit", self.EndFlight, self)
+    addonCore:RegisterCallback("OnFlight_Taxi_FAILED_ENTRY", self.EndFlight, self)
     -- A real cast has already populated the bar when this callback runs.
     self:SecureHook(Player, "UNIT_SPELLCAST_START", function() self:EndFlight(true) end)
     self:SecureHook(Player, "OnDisable", "EndFlight")
@@ -107,7 +107,12 @@ function Flight:OnEnable()
 end
 
 function Flight:OnDisable()
-    self:UnregisterAllMessages()
+    addonCore:UnregisterCallback("OnFlight_Taxi_Start", self)
+    addonCore:UnregisterCallback("OnFlight_Taxi_RESUME", self)
+    addonCore:UnregisterCallback("OnFlight_Taxi_Suspend", self)
+    addonCore:UnregisterCallback("OnFlight_Taxi_Stop", self)
+    addonCore:UnregisterCallback("OnFlight_Taxi_EarlyExit", self)
+    addonCore:UnregisterCallback("OnFlight_Taxi_FAILED_ENTRY", self)
     self:UnhookAll()
     self:EndFlight()
     conflictReported = nil

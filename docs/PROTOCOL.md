@@ -1,20 +1,14 @@
 # OnFlight flight-status protocol
 
-WoW Forever addons can exchange flight status using Blizzard addon messages. No OnFlight installation or shared library is required.
-
 ## Transport
 
-Register the prefix `OnFlight` with `C_ChatInfo.RegisterAddonMessagePrefix`. Send through `C_ChatInfo.SendAddonMessage` using one channel per announcement:
+Prefix: `OnFlight`. Send to normal `RAID`, otherwise normal `PARTY`, or
+self-`WHISPER` when solo. OnFlight receives only party/raid announcements and
+ignores its own. Sender identity is the unmodified full character name, including
+Forever surnames. No guild or instance-chat distribution.
 
-- `RAID` when in a normal raid.
-- `PARTY` when in a normal party.
-- `WHISPER` to the local character when solo.
-
-Use `NameUtil.GetUnmodifiedUnitFullName("player")` for the self-whisper target. Forever names include surnames; do not treat the surname as a realm.
-
-Receive through `CHAT_MSG_ADDON`, whose first four arguments are prefix, payload, channel and sender. Accept the channels above and keep sender identities as Blizzard supplies them. Receivers may include their own announcements. Guild and instance-chat channels are not used.
-
-Delivery is best effort. There are no roster-triggered announcements, requests, handshakes or acknowledgments. Late joiners may discover flights through scheduled repeats; discovery is not guaranteed.
+Delivery and late discovery are best effort. No requests, acknowledgments, or
+roster-triggered announcements. Gossip flights are not shared.
 
 ## Payload
 
@@ -24,46 +18,75 @@ Exactly four colon-separated fields:
 sourceNodeID:startServerTime:durationOrCommand:destinationNodeID
 ```
 
-Source and destination are positive decimal integer Blizzard taxi-node IDs. Custom endpoint names are unsupported. The start time is `GetServerTime()` at confirmed boarding, in shared server seconds.
+Node IDs are positive decimal canonical Blizzard taxi-node IDs, not map slots.
+`startServerTime` is the positive integer `GetServerTime()` at confirmed boarding.
 
 | Third field | Meaning |
 | --- | --- |
-| Positive decimal integer | Active flight with that measured duration in seconds |
-| `U` | Active flight with an unknown duration |
-| `E` | Flight actually ended, for any reason |
+| Positive decimal integer | Active flight; total measured duration in seconds |
+| `U` | Active flight; unknown duration |
+| `E` | Flight ended |
 
-Examples:
-
-```text
-22:1800000000:85:25
-22:1800000000:E:25
-25:1800000100:U:22
-25:1800000100:E:22
-```
-
-Reject zero, empty or extra fields, fractional numbers, signs and unrecognized commands. Commands are uppercase. There are no additional fields or message types.
+Reject empty or extra fields, zero, fractions, signs, and other commands.
 
 ## Sending
 
-Keep the source, destination, boarding timestamp and advertised duration or `U` fixed throughout the flight.
+Keep endpoints, boarding timestamp, and duration/`U` fixed throughout the flight.
 
-- Known duration: announce on confirmed boarding, then repeat the identical payload at 30%, 50% and 70% progress. Each threshold fires once. If several thresholds are crossed during a loading gap, send once and consume all crossed thresholds.
-- Unknown duration: announce `U` on confirmed boarding, then repeat the identical payload every 60 seconds. After a delayed update, send once and schedule the next repeat 60 seconds later. Never replace `U` with a number during that flight.
-- Actual end: send `E` with the original source, boarding timestamp and destination. ETA expiration, an early-landing request or a loading screen does not end a flight.
+- Known duration: announce at boarding and repeat at 30%, 50%, and 70%. Consume
+  each threshold once; crossing several during a loading gap sends one repeat.
+- Unknown duration: announce at boarding and every 60 seconds. After a delay,
+  send once and schedule the next repeat 60 seconds later.
+- End: send `E` with the original endpoints and timestamp on actual completion
+  or early exit. ETA expiry, early-landing requests, and loading screens are not ends.
 
-An optional manual resend repeats the original announcement without changing its timestamp or scheduled repeats. Use the same schedule for solo self-whispers.
+Manual resend repeats the original announcement without changing the schedule.
 
 ## Receiving
 
-Keep one active flight per sender. Source, boarding timestamp and destination identify the flight.
+Keep one active flight per sender, identified by endpoints and boarding timestamp.
 
-- A strictly newer boarding timestamp replaces the current flight.
-- Identical repeats refresh the last-heard time without restarting progress.
+- A newer timestamp replaces the current flight.
+- Identical repeats refresh freshness without restarting the flight.
 - Ignore older announcements and conflicting data at the same timestamp.
-- `E` removes only the matching flight. Ignore unmatched `E` messages.
+- `E` removes only a matching flight.
+- Expire after `max(180, duration)` seconds without a matching announcement;
+  unknown flights use 180 seconds.
+- Retain ended timestamps for 180 seconds to reject delayed announcements with
+  the same or older timestamp. Unmatched `E` messages do not create a marker.
 
-Expire unknown flights after 180 seconds without a matching announcement. For known flights, use `max(180, duration)` seconds without one. Expiry cleans up missing traffic; it does not prove landing. A short recently-ended timestamp marker can prevent delayed announcements from restoring a completed flight.
+Elapsed time is `max(0, GetServerTime() - startServerTime)`. ETA expiry does not
+remove an active flight; wait for matching `E` or stale expiry.
 
-Calculate elapsed time as `max(0, GetServerTime() - startServerTime)`. For known flights, remaining time is `max(0, duration - elapsed)`. Keep overdue flights active until matching `E` or stale expiry.
+## Local Lua API
 
-Unknown flights have no ETA. Display elapsed time or an in-flight indicator until matching `E` or stale expiry; unknown duration never means zero seconds.
+`_G.FlightTimes` is the public integration interface, independent of timer display.
+Local flight state remains available when sharing is disabled.
+
+```lua
+FlightTimes:GetFlightInfo(unit) -- flight table or nil; player, partyN, raidN
+FlightTimes:GetTaxiNodeName(nodeID) -- complete Blizzard name or nil
+FlightTimes:RegisterCallback(event, callback, owner) -- returns owner
+FlightTimes:UnregisterCallback(event, owner)
+```
+
+`FlightStarted` and `FlightStopped` deliver `(owner, unit, flight)`. One callback
+per owner per event; registration does not replay existing flights. Repeated
+announcements and unit-token changes do not restart flights.
+
+Flight tables are read-only:
+
+| Field | Value |
+| --- | --- |
+| `sourceName`, `destinationName` | Complete, unchanged Blizzard names resolved locally, or nil |
+| `sourceNodeID`, `destinationNodeID` | Canonical numeric taxi-node IDs, or nil |
+| `startTime` | Receiving client's `GetTime()` seconds; approximate for remote flights |
+| `duration` | Fixed total seconds or `"U"` |
+
+`GetTaxiNodeName` also works without an active flight. Custom gossip labels are
+not exposed as Blizzard names.
+
+Flights become public after confirmed boarding or remote discovery and persist
+through loading screens. Stops include early exits, remote expiration, and group
+departure. The final table is supplied to the stop callback after public state is
+removed. Remote timing and discovery remain best effort.

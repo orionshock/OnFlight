@@ -1,45 +1,48 @@
--- Independent OnFlight wire receiver and broker display. See docs/PROTOCOL.md.
--- Flight data comes only from CHAT_MSG_ADDON, including our own received packets.
+-- FlightTimes consumer: presentation and refresh belong to the broker.
 -- luacheck: no max line length
--- luacheck: globals LibStub C_ChatInfo C_TaxiMap CreateFrame GetTime GetServerTime NameUtil wipe
+-- luacheck: globals LibStub FlightTimes CreateFrame GetTime NameUtil IsInRaid GetNumGroupMembers UnitIsUnit
 local addonName, addonCore = ...
 local module = addonCore:NewModule("LDBLauncher", "AceEvent-3.0")
 local L = LibStub("AceLocale-3.0"):GetLocale(addonName)
 local LDB, DBIcon = LibStub("LibDataBroker-1.1"), LibStub("LibDBIcon-1.0")
-local flights = {}
-local playerName, broker, nodeNames
+local broker
 local tooltip, tooltipOwner, lastTooltipUpdate
 local timer = CreateFrame("Frame")
 timer:Hide()
 
-local function PositiveInteger(value)
-    return value and value > 0 and value < math.huge and value == math.floor(value)
-end
-
-local function DestinationName(id)
-    if not nodeNames then
-        nodeNames = {}
-        for _, node in ipairs(C_TaxiMap.GetTaxiNodesForMap(947)) do
-            nodeNames[node.nodeID] = node.name
+local function GroupFlights()
+    local flights = {}
+    local function AddUnit(unit)
+        local flight = FlightTimes:GetFlightInfo(unit)
+        if flight then
+            flights[NameUtil.GetUnmodifiedUnitFullName(unit)] = flight
         end
     end
-    return nodeNames[id] or tostring(id)
+    AddUnit("player")
+    local prefix = IsInRaid() and "raid" or "party"
+    for i = 1, GetNumGroupMembers() do
+        local unit = prefix .. i
+        if not UnitIsUnit(unit, "player") then AddUnit(unit) end
+    end
+    return flights
 end
 
 local function TimeText(flight, now)
-    local elapsed = math.max(0, now - flight.startServerTime)
-    local seconds = flight.duration and math.max(0, flight.duration - elapsed) or elapsed
+    local elapsed = math.max(0, now - flight.startTime)
+    local seconds = flight.duration ~= "U" and math.max(0, flight.duration - elapsed) or elapsed
+    seconds = math.floor(seconds)
     return ("%d:%02d"):format(math.floor(seconds / 60), seconds % 60)
 end
 
 local function UpdateText()
-    local flight = flights[playerName]
-    broker.text = flight and L["OnFlight: %s"]:format(TimeText(flight, GetServerTime())) or L["OnFlight"]
+    local flight = FlightTimes:GetFlightInfo("player")
+    broker.text = flight and L["OnFlight: %s"]:format(TimeText(flight, GetTime())) or L["OnFlight"]
 end
 
 local function RenderTooltip(tip)
     tip:ClearLines()
     tip:SetText(L["OnFlight - Group Flights"])
+    local flights = GroupFlights()
     local senders = {}
     for sender in pairs(flights) do
         senders[#senders + 1] = sender
@@ -49,11 +52,11 @@ local function RenderTooltip(tip)
         tip:AddLine(L["No flights reported"], 1, 1, 1)
     else
         tip:AddDoubleLine(L["Player / Destination"], L["Remaining"], 1, 0.82, 0, 1, 0.82, 0)
-        local now = GetServerTime()
+        local now = GetTime()
         for _, sender in ipairs(senders) do
             local flight = flights[sender]
-            tip:AddDoubleLine(L["%s | %s"]:format(sender, DestinationName(flight.destinationID)),
-                flight.duration and TimeText(flight, now) or L["Flying"],
+            tip:AddDoubleLine(L["%s | %s"]:format(sender, (flight.destinationName or tostring(flight.destinationNodeID or "?"))),
+                flight.duration ~= "U" and TimeText(flight, now) or L["Flying"],
                 1, 1, 1, 1, 1, 1)
         end
     end
@@ -65,7 +68,7 @@ local function RenderTooltip(tip)
 end
 
 local function UpdateTimer()
-    timer:SetShown(next(flights) ~= nil or tooltip ~= nil)
+    timer:SetShown(next(GroupFlights()) ~= nil or tooltip ~= nil)
 end
 
 local function ShowTooltip(tip)
@@ -82,51 +85,7 @@ local function LeaveTooltip()
     UpdateTimer()
 end
 
-function module:CHAT_MSG_ADDON(_, prefix, message, channel, sender)
-    if prefix ~= "OnFlight" then
-        return
-    end
-    if channel ~= "PARTY" and channel ~= "RAID" and channel ~= "WHISPER" then
-        return
-    end
-    local source, start, command, destination = message:match("^(%d+):(%d+):([^:]+):(%d+)$")
-    if not source then
-        return
-    end
-    local sourceID, startServerTime, destinationID = tonumber(source), tonumber(start), tonumber(destination)
-    if not PositiveInteger(sourceID) or not PositiveInteger(startServerTime) or not PositiveInteger(destinationID) then
-        return
-    end
-    local duration
-    if command ~= "U" and command ~= "E" then
-        if not command:match("^%d+$") then
-            return
-        end
-        duration = tonumber(command)
-        if not PositiveInteger(duration) then
-            return
-        end
-    end
-    local current = flights[sender]
-    local matches = current and current.sourceID == sourceID and current.startServerTime == startServerTime and
-                        current.destinationID == destinationID
-    if command == "E" then
-        if matches then
-            flights[sender] = nil
-        end
-    elseif matches then
-        if current.duration == duration then
-            current.lastSeenAt = GetServerTime()
-        end
-    elseif not current or startServerTime > current.startServerTime then
-        flights[sender] = {
-            sourceID = sourceID,
-            destinationID = destinationID,
-            startServerTime = startServerTime,
-            duration = duration,
-            lastSeenAt = GetServerTime()
-        }
-    end
+function module:FlightChanged()
     UpdateText()
     UpdateTimer()
 end
@@ -138,13 +97,6 @@ timer:SetScript("OnUpdate", function(_, elapsed)
         return
     end
     elapsedSinceUpdate = 0
-    local now = GetServerTime()
-    for sender, flight in pairs(flights) do
-        -- Expiry follows missing announcements, not the countdown reaching zero.
-        if now - flight.lastSeenAt >= math.max(180, flight.duration or 0) then
-            flights[sender] = nil
-        end
-    end
     UpdateText()
     if tooltip and tooltip:IsShown() and tooltip:GetOwner() == tooltipOwner then
         if GetTime() - lastTooltipUpdate >= 1 then
@@ -165,7 +117,6 @@ function module:RefreshMinimapIcon()
 end
 
 function module:OnInitialize()
-    playerName = NameUtil.GetUnmodifiedUnitFullName("player")
     self:SetEnabledState(addonCore.db.profile.moduleState.LDBLauncher)
     broker = LDB:NewDataObject("OnFlight", {
         type = "launcher",
@@ -190,16 +141,19 @@ function module:OnInitialize()
 end
 
 function module:OnEnable()
-    C_ChatInfo.RegisterAddonMessagePrefix("OnFlight")
-    self:RegisterEvent("CHAT_MSG_ADDON")
+    FlightTimes:RegisterCallback("FlightStarted", self.FlightChanged, self)
+    FlightTimes:RegisterCallback("FlightStopped", self.FlightChanged, self)
+    self:RegisterEvent("GROUP_ROSTER_UPDATE", "FlightChanged")
+    UpdateText()
     self:RefreshMinimapIcon()
     UpdateTimer()
 end
 
 function module:OnDisable()
     self:UnregisterAllEvents()
-    wipe(flights)
-    UpdateText()
+    FlightTimes:UnregisterCallback("FlightStarted", self)
+    FlightTimes:UnregisterCallback("FlightStopped", self)
+    broker.text = L["OnFlight"]
     if tooltip then
         tooltip:Hide()
     end
