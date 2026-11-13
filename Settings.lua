@@ -195,18 +195,18 @@ function addonCore:InitializeSettings()
         self.db.profile.showChat = value
     end)
     Settings.CreateCheckbox(category, showChat,
-        L["Reports when flights start, resume, finish, or end early. Includes timing information when available."])
+        L["Show flight status and timing in chat."])
     local showUnknown = Register(category, "showUnknownFlightPoints", "boolean", L["Show Unknown Flight Points"], false,
         function() return self.db.profile.showUnknownFlightPoints end,
         function(value) self.db.profile.showUnknownFlightPoints = value end)
     Settings.CreateCheckbox(category, showUnknown,
-        L["Show unreachable flight points in the destination browser and mark their locations in red on the flight map. These destinations cannot be selected."])
+        L["Show unreachable destinations and mark them red on the flight map."])
     local worldMaps = Register(category, "useWorldMapFlightMaps", "boolean",
         L["Use World Map Style Flight Maps"], true,
         function() return self.db.profile.useWorldMapFlightMaps end,
         function(value) self.db.profile.useWorldMapFlightMaps = value end)
     Settings.CreateCheckbox(category, worldMaps,
-        L["Use detailed continent artwork on the flight map instead of Blizzard's simplified taxi-map background."])
+        L["Use detailed continent artwork for flight maps."])
     local minimap = Register(category, "showMinimapButton", "boolean", L["Show Minimap Button"], true, function()
         return not self.db.profile.minimap.hide
     end, function(value)
@@ -214,7 +214,7 @@ function addonCore:InitializeSettings()
         self:GetModule("LDBLauncher"):RefreshMinimapIcon()
     end)
     Settings.CreateCheckbox(category, minimap,
-        L["Shows the OnFlight minimap launcher. Left-click to resend your flight; right-click to open settings. Drag to move it."])
+        L["Left-click to resend your flight. Right-click for settings. Drag to move."])
     local bar = self:GetModule("StatusBarModule")
     local display = Register(category, "flightDisplay", "string", L["Flight Timer Display"], "builtin", function()
         return self:GetFlightDisplay()
@@ -227,10 +227,10 @@ function addonCore:InitializeSettings()
         options:Add("builtin", L["Built-in Timer Bar"])
         if Quartz3 then
             options:Add("quartz", L["Quartz"],
-                L["Shows known flights on Quartz's Player bar and disables Quartz's original Flight module."])
+                L["Show known flights on Quartz's Player bar. Replaces Quartz's Flight module."])
         end
         return options:GetData()
-    end, L["Choose a flight timer display. Quartz is available when installed. None hides OnFlight's timer bars; flight tracking, learning, and the broker display continue."])
+    end, L["Choose a timer display. None hides the timer without stopping flight tracking."])
     local barCategory, layout = Settings.RegisterVerticalLayoutSubcategory(category, L["Flight Timer Bar"])
     local function AddControl(initializer)
         initializer:SetParentInitializer(enableControl, function()
@@ -284,23 +284,23 @@ function addonCore:InitializeSettings()
         end
         return options:GetData()
     end
-    Dropdown("anchorPoint", L["Bar Anchor"], Anchors, true, L["Point on the timer bar attached to the Relative Anchor."])
+    Dropdown("anchorPoint", L["Bar Anchor"], Anchors, true, L["Bar point attached to the Relative Anchor."])
     Dropdown("relativePoint", L["Relative Anchor"], Anchors, true,
-        L["Point on the screen's main UI frame (UIParent) that the bar attaches to. TOP for both anchors aligns their top centers before offsets."])
+        L["Screen point the bar attaches to."])
     Slider("offsetX", L["Horizontal Offset"], -1000, 1000, 1, true,
-        L["Moves the bar from its anchor position. Positive values move right; negative values move left."])
+        L["Positive values move right; negative values move left."])
     Slider("offsetY", L["Vertical Offset"], -1000, 1000, 1, true,
-        L["Moves the bar from its anchor position. Positive values move up; negative values move down."])
+        L["Positive values move up; negative values move down."])
     Slider("barWidth", L["Minimum Width"], 10, 1000, 10, false,
-        L["The bar grows wider when needed to fit its text. This sets its minimum width."])
-    Slider("barHeight", L["Height"], 20, 300, 1, false, L["Vertical size of the timer bar, including its border."])
+        L["Minimum bar width. Expands to fit the text."])
+    Slider("barHeight", L["Height"], 20, 300, 1, false, L["Timer bar height, including its border."])
     Heading(L["Display"])
     local compact = AddControl(Settings.CreateCheckbox(barCategory,
         BarSetting("compactMode", "boolean", L["Compact Mode"]),
-        L["Shows only the remaining time for flights with a known duration. Unknown flights still show location names and elapsed time."]))
+        L["Show only the countdown on known flights."]))
     local short = AddControl(Settings.CreateCheckbox(barCategory,
         BarSetting("shortNames", "boolean", L["Short Destination Names"]),
-        L["Omits zone suffixes from source and destination names. Unavailable in Compact Mode because known flights show only the timer."]))
+        L["Hide zones in location names. Unavailable in Compact Mode."]))
     short:SetParentInitializer(compact, function()
         return not bar.db.profile.compactMode
     end)
@@ -313,54 +313,54 @@ function addonCore:InitializeSettings()
     local barColor = BarSetting("barColor", "string", L["Known Flight Color"], false, true)
     AddControl(LSMC:CreateStatusbarDropdown(barCategory,
         BarSetting("barTexture", "string", L["Bar Texture"]),
-        L["Artwork used for the bar fill and background. Choices come from LibSharedMedia and may include textures supplied by other addons."],
+        L["Timer bar texture."],
         barColor))
-    ColorControl(barColor, L["Bar fill used for the countdown when OnFlight has a measured flight duration."])
+    ColorControl(barColor, L["Bar color for known flight times."])
     ColorControl(BarSetting("unknownFlightColor", "string", L["Unknown Flight Color"], false, true),
-        L["Bar fill used when no measured duration is saved for the flight's source and destination. The timer shows elapsed time instead of time remaining."])
+        L["Bar color for unknown flight times."])
     ColorControl(BarSetting("backgroundColor", "string", L["Background Color"], false, true),
-        L["Color behind the bar fill. Keeps the current transparency."])
+        L["Color behind the bar fill."])
 
     Heading(L["Border"])
     local borderColor = BarSetting("borderColor", "string", L["Border Color"], false, true)
     AddControl(LSMC:CreateBorderDropdown(barCategory,
         BarSetting("borderTexture", "string", L["Border Texture"]),
-        L["Artwork around the edge of the timer bar. Choices come from LibSharedMedia and may include borders supplied by other addons."],
+        L["Timer bar border texture."],
         borderColor))
-    ColorControl(borderColor, L["Color of the frame edge. Choose its artwork with Border Texture."])
+    ColorControl(borderColor, L["Timer bar border color."])
 
     Heading(L["Text"])
     local fontSize = BarSetting("fontSize", "number", L["Font Size"])
     local fontColor = BarSetting("fontColor", "string", L["Font Color"], false, true)
     local fontOutline = BarSetting("fontOutline", "string", L["Font Outline"])
     AddControl(LSMC:CreateFontDropdown(barCategory, BarSetting("fontName", "string", L["Font"]),
-        L["Typeface for location names and the timer. Choices come from LibSharedMedia and may include fonts supplied by other addons."],
+        L["Timer bar font."],
         fontSize, fontColor, fontOutline))
     layout:AddInitializer(AddControl(Settings.CreateControlInitializer("OnFlightSettingsFontSizeTemplate", fontSize,
         nil,
-        L["Size of the location names and timer text. Enter a positive number, then press Enter or click away to apply."])))
-    ColorControl(fontColor, L["Color shared by location names and the timer text."])
+        L["Timer bar font size."])))
+    ColorControl(fontColor, L["Timer bar text color."])
     AddControl(Settings.CreateDropdown(barCategory, fontOutline, function()
         local options = Settings.CreateControlTextContainer()
         options:Add("", L["None"])
         options:Add("OUTLINE", L["Outline"])
         options:Add("THICKOUTLINE", L["Thick Outline"])
         return options:GetData()
-    end, L["Outline style shared by location names and the timer text."]))
+    end, L["Timer bar text outline."]))
     Heading(L["Preview and Reset"])
     Button(L["Preview Known Flight"], function()
         bar:TogglePreview(false)
     end,
-        L["Shows a five-minute countdown with sample locations. Click again to stop, or use /onflight test known. The preview stays visible when Settings closes and leaves travel and learned flight times unchanged."])
+        L["Shows a five-minute countdown with sample locations.\n/onflight test known"])
     Button(L["Preview Unknown Flight"], function()
         bar:TogglePreview(true)
     end,
-        L["Shows an elapsed-time display with sample locations. Click again to stop, or use /onflight test unknown. The preview stays visible when Settings closes and leaves travel and learned flight times unchanged."])
+        L["Shows an elapsed-time display with sample locations.\n/onflight test unknown"])
     Button(L["Hide Timer Bar"], function()
         bar:StopTimerBar()
-    end, L["Hides the preview or current flight display. Use /onflight test stop to stop only the preview. Flight tracking and duration learning continue."])
+    end, L["Hide the timer bar.\n/onflight test stop stops only the preview."])
     Button(L["Reset Bar Settings"], function() self:ResetBarSettings() end,
-        L["Restores the current profile's timer-bar appearance and position defaults. Other OnFlight settings and learned flight times stay unchanged."])
+        L["Reset this profile's bar appearance and position."])
     LibStub("AceConfigDialog-3.0"):AddToBlizOptions(addonName, L["Profiles"], category:GetID(), "profiles")
     self:CreateGossipSettings(category, Register)
     self:RefreshGossipEditor()
