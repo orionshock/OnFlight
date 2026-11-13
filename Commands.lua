@@ -22,6 +22,12 @@ SlashCmdList.ONFLIGHT = function(input)
         else
             addonCore:OpenSettings()
         end
+    elseif command == "test known" then
+        addonCore:GetModule("StatusBarModule"):TogglePreview(false)
+    elseif command == "test unknown" then
+        addonCore:GetModule("StatusBarModule"):TogglePreview(true)
+    elseif command == "test stop" then
+        addonCore:GetModule("StatusBarModule"):StopPreview()
     elseif command == "debug" then
         local profile = addonCore.db.profile
         profile.taxiDebug = not profile.taxiDebug
@@ -36,6 +42,7 @@ SlashCmdList.ONFLIGHT = function(input)
         addonCore:RefreshSettings("showChat")
         print(addonCore.OnFlightPrefixText, L["Chat messages %s."]:format(profile.showChat and L["ON"] or L["OFF"]))
     else
-        print(addonCore.OnFlightPrefixText, L["Usage: /onflight | /onflight debug | /onflight debug clear | /onflight chat"])
+        print(addonCore.OnFlightPrefixText,
+            L["Usage: /onflight | /onflight test known | /onflight test unknown | /onflight test stop | /onflight debug | /onflight debug clear | /onflight chat"])
     end
 end

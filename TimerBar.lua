@@ -287,6 +287,31 @@ function statusBarModuleCore:SetupTimerBar()
     self.OnFlightTimerFrame = OnFlightTimerFrame
 end
 
+-- Previews own only presentation; the core's flight record always takes precedence.
+function statusBarModuleCore:TogglePreview(unknownFlight)
+    if not self:IsEnabled() or addonCore:GetCurrentFlight() then
+        return
+    end
+    local mode = unknownFlight and "unknown" or "known"
+    if self.previewMode == mode then
+        self:StopPreview()
+        return
+    end
+    self:StopPreview()
+    if unknownFlight then
+        self:StartTimerBar(L["Unknown1, Zone1"], L["Unknown2, Zone2"], nil, nil, true)
+    else
+        self:StartTimerBar(L["City1, Zone1"], L["City2, Zone2"], 300)
+    end
+    self.previewMode = mode
+end
+
+function statusBarModuleCore:StopPreview()
+    if self.previewMode then
+        self:StopTimerBar("Preview stopped")
+    end
+end
+
 function statusBarModuleCore:StartTimerBar(taxiSrcName, taxiDestName, duration, timeRemaining, unknownFlight,
     isFlightDisplay) -- Bar Text and Duration in seconds--
     if not self:IsEnabled() then
@@ -299,6 +324,9 @@ function statusBarModuleCore:StartTimerBar(taxiSrcName, taxiDestName, duration, 
         return
     end
 
+    if isFlightDisplay then
+        self:StopPreview()
+    end
     local timerFrame = self.OnFlightTimerFrame
 
     timerFrame.isFlightDisplay = isFlightDisplay or false
@@ -329,6 +357,7 @@ function statusBarModuleCore:StartTimerBar(taxiSrcName, taxiDestName, duration, 
 end
 
 function statusBarModuleCore:StopTimerBar(reason)
+    self.previewMode = nil
     if not self.OnFlightTimerFrame then
         return
     end
