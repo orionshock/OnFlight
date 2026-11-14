@@ -181,10 +181,10 @@ end
 local bdrop = {
     edgeSize = 16,
     insets = {
-        left = 4,
-        right = 4,
-        top = 4,
-        bottom = 4
+        left = 6,
+        right = 6,
+        top = 6,
+        bottom = 6
     }
 }
 local function ApplyLookAndFeel(self)
