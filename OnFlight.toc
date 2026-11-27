@@ -10,7 +10,6 @@
 ## X-Curse-Project-ID: 821247
 
 embeds.xml
-libs\LibSharedMediaControls-1.0\LibSharedMediaControls-1.0.lua
 locales\locales.xml
 OnFlight.lua
 TaxiMapArtwork.lua

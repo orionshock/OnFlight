@@ -24,9 +24,7 @@ See [PROTOCOL.md](docs/PROTOCOL.md) for the public flight-status protocol.
 
 ## Media control dependency
 
-The native Settings media previews use LibSharedMediaControls-1.0. Its single
-runtime Lua file is tracked under `libs/LibSharedMediaControls-1.0` so source
-checkouts can load it with OnFlight's existing libraries. `pkgmeta.yaml` pins the
-Git external to the same upstream revision for release packaging. When updating
-this dependency, update the pin and tracked file together. The upstream Lua file
-contains its MIT notice; the standalone demo and dependency copies are excluded.
+The native Settings media previews use LibSharedMediaControls-1.0. The BigWigs
+packager copies the `LibSharedMediaControls-1.0` folder from the latest
+upstream Git tag. For a source checkout, place the runtime Lua file at
+`libs/LibSharedMediaControls-1.0/LibSharedMediaControls-1.0.lua`.

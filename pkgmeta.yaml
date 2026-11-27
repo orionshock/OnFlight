@@ -1,9 +1,5 @@
 package-as: OnFlight
 
-manual-changelog:
-    filename: docs/CHANGELOG.md
-    markup-type: markdown
-
 externals:
     libs/LibStub: https://repos.wowace.com/wow/libstub/trunk
     libs/CallbackHandler-1.0: https://repos.wowace.com/wow/callbackhandler/trunk/CallbackHandler-1.0
@@ -16,22 +12,19 @@ externals:
     libs/AceLocale-3.0: https://repos.curseforge.com/wow/ace3/trunk/AceLocale-3.0
     libs/LibSharedMedia-3.0: https://repos.wowace.com/wow/libsharedmedia-3-0/trunk/LibSharedMedia-3.0
     libs/LibSharedMediaControls-1.0:
-        url: https://github.com/orionshock/LibSharedMediaControls-1.0.git
+        url: https://github.com/orionshock/LibSharedMediaControls.git
         type: git
-        commit: 1761a4317abf784facf75a4acc1d51cfa4fd0fcb
+        tag: latest
+        path: LibSharedMediaControls-1.0
     libs/LibDataBroker-1.1: https://github.com/tekkub/libdatabroker-1-1
     libs/LibDBIcon-1.0: https://repos.wowace.com/wow/libdbicon-1-0/trunk/LibDBIcon-1.0
 
 ignore:
-    - .gitignore
-    - README.md
-    - pkgmeta.yaml
     - .github
+    - .gitignore
     - .previews
     - .vscode
-    - libs/LibSharedMediaControls-1.0/Demo.lua
-    - libs/LibSharedMediaControls-1.0/LibSharedMediaControls-1.0.toc
-    - libs/LibSharedMediaControls-1.0/README.md
-    - libs/LibSharedMediaControls-1.0/LICENSE
-    - libs/LibSharedMediaControls-1.0/AGENT.MD
-    - libs/LibSharedMediaControls-1.0/libs
+    - AGENT.MD
+    - README.md
+    - docs/PROTOCOL.md
+    - pkgmeta.yaml

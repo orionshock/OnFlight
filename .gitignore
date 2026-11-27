@@ -1,6 +1,1 @@
 libs/*
-!libs/LibSharedMediaControls-1.0/
-libs/LibSharedMediaControls-1.0/*
-!libs/LibSharedMediaControls-1.0/LibSharedMediaControls-1.0.lua
-AllTaxiRunner.lua
-.vscode/*
