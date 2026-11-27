@@ -5,8 +5,8 @@
 Prefix: `OnFlight`. Send to `INSTANCE_CHAT` when in an instance group, otherwise
 normal `RAID`, normal `PARTY`, or self-`WHISPER` when solo. Use one channel per
 announcement. OnFlight receives `INSTANCE_CHAT`, `RAID`, and `PARTY` announcements
-and ignores its own. Sender identity is the unmodified full character name,
-including Forever surnames. No guild distribution.
+and ignores its own. The sender key is the exact sender string delivered by
+`CHAT_MSG_ADDON`. No guild distribution.
 
 Delivery and late discovery are best effort. No requests, acknowledgments, or
 roster-triggered announcements. Gossip flights are not shared.
@@ -62,19 +62,23 @@ remove an active flight; wait for matching `E` or stale expiry.
 ## Local Lua API
 
 `_G.FlightTimes` is the public integration interface, independent of timer display.
-Local flight state remains available when sharing is disabled.
-Instance-group members use the active roster's `partyN` or `raidN` tokens.
+Look up remote flights with the exact `CHAT_MSG_ADDON` sender string. Local
+flights use Forever's `NameUtil.GetUnmodifiedUnitFullName("player")`. Consumers
+that need Blizzard unit tokens resolve them against their own roster.
+
+Z-Perl's ArcaneBar integration still uses unit tokens in callback dispatch and
+initial lookups. Both paths need to migrate to the name-based contract.
 
 ```lua
-FlightTimes:GetFlightInfo(unit) -- flight table or nil; player, partyN, raidN
+FlightTimes:GetFlightInfo(playerName) -- flight table or nil
 FlightTimes:GetTaxiNodeName(nodeID) -- complete Blizzard name or nil
 FlightTimes:RegisterCallback(event, callback, owner) -- returns owner
 FlightTimes:UnregisterCallback(event, owner)
 ```
 
-`FlightStarted` and `FlightStopped` deliver `(owner, unit, flight)`. One callback
-per owner per event; registration does not replay existing flights. Repeated
-announcements and unit-token changes do not restart flights.
+`FlightStarted` and `FlightStopped` deliver `(owner, playerName, flight)`.
+There is one callback per owner per event. Registration does not replay existing
+flights. Repeated announcements and roster changes do not restart flights.
 
 Flight tables are read-only:
 
@@ -89,6 +93,7 @@ Flight tables are read-only:
 not exposed as Blizzard names.
 
 Flights become public after confirmed boarding or remote discovery and persist
-through loading screens. Stops include early exits, remote expiration, and group
-departure. The final table is supplied to the stop callback after public state is
+through loading screens. Remote records follow matching end messages, replacement,
+and expiration. Group departure alone leaves the record available until one of
+those occurs. The stop callback receives the final table after public state is
 removed. Remote timing and discovery remain best effort.

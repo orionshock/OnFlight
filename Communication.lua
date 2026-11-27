@@ -1,6 +1,6 @@
 -- Forever group flight status. See docs/PROTOCOL.md for the independent wire protocol.
 -- luacheck: no max line length
--- luacheck: globals LibStub C_ChatInfo C_AddOns C_Timer IsInGuild CreateFrame GetTime GetServerTime IsInRaid IsInGroup NameUtil
+-- luacheck: globals LibStub C_ChatInfo C_AddOns C_Timer IsInGuild CreateFrame GetTime GetServerTime IsInRaid IsInGroup
 -- luacheck: globals LE_PARTY_CATEGORY_INSTANCE LE_PARTY_CATEGORY_HOME
 -- luacheck: globals C_RestrictedActions Enum canaccessvalue issecretvalue tinsert tremove unpack
 local addonName, addonCore = ...
@@ -19,10 +19,6 @@ local function PositiveInteger(value)
     return value and value > 0 and value < math.huge and value == math.floor(value)
 end
 
-local function IsSelf(sender)
-    return sender == NameUtil.GetUnmodifiedUnitFullName("player")
-end
-
 local function Broadcast(message)
     if IsInGroup(LE_PARTY_CATEGORY_INSTANCE) then
         C_ChatInfo.SendAddonMessage(PREFIX, message, "INSTANCE_CHAT")
@@ -30,8 +26,8 @@ local function Broadcast(message)
         C_ChatInfo.SendAddonMessage(PREFIX, message, "RAID")
     elseif IsInGroup(LE_PARTY_CATEGORY_HOME) then
         C_ChatInfo.SendAddonMessage(PREFIX, message, "PARTY")
-    else
-        C_ChatInfo.SendAddonMessage(PREFIX, message, "WHISPER", NameUtil.GetUnmodifiedUnitFullName("player"))
+    elseif addonCore.playerName then
+        C_ChatInfo.SendAddonMessage(PREFIX, message, "WHISPER", addonCore.playerName)
     end
 end
 
@@ -52,7 +48,6 @@ end
 local function CanProcessMessages()
     -- IsAddOnRestrictionActive always returns false during the restriction event.
     return C_RestrictedActions.GetAddOnRestrictionState(restrictionType.Chat) == restrictionState.Inactive
-        and addonCore:GetModule("FlightTimes").CanResolveGroupMembers()
 end
 
 local function CanRetain(value)
@@ -69,7 +64,7 @@ function module:CHAT_MSG_ADDON(_, prefix, message, channel, sender)
         tinsert(pending, {prefix, message, channel, sender})
         return
     end
-    if IsSelf(sender) then
+    if sender == addonCore.playerName then
         return
     end
     local source, start, command, destination = message:match("^(%d+):(%d+):([^:]+):(%d+)$")
@@ -125,12 +120,10 @@ function module:CHAT_MSG_ADDON(_, prefix, message, channel, sender)
     addonCore:TriggerEvent("OnFlight_RemoteFlightUpdated", sender, flight)
 end
 
-function module:ADDON_RESTRICTION_STATE_CHANGED(_, _, state)
-    -- Roster access is per unit, so recheck it after any deactivation.
-    if state ~= restrictionState.Inactive or not CanProcessMessages() then
+function module:ADDON_RESTRICTION_STATE_CHANGED(_, kind, state)
+    if kind ~= restrictionType.Chat or state ~= restrictionState.Inactive or not CanProcessMessages() then
         return
     end
-    addonCore:GetModule("FlightTimes"):GROUP_ROSTER_UPDATE()
     pending, replay = replay, pending
     while #replay > 0 do
         local args = tremove(replay, 1)

@@ -1,6 +1,7 @@
 -- FlightTimes consumer: presentation and refresh belong to the broker.
 -- luacheck: no max line length
--- luacheck: globals LibStub FlightTimes CreateFrame GetTime NameUtil IsInRaid GetNumGroupMembers UnitIsUnit InCombatLockdown
+-- luacheck: globals LibStub FlightTimes CreateFrame GetTime NameUtil IsInRaid GetNumGroupMembers GetNumSubgroupMembers InCombatLockdown
+-- luacheck: globals C_Secrets
 local addonName, addonCore = ...
 local module = addonCore:NewModule("LDBLauncher", "AceEvent-3.0")
 local L = LibStub("AceLocale-3.0"):GetLocale(addonName)
@@ -12,17 +13,22 @@ timer:Hide()
 
 local function GroupFlights()
     local flights = {}
-    local function AddUnit(unit)
-        local flight = FlightTimes:GetFlightInfo(unit)
+    local function AddPlayer(name)
+        local flight = FlightTimes:GetFlightInfo(name)
         if flight then
-            flights[NameUtil.GetUnmodifiedUnitFullName(unit)] = flight
+            flights[name] = flight
         end
     end
-    AddUnit("player")
-    local prefix = IsInRaid() and "raid" or "party"
-    for i = 1, GetNumGroupMembers() do
+    AddPlayer(addonCore.playerName)
+    local raid = IsInRaid()
+    local prefix = raid and "raid" or "party"
+    local count = raid and GetNumGroupMembers() or GetNumSubgroupMembers()
+    for i = 1, count do
         local unit = prefix .. i
-        if not UnitIsUnit(unit, "player") then AddUnit(unit) end
+        if not C_Secrets.ShouldUnitIdentityBeSecret(unit) then
+            -- NameUtil may concatenate the name and surname before returning.
+            AddPlayer(NameUtil.GetUnmodifiedUnitFullName(unit))
+        end
     end
     return flights
 end
@@ -35,7 +41,7 @@ local function TimeText(flight, now)
 end
 
 local function UpdateText()
-    local flight = FlightTimes:GetFlightInfo("player")
+    local flight = FlightTimes:GetFlightInfo(addonCore.playerName)
     broker.text = flight and L["OnFlight: %s"]:format(TimeText(flight, GetTime())) or L["OnFlight"]
 end
 
@@ -68,7 +74,7 @@ local function RenderTooltip(tip)
 end
 
 local function UpdateTimer()
-    timer:SetShown(next(GroupFlights()) ~= nil or tooltip ~= nil)
+    timer:SetShown(tooltip ~= nil or FlightTimes:GetFlightInfo(addonCore.playerName) ~= nil)
 end
 
 local function ShowTooltip(tip)
