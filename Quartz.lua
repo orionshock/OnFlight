@@ -92,24 +92,19 @@ function Flight:OnEnable()
     if addonCore:GetFlightDisplay() == "quartz" then
         Quartz3:SetModuleEnabled("Flight", false)
     end
-    addonCore:RegisterCallback("OnFlight_Taxi_Start", self.ShowCurrentFlight, self)
-    addonCore:RegisterCallback("OnFlight_Taxi_RESUME", self.ShowCurrentFlight, self)
-    addonCore:RegisterCallback("OnFlight_Taxi_Suspend", self.EndFlight, self)
+    addonCore:RegisterCallback("OnFlight_Taxi_Start", self.StartFlight, self)
     addonCore:RegisterCallback("OnFlight_Taxi_Stop", self.EndFlight, self)
     addonCore:RegisterCallback("OnFlight_Taxi_EarlyExit", self.EndFlight, self)
     addonCore:RegisterCallback("OnFlight_Taxi_FAILED_ENTRY", self.EndFlight, self)
     -- A real cast has already populated the bar when this callback runs.
     self:SecureHook(Player, "UNIT_SPELLCAST_START", function() self:EndFlight(true) end)
     self:SecureHook(Player, "OnDisable", "EndFlight")
-    self:SecureHook(Quartz3, "Unlock", "EndFlight")
-    self:SecureHook(Quartz3, "Lock", "ShowCurrentFlight")
-    self:ShowCurrentFlight()
+    self:SecureHook(Quartz3, "Unlock", "ClearFlightBar")
+    self:SecureHook(Quartz3, "Lock", "RefreshFlight")
 end
 
 function Flight:OnDisable()
     addonCore:UnregisterCallback("OnFlight_Taxi_Start", self)
-    addonCore:UnregisterCallback("OnFlight_Taxi_RESUME", self)
-    addonCore:UnregisterCallback("OnFlight_Taxi_Suspend", self)
     addonCore:UnregisterCallback("OnFlight_Taxi_Stop", self)
     addonCore:UnregisterCallback("OnFlight_Taxi_EarlyExit", self)
     addonCore:UnregisterCallback("OnFlight_Taxi_FAILED_ENTRY", self)
@@ -120,15 +115,18 @@ end
 
 function Flight:ApplySettings()
     db = self.db.profile
-    if self:IsEnabled() then
-        self:ShowCurrentFlight()
+    self:RefreshFlight()
+end
+
+function Flight:RefreshFlight()
+    if displayedFlight and displayedFlight == addonCore:GetCurrentFlight() and not Quartz3.unlock then
+        self:StartFlight()
     end
 end
 
-function Flight:EndFlight(keepCast)
+-- Layout mode clears the bar while retaining the flight it presented.
+function Flight.ClearFlightBar()
     if not displayedFlight then return end
-    displayedFlight = nil
-    if keepCast == true then return end
     local bar = Player.Bar
     bar.casting, bar.channeling, bar.fadeOut = nil, nil, nil
     bar.startTime, bar.endTime, bar.stopTime = nil, nil, nil
@@ -137,12 +135,20 @@ function Flight:EndFlight(keepCast)
     bar:Hide()
 end
 
-function Flight:ShowCurrentFlight()
-    self:EndFlight()
+function Flight:EndFlight(keepCast)
+    if keepCast ~= true then
+        self:ClearFlightBar()
+    end
+    displayedFlight = nil
+end
+
+function Flight:StartFlight()
     local current = addonCore:GetCurrentFlight()
     local elapsed, _, duration = addonCore:GetCurrentFlightProgress()
+    if not current or elapsed == nil then return end
+    self:EndFlight()
     if addonCore:GetFlightDisplay() ~= "quartz" then return end
-    if not current or elapsed == nil or not Player:IsEnabled() or Quartz3.unlock then return end
+    if not Player:IsEnabled() or Quartz3.unlock then return end
     -- Like Quartz's original Flight module, only display measured positive durations.
     if not duration or duration <= 0 then return end
     local original = Quartz3:GetModule("Flight")

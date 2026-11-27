@@ -85,33 +85,25 @@ function timerBar:OnEnable()
     if not self.OnFlightTimerFrame then
         self:SetupTimerBar()
     end
-    addonCore:RegisterCallback("OnFlight_Taxi_Start", self.ShowCurrentFlight, self)
-    addonCore:RegisterCallback("OnFlight_Taxi_RESUME", self.ShowCurrentFlight, self)
+    addonCore:RegisterCallback("OnFlight_Taxi_Start", self.StartFlight, self)
     addonCore:RegisterCallback("OnFlight_Taxi_Stop", self.StopTimerBar, self)
     addonCore:RegisterCallback("OnFlight_Taxi_EarlyExit", self.StopTimerBar, self)
     addonCore:RegisterCallback("OnFlight_Taxi_FAILED_ENTRY", self.StopTimerBar, self)
-    addonCore:RegisterCallback("OnFlight_Taxi_Suspend", function(owner)
-        owner.OnFlightTimerFrame:Hide()
-    end, self)
-    self:ShowCurrentFlight()
 end
 
 function timerBar:OnDisable()
     addonCore:UnregisterCallback("OnFlight_Taxi_Start", self)
-    addonCore:UnregisterCallback("OnFlight_Taxi_RESUME", self)
     addonCore:UnregisterCallback("OnFlight_Taxi_Stop", self)
     addonCore:UnregisterCallback("OnFlight_Taxi_EarlyExit", self)
     addonCore:UnregisterCallback("OnFlight_Taxi_FAILED_ENTRY", self)
-    addonCore:UnregisterCallback("OnFlight_Taxi_Suspend", self)
     self:StopTimerBar("Module disabled")
 end
 
--- Rebuild presentation if enabled after the flight started or after a loading screen.
-function timerBar:ShowCurrentFlight()
+function timerBar:StartFlight()
     local current = addonCore:GetCurrentFlight()
     local elapsed, remaining, duration = addonCore:GetCurrentFlightProgress()
     if not current or elapsed == nil then return end
-    self:StartTimerBar(current.sourceName, current.destinationName, duration, remaining, not duration, true)
+    self:StartTimerBar(current.sourceName, current.destinationName, duration, remaining, not duration, current)
 end
 
 local function disp_time(time)
@@ -122,27 +114,25 @@ end
 
 local function timerBarOnUpdate(self, elapsed)
     local timeOnFlight
-    if self.isFlightDisplay then
-        timeOnFlight, self.timeRemaining, self.duration = addonCore:GetCurrentFlightProgress()
-        if timeOnFlight == nil then
-            timerBar:StopTimerBar("No active flight progress")
-            return
-        end
-        local current = addonCore:GetCurrentFlight()
-        if self.timeRemaining and current.resumeRemaining then
-            self.timeRemaining = current.resumeRemaining - timeOnFlight
+    if self.displayedFlight then
+        local remaining, duration
+        timeOnFlight, remaining, duration = addonCore:GetCurrentFlightProgress()
+        if timeOnFlight == nil then return end
+        self.timeRemaining, self.duration = remaining, duration
+        if self.timeRemaining and self.displayedFlight.resumeRemaining then
+            self.timeRemaining = self.displayedFlight.resumeRemaining - timeOnFlight
         end
     end
     local profile = db.profile
     local displayedTime
     if self.unknownFlight then
-        if not self.isFlightDisplay then
+        if not self.displayedFlight then
             -- Appearance previews have no core flight and keep their own display timer.
             self.countingUpwards = (self.countingUpwards or 0) + elapsed
         end
         displayedTime = timeOnFlight or self.countingUpwards
     else
-        if not self.isFlightDisplay then
+        if not self.displayedFlight then
             self.timeRemaining = self.timeRemaining - elapsed
         end
         if self.timeRemaining <= 0 then
@@ -300,7 +290,7 @@ function timerBar:StopPreview()
 end
 
 function timerBar:StartTimerBar(taxiSrcName, taxiDestName, duration, timeRemaining, unknownFlight,
-    isFlightDisplay) -- Bar Text and Duration in seconds--
+    displayedFlight) -- Bar Text and Duration in seconds--
     if not self:IsEnabled() then
         return
     end
@@ -311,12 +301,12 @@ function timerBar:StartTimerBar(taxiSrcName, taxiDestName, duration, timeRemaini
         return
     end
 
-    if isFlightDisplay then
+    if displayedFlight then
         self:StopPreview()
     end
     local timerFrame = self.OnFlightTimerFrame
 
-    timerFrame.isFlightDisplay = isFlightDisplay or false
+    timerFrame.displayedFlight = displayedFlight
     timerFrame.duration = duration
     timerFrame.timeRemaining = timeRemaining or duration
     timerFrame.unknownFlight = unknownFlight or false
@@ -349,7 +339,7 @@ function timerBar:StopTimerBar(reason)
         return
     end
     self.OnFlightTimerFrame:Hide()
-    self.OnFlightTimerFrame.isFlightDisplay = false
+    self.OnFlightTimerFrame.displayedFlight = nil
     self.OnFlightTimerFrame.countingUpwards = 0
     self.OnFlightTimerFrame.timeRemaining = 0
     self.OnFlightTimerFrame.duration = 0

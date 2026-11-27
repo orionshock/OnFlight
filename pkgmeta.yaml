@@ -26,5 +26,5 @@ ignore:
     - .vscode
     - AGENT.MD
     - README.md
-    - docs/PROTOCOL.md
+    - docs
     - pkgmeta.yaml
