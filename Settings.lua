@@ -5,6 +5,7 @@
 -- luacheck: globals CreateSettingsListSectionHeaderInitializer CreateSettingsButtonInitializer
 -- luacheck: globals OnFlightSettingsFontSizeMixin OnFlightSettingsColorMixin
 -- luacheck: globals SettingsSliderControlMixin OnFlightSettingsWarningTimeMixin
+-- luacheck: globals C_AddOns CreateSimpleTextureMarkup
 -- luacheck: globals GameTooltip GameTooltip_Hide InCombatLockdown wipe
 local addonName, addonCore = ...
 local LSMC = LibStub("LibSharedMediaControls-1.0")
@@ -236,7 +237,9 @@ function addonCore:InitializeSettings()
     if self.settingsCategory then
         return
     end
-    local category, mainLayout = Settings.RegisterVerticalLayoutCategory("OnFlight")
+    local icon = C_AddOns.GetAddOnMetadata(addonName, "IconTexture")
+    local categoryName = icon and ("OnFlight " .. CreateSimpleTextureMarkup(icon, 16, 16)) or "OnFlight"
+    local category, mainLayout = Settings.RegisterVerticalLayoutCategory(categoryName)
     self.settingsCategory = category
     Settings.RegisterAddOnCategory(category)
     local showChat = Register(category, "showChat", "boolean", L["Show Chat Messages"], true, function()

@@ -1,6 +1,6 @@
 -- FlightTimes consumer: presentation and refresh belong to the broker.
 -- luacheck: no max line length
--- luacheck: globals LibStub FlightTimes CreateFrame GetTime NameUtil IsInRaid GetNumGroupMembers UnitIsUnit
+-- luacheck: globals LibStub FlightTimes CreateFrame GetTime NameUtil IsInRaid GetNumGroupMembers UnitIsUnit InCombatLockdown
 local addonName, addonCore = ...
 local module = addonCore:NewModule("LDBLauncher", "AceEvent-3.0")
 local L = LibStub("AceLocale-3.0"):GetLocale(addonName)
@@ -126,7 +126,7 @@ function module:OnInitialize()
         OnClick = function(_, button)
             if button == "LeftButton" then
                 addonCore:GetModule("Communication"):RequestFlightAnnouncement()
-            elseif button == "RightButton" then
+            elseif button == "RightButton" and not InCombatLockdown() then
                 addonCore:OpenSettings()
             end
         end,

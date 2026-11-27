@@ -1,5 +1,6 @@
 ## Interface: 16001
 ## Title: OnFlight
+## IconTexture: Interface\Minimap\TRACKING\FlightMaster
 ## Notes: Taxi flight timer and destination list for WoW Forever.
 ## Dependencies: Blizzard_UIPanels_Game
 ## OptionalDeps: Quartz
