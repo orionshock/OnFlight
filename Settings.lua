@@ -4,6 +4,7 @@
 -- luacheck: globals SettingsColorSwatchControlMixin MinimalSliderWithSteppersMixin
 -- luacheck: globals CreateSettingsListSectionHeaderInitializer CreateSettingsButtonInitializer
 -- luacheck: globals OnFlightSettingsFontSizeMixin OnFlightSettingsColorMixin
+-- luacheck: globals SettingsSliderControlMixin OnFlightSettingsWarningTimeMixin
 -- luacheck: globals GameTooltip GameTooltip_Hide InCombatLockdown wipe
 local addonName, addonCore = ...
 local LSMC = LibStub("LibSharedMediaControls-1.0")
@@ -182,11 +183,60 @@ function OnFlightSettingsFontSizeMixin:Release()
     SettingsControlMixin.Release(self)
 end
 
+OnFlightSettingsWarningTimeMixin = CreateFromMixins(SettingsSliderControlMixin)
+
+function OnFlightSettingsWarningTimeMixin:OnLoad()
+    SettingsSliderControlMixin.OnLoad(self)
+    self.SliderWithSteppers:SetWidth(190)
+    local input = CreateFrame("EditBox", nil, self, "InputBoxTemplate")
+    self.input = input
+    input:SetSize(44, 22)
+    input:SetPoint("LEFT", self.SliderWithSteppers, "RIGHT", 10, -2)
+    input:SetAutoFocus(false)
+    input:SetNumeric(true)
+    input:SetMaxLetters(3)
+    local function Commit()
+        local setting = self:GetSetting()
+        local value = tonumber(input:GetText())
+        if value then
+            setting:SetValue(math.min(value, 120))
+        end
+        input:SetText(tostring(setting:GetValue()))
+    end
+    input:SetScript("OnEnterPressed", input.ClearFocus)
+    input:SetScript("OnEditFocusLost", Commit)
+    input:SetScript("OnEscapePressed", function()
+        input:SetText(tostring(self:GetSetting():GetValue()))
+        input:ClearFocus()
+    end)
+end
+
+function OnFlightSettingsWarningTimeMixin:Init(initializer)
+    SettingsSliderControlMixin.Init(self, initializer)
+    self.input:SetText(tostring(self:GetSetting():GetValue()))
+end
+
+function OnFlightSettingsWarningTimeMixin:SetValue(value)
+    SettingsSliderControlMixin.SetValue(self, value)
+    self.input:SetText(tostring(value))
+end
+
+function OnFlightSettingsWarningTimeMixin:EvaluateState()
+    SettingsSliderControlMixin.EvaluateState(self)
+    self.input:SetEnabled(self:IsEnabled())
+end
+
+function OnFlightSettingsWarningTimeMixin:Release()
+    self.input:SetText(tostring(self:GetSetting():GetValue()))
+    self.input:ClearFocus()
+    SettingsSliderControlMixin.Release(self)
+end
+
 function addonCore:InitializeSettings()
     if self.settingsCategory then
         return
     end
-    local category = Settings.RegisterVerticalLayoutCategory("OnFlight")
+    local category, mainLayout = Settings.RegisterVerticalLayoutCategory("OnFlight")
     self.settingsCategory = category
     Settings.RegisterAddOnCategory(category)
     local showChat = Register(category, "showChat", "boolean", L["Show Chat Messages"], true, function()
@@ -231,6 +281,31 @@ function addonCore:InitializeSettings()
         end
         return options:GetData()
     end, L["Choose a timer display. None hides the timer without stopping flight tracking."])
+
+    mainLayout:AddInitializer(CreateSettingsListSectionHeaderInitializer(L["Notifications"]))
+    local notificationDefault = Register(category, "flightNotifications", "boolean", L["Enable Flight Notifications"],
+        self.svDefaults.profile.flightNotifications, function()
+            return self.db.profile.flightNotifications
+        end, function(value)
+            self:SetFlightNotifications(value)
+        end)
+    Settings.CreateCheckbox(category, notificationDefault, L["Enable flight notifications by default for this profile."])
+
+    local function NotificationSetting(key, kind, name)
+        return Register(category, key, kind, name, self.svDefaults.profile[key], function()
+            return self.db.profile[key]
+        end, function(value)
+            self.db.profile[key] = value
+        end)
+    end
+    local warning = NotificationSetting("landingWarningTime", "number", L["Landing Soon (seconds)"])
+    mainLayout:AddInitializer(Settings.CreateControlInitializer("OnFlightSettingsWarningTimeTemplate", warning,
+        Settings.CreateSliderOptions(0, 120, 1), L["Warn this many seconds before landing on known flights. Zero disables the warning."]))
+    LSMC:CreateSoundDropdown(category, NotificationSetting("landingSoonSound", "string", L["Landing Soon Sound"]))
+    Settings.CreateCheckbox(category, NotificationSetting("landingSoonFlash", "boolean", L["Landing Soon Taskbar Flash"]))
+    LSMC:CreateSoundDropdown(category, NotificationSetting("landedSound", "string", L["End of Flight Sound"]))
+    Settings.CreateCheckbox(category, NotificationSetting("landedFlash", "boolean", L["End of Flight Taskbar Flash"]))
+
     local barCategory, layout = Settings.RegisterVerticalLayoutSubcategory(category, L["Flight Timer Bar"])
     local function AddControl(initializer)
         initializer:SetParentInitializer(enableControl, function()

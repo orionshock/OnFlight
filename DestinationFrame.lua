@@ -1,7 +1,21 @@
 -- One-time construction of the native destination pane.
--- luacheck: globals LibStub CreateFrame TaxiFrame
+-- luacheck: globals LibStub CreateFrame TaxiFrame GameTooltip GameTooltip_Hide
 local addonName, addonCore = ...
 local L = LibStub("AceLocale-3.0"):GetLocale(addonName)
+
+function addonCore:RefreshFlightNotificationCheckbox()
+    local checkbox = self.destinationFrame and self.destinationFrame.notifications
+    if not checkbox then return end
+
+    local enabled = self.db.profile.flightNotifications
+    checkbox:SetChecked(self:GetNextFlightNotifications())
+    -- Desaturate the native gold artwork before tinting it blue.
+    local textures = {checkbox:GetNormalTexture(), checkbox:GetPushedTexture(), checkbox:GetCheckedTexture()}
+    for _, texture in ipairs(textures) do
+        texture:SetDesaturated(enabled)
+        texture:SetVertexColor(enabled and 0.35 or 1, enabled and 0.65 or 1, 1)
+    end
+end
 
 function addonCore:CreateDestinationFrame()
     if self.destinationFrame then return self.destinationFrame end
@@ -52,6 +66,34 @@ function addonCore:CreateDestinationFrame()
     window.showUnknown:SetPoint("BOTTOMLEFT", 16, 20)
     window.showUnknown.Text:SetText(L["Show Unknown Flight Points"])
     window.showUnknown:SetHitRectInsets(0, -window.showUnknown.Text:GetStringWidth(), 0, 0)
+
+    local notifications = CreateFrame("CheckButton", nil, window, "UICheckButtonTemplate")
+    window.notifications = notifications
+    notifications:SetSize(24, 24)
+    notifications:SetPoint("BOTTOMRIGHT", -16, 20)
+    notifications.Text:ClearAllPoints()
+    notifications.Text:SetPoint("RIGHT", notifications, "LEFT", 2, 0)
+    notifications.Text:SetText(L["End of Flight Notification"])
+    notifications:SetHitRectInsets(-notifications.Text:GetStringWidth(), 0, 0, 0)
+    notifications:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+    notifications:SetScript("OnClick", function(_, button)
+        if button == "RightButton" then
+            self:SetFlightNotifications(not self.db.profile.flightNotifications, true)
+        else
+            self:SetNextFlightNotifications(not self:GetNextFlightNotifications())
+        end
+    end)
+    notifications:SetScript("OnEnter", function(checkbox)
+        GameTooltip:SetOwner(checkbox, "ANCHOR_TOPLEFT")
+        GameTooltip:AddLine(L["Landing warning and arrival notifications."], 1, 1, 1)
+        GameTooltip:AddLine(" ")
+        GameTooltip:AddLine(L["Left-click: Next flight"], 1, 1, 1)
+        GameTooltip:AddLine(L["Right-click: Profile default"], 1, 1, 1)
+        GameTooltip:AddLine(L["Blue: Profile default enabled"], 1, 1, 1)
+        GameTooltip:Show()
+    end)
+    notifications:SetScript("OnLeave", GameTooltip_Hide)
+    self:RefreshFlightNotificationCheckbox()
 
     local hint = window:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     hint:SetPoint("BOTTOM", 0, 12)

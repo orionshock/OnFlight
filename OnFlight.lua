@@ -2,7 +2,8 @@
 -- luacheck: no max line length
 -- luacheck: globals LibStub TaxiNodeName GetNumRoutes NumTaxiNodes TaxiNodeGetType
 -- luacheck: globals UnitFactionGroup UnitOnTaxi UnitInVehicle CreateFrame tostringall GetTime GetServerTime SecondsToTime abs hooksecurefunc string
--- luacheck: globals C_SummonInfo OnFlight_GetEstimatedTime TaxiFrame TaxiGetNodeSlot OnFlight_TaxiFrame_TooltipHook GameTooltip wipe
+-- luacheck: globals C_SummonInfo OnFlight_GetEstimatedTime TaxiFrame TaxiGetNodeSlot OnFlight_TaxiFrame_TooltipHook GameTooltip
+-- luacheck: globals FlashClientIcon PlaySoundFile
 -- luacheck: globals CreateFromMixins CallbackRegistryMixin C_TaxiMap GetTaxiMapID TakeTaxiNode
 local addonName, addonCore = ...
 addonCore = LibStub("AceAddon-3.0"):NewAddon(addonCore, "OnFlight", "AceEvent-3.0")
@@ -32,6 +33,11 @@ function addonCore:TriggerEvent(event, ...)
 end
 
 local L = LibStub("AceLocale-3.0"):GetLocale(addonName)
+local LSM = LibStub("LibSharedMedia-3.0")
+local landingSoonSound = "OnFlight: Level Up"
+local landedSound = "OnFlight: PvP Queue"
+LSM:Register("sound", landingSoonSound, 567431)
+LSM:Register("sound", landedSound, 568011)
 
 local GetNumRoutes, NumTaxiNodes, TaxiNodeGetType, TaxiGetNodeSlot = GetNumRoutes, NumTaxiNodes, TaxiNodeGetType,
     TaxiGetNodeSlot
@@ -122,8 +128,13 @@ end
 local taxiSessionFrame = CreateFrame("Frame")
 
 local svDefaults = {
-    char = {},
     profile = {
+        flightNotifications = false,
+        landingWarningTime = 30,
+        landingSoonSound = landingSoonSound,
+        landingSoonFlash = false,
+        landedSound = landedSound,
+        landedFlash = false,
         showChat = true,
         taxiDebug = false,
         showUnknownFlightPoints = false,
@@ -175,8 +186,6 @@ function addonCore:OnInitialize()
             state.StatusBarModule = nil
         end
     end
-    -- Flights only survive loading screens within this Lua session, never a reload/login.
-    wipe(db.char)
     db.global.flightTimes[playerFaction] = db.global.flightTimes[playerFaction] or {}
     db.profile.gossipConfig = false
     db.RegisterCallback(self, "OnProfileChanged", "OnProfileUpdated")
@@ -210,6 +219,40 @@ end
 -- The monitor schedules work; the private record owns all flight state.
 local flight
 local flightMonitor = CreateFrame("Frame")
+local nextFlightNotifications
+
+function addonCore:GetNextFlightNotifications()
+    if nextFlightNotifications ~= nil then
+        return nextFlightNotifications
+    end
+    return self.db.profile.flightNotifications
+end
+
+function addonCore:SetNextFlightNotifications(value)
+    nextFlightNotifications = value
+    self:RefreshFlightNotificationCheckbox()
+end
+
+function addonCore:SetFlightNotifications(value, clearOverride)
+    db.profile.flightNotifications = value
+    if clearOverride then
+        nextFlightNotifications = nil
+    end
+    self:RefreshFlightNotificationCheckbox()
+    self:RefreshSettings("flightNotifications")
+end
+
+local function NotifyFlight(sound, flash)
+    if sound ~= "None" then
+        local file = LSM:Fetch("sound", sound, true)
+        if file and file ~= 1 then
+            PlaySoundFile(file, "Master")
+        end
+    end
+    if flash then
+        FlashClientIcon(true)
+    end
+end
 
 local function ResetFlight()
     flight = nil
@@ -223,6 +266,10 @@ local function UpdateFlight(_, elapsed)
     if previous ~= flight.onTaxi then
         if flight.onTaxi then
             flight.elapsedNotOnFlight = nil
+            if not flight.startedAt then
+                flight.notifications = addonCore:GetNextFlightNotifications()
+                addonCore:SetNextFlightNotifications(nil)
+            end
             flight.startedAt = flight.startedAt or GetTime()
             flight.startServerTime = flight.startServerTime or GetServerTime()
             local duration = addonCore:GetFlightDuration(flight.sourceID, flight.destinationID)
@@ -247,6 +294,9 @@ local function UpdateFlight(_, elapsed)
             end
         elseif flight.startedAt then
             if not flight.earlyExit then
+                if flight.notifications then
+                    NotifyFlight(db.profile.landedSound, db.profile.landedFlash)
+                end
                 local duration = abs(GetTime() - flight.startedAt)
                 local times = db.global.flightTimes[playerFaction]
                 times[flight.sourceID] = times[flight.sourceID] or {}
@@ -262,7 +312,18 @@ local function UpdateFlight(_, elapsed)
             return ResetFlight()
         end
     end
-    if not flight.onTaxi then
+    if flight.onTaxi then
+        if flight.notifications and not flight.warned and not flight.earlyExit then
+            local warning = db.profile.landingWarningTime
+            if warning > 0 then
+                local _, remaining, duration = addonCore:GetCurrentFlightProgress()
+                if duration and duration > warning and remaining <= warning and remaining > 0 then
+                    flight.warned = true
+                    NotifyFlight(db.profile.landingSoonSound, db.profile.landingSoonFlash)
+                end
+            end
+        end
+    else
         flight.elapsedNotOnFlight = (flight.elapsedNotOnFlight or 0) + elapsed
         if flight.elapsedNotOnFlight > 5 then
             addonCore:TriggerEvent("OnFlight_Taxi_FAILED_ENTRY", flight.sourceName, flight.destinationName)
@@ -484,7 +545,7 @@ do -- Direct Hoook Funcs
     TakeTaxiNode = function(slot, ...)
         local session = addonCore:RefreshTaxiSession()
         local destinationID = session and session.slotToID[slot]
-        if destinationID then
+        if session and destinationID then
             local route = addonCore:GetTaxiRoute(destinationID)
             if route then
                 addonCore:StartAFlight(session.sourceID, destinationID, nil, nil, route)
@@ -514,6 +575,7 @@ function addonCore:OnProfileUpdated()
         end
     end
     self:RefreshSettings()
+    self:RefreshFlightNotificationCheckbox()
     self:RefreshDiagnostics()
     self:UpdateTaxiDebug()
 end

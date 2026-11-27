@@ -232,3 +232,19 @@ L["Timer bar text color."] = true
 L["Timer bar text outline."] = true
 L["Timer bar texture."] = true
 L["Use detailed continent artwork for flight maps."] = true
+
+-- Flight notifications.
+L["Notifications"] = true
+L["Enable Flight Notifications"] = true
+L["Enable flight notifications by default for this profile."] = true
+L["Landing Soon (seconds)"] = true
+L["Warn this many seconds before landing on known flights. Zero disables the warning."] = true
+L["Landing Soon Sound"] = true
+L["Landing Soon Taskbar Flash"] = true
+L["End of Flight Sound"] = true
+L["End of Flight Taskbar Flash"] = true
+L["End of Flight Notification"] = true
+L["Landing warning and arrival notifications."] = true
+L["Left-click: Next flight"] = true
+L["Right-click: Profile default"] = true
+L["Blue: Profile default enabled"] = true
