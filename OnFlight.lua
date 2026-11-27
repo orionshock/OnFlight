@@ -139,7 +139,6 @@ local svDefaults = {
         taxiDebug = false,
         showUnknownFlightPoints = false,
         useWorldMapFlightMaps = true,
-        gossipConfig = false,
         showGossipConfig = false,
         gossipdebug = false,
         favorites = {
@@ -158,12 +157,7 @@ local svDefaults = {
             TimerBar = true
         }
     },
-    global = {
-        flightTimes = {
-            Horde = {},
-            Alliance = {}
-        }
-    }
+    global = {}
 }
 addonCore.svDefaults = svDefaults
 
@@ -187,7 +181,6 @@ function addonCore:OnInitialize()
         end
     end
     db.global.flightTimes[playerFaction] = db.global.flightTimes[playerFaction] or {}
-    db.profile.gossipConfig = false
     db.RegisterCallback(self, "OnProfileChanged", "OnProfileUpdated")
     db.RegisterCallback(self, "OnProfileCopied", "OnProfileUpdated")
     db.RegisterCallback(self, "OnProfileReset", "OnProfileUpdated")

@@ -51,10 +51,8 @@ function addonCore:StartGossipFlight(optionID)
 end
 
 do
-    hooksecurefunc(C_GossipInfo, "SelectOption", function(option, ...)
-        if addonCore.db.global.gossipTriggered[option] then
-            addonCore:StartGossipFlight(option)
-        end
+    hooksecurefunc(C_GossipInfo, "SelectOption", function(option)
+        addonCore:StartGossipFlight(option)
     end)
 
     local original_C_GossipInfo_SelectOptionByIndex = C_GossipInfo.SelectOptionByIndex
@@ -65,11 +63,8 @@ do
         local gossipOptions = C_GossipInfo.GetOptions()
         for _, optionData in ipairs(gossipOptions) do
             if optionData.orderIndex == selectedIndex then
-                local selectedGossipID = optionData.gossipOptionID
-                if addonCore.db.global.gossipTriggered[selectedGossipID] then
-                    addonCore:StartGossipFlight(selectedGossipID)
-                    break
-                end
+                addonCore:StartGossipFlight(optionData.gossipOptionID)
+                break
             end
         end
         original_C_GossipInfo_SelectOptionByIndex(...)

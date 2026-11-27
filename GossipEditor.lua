@@ -92,7 +92,7 @@ local function CreateGossipRow(parent)
     return row
 end
 
-function addonCore:RefreshGossipEditor(optionID)
+function addonCore:RefreshGossipEditor()
     if not gossipPage then
         return
     end
@@ -139,16 +139,11 @@ function addonCore:RefreshGossipEditor(optionID)
                         end
                     end
                     data.gossipTriggered[removedID] = nil
-                    self:RefreshGossipEditor(removedID)
+                    self:RefreshGossipEditor()
                 end)
                 row.remove:SetPoint("TOPRIGHT", -8, 0)
             end
             gossipPage.rows[id] = row
-            for endpoint = 1, 2 do
-                SetEndpointInput(row[endpoint], id, self.db.global.gossipTriggered[id][endpoint])
-            end
-        end
-        if optionID == id then
             for endpoint = 1, 2 do
                 SetEndpointInput(row[endpoint], id, self.db.global.gossipTriggered[id][endpoint])
             end
@@ -262,7 +257,7 @@ function addonCore:CreateGossipSettings(parentCategory, register)
             new[index].feedback:SetText("")
             new[index]:ClearFocus()
         end
-        addonCore:RefreshGossipEditor(id)
+        addonCore:RefreshGossipEditor()
     end)
     new.add:SetPoint("TOPRIGHT", -8, 0)
 

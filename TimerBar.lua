@@ -12,9 +12,6 @@ local LSM = LibStub("LibSharedMedia-3.0")
 local db
 local svDefaults = {
     profile = {
-        -- Basic Bar Options
-        countUp = false,
-        fillUp = false,
         -- Bar Background Color
         backgroundColor = {
             r = 0.1,

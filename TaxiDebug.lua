@@ -223,7 +223,6 @@ end
 -- Join only on explicit IDs/slotIndex. Names and positions are evidence, never keys.
 local function correlate(data, mapID, selectedSlot)
     local result = {
-        mapID = mapID,
         slots = {},
         issues = {},
         currentSlots = {}
@@ -234,12 +233,11 @@ local function correlate(data, mapID, selectedSlot)
         return result
     end
     local all, forMap = first(map.all), first(map.forMap)
-    local byID, bySlot, duplicateSlots, duplicateIDs = {}, {}, {}, {}
+    local countByID, bySlot, duplicateSlots, duplicateIDs = {}, {}, {}, {}
     if type(forMap) == "table" then
         for _, node in pairs(forMap) do
             if type(node) == "table" and type(node.nodeID) == "number" then
-                byID[node.nodeID] = byID[node.nodeID] or {}
-                table.insert(byID[node.nodeID], node)
+                countByID[node.nodeID] = (countByID[node.nodeID] or 0) + 1
             end
         end
     end
@@ -275,22 +273,17 @@ local function correlate(data, mapID, selectedSlot)
     for slot, legacy in ipairs(data.nodes) do
         local modern = bySlot[slot]
         local row = {
-            slotIndex = slot,
             legacyName = first(legacy.name),
             legacyType = first(legacy.type),
-            legacyPosition = legacy.position,
             resolved = false
         }
         result.slots[slot] = row
         if modern and not duplicateSlots[slot] and not duplicateIDs[modern.nodeID] and type(modern.nodeID) == "number" and
             modern.nodeID > 0 then
             row.resolved, row.nodeID = true, modern.nodeID
-            row.state, row.position = modern.state, modern.position
-            row.nameMatches = row.legacyName == modern.name
-            row.mapEntries = byID[modern.nodeID]
-            row.mapEntryCount = row.mapEntries and #row.mapEntries or 0
-            if row.mapEntryCount ~= 1 then
-                table.insert(result.issues, "Map-list ID match count for slot " .. slot .. ": " .. row.mapEntryCount)
+            local mapEntryCount = countByID[modern.nodeID] or 0
+            if mapEntryCount ~= 1 then
+                table.insert(result.issues, "Map-list ID match count for slot " .. slot .. ": " .. mapEntryCount)
             end
         else
             table.insert(result.issues, "Unresolved/ambiguous legacy slot: " .. slot)
@@ -307,13 +300,10 @@ local function correlate(data, mapID, selectedSlot)
             local source = result.slots[first(route.sourceSlot)]
             local destination = result.slots[first(route.destinationSlot)]
             local edge = {
-                sourceSlot = first(route.sourceSlot),
-                destinationSlot = first(route.destinationSlot),
                 sourceID = source and source.nodeID,
                 destinationID = destination and destination.nodeID
             }
-            edge.resolved = edge.sourceID ~= nil and edge.destinationID ~= nil
-            if not edge.resolved then
+            if not edge.sourceID or not edge.destinationID then
                 table.insert(result.issues, "Unresolved route hop: " .. slot .. "/" .. hop)
             end
             if hop > 1 and previousID ~= edge.sourceID then
@@ -333,7 +323,6 @@ local function correlate(data, mapID, selectedSlot)
         table.insert(result.issues, "Expected exactly one CURRENT legacy slot")
     end
     result.selectedSlot = selectedSlot
-    result.selectedNodeID = result.slots[selectedSlot] and result.slots[selectedSlot].nodeID
     return result
 end
 
@@ -350,8 +339,7 @@ local function observeButtons(nodeCount)
                 if enabled then
                     record("selection", {
                         slot = self:GetID(),
-                        mouseButton = mouseButton,
-                        phase = "PreClick"
+                        mouseButton = mouseButton
                     })
                     snapshot("TaxiButton PreClick", self:GetID())
                 end
@@ -364,23 +352,19 @@ snapshot = function(reason, selectedSlot)
     local data = {
         reason = reason,
         mapOpen = frame.mapOpen,
-        mapSession = mapSession,
         mapID = call(GetTaxiMapID),
         numNodes = call(NumTaxiNodes),
-        onTaxi = call(UnitOnTaxi, "player"),
         nodes = {},
         maps = {},
         playerMapID = call(C_Map and C_Map.GetBestMapForUnit, "player"),
         faction = call(UnitFactionGroup, "player"),
         locale = call(GetLocale),
-        npcGUID = call(UnitGUID, "npc"),
         npcName = call(UnitName, "npc")
     }
     local currentMapID = first(data.mapID)
     if type(currentMapID) == "number" and currentMapID > 0 then
         lastMapID = currentMapID
     end
-    data.lastMapID = lastMapID
     local maps = {}
     for _, id in pairs({
         current = currentMapID,
@@ -397,14 +381,13 @@ snapshot = function(reason, selectedSlot)
             forMap = call(C_TaxiMap and C_TaxiMap.GetTaxiNodesForMap, id)
         }
     end
-    data.noMapID = next(maps) == nil
     local nodeCount = count(first(data.numNodes), MAX_NODES)
     data.nodesTruncated = type(first(data.numNodes)) == "number" and first(data.numNodes) > MAX_NODES
     for slot = 1, nodeCount do
         local node = {
             name = call(TaxiNodeName, slot),
             type = call(TaxiNodeGetType, slot),
-            position = call(TaxiNodePosition, slot),
+            position = slot == selectedSlot and call(TaxiNodePosition, slot),
             cost = call(TaxiNodeCost, slot),
             direct = call(TaxiIsDirectFlight, slot),
             numRoutes = call(GetNumRoutes, slot),
