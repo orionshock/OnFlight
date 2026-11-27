@@ -22,6 +22,21 @@ OnFlight tracks taxi flights and learns their durations as you travel.
 
 See [PROTOCOL.md](docs/PROTOCOL.md) for the public flight-status protocol.
 
+## Flight data transfer
+
+`/onflight export` and `/onflight import` transfer learned durations and gossip
+configurations. Imports add missing entries and report conflicts while preserving
+local values. Existing duration-only exports still import.
+
+Duration records use `A|source|destination|seconds` or
+`H|source|destination|seconds`. A gossip duration's source key is
+`<optionID>:<nodeID or title>`. Its destination is a numeric taxi node ID or an
+option-scoped title. Ordinary taxi durations use numeric IDs for both endpoints.
+
+Configuration records use `G|optionID|source|destination`. Each endpoint uses
+`N:<nodeID>` for a numeric node or `T:<optionID>:<title>` for a custom title.
+For example, `G|12345|N:10|T:12345:Harbor` configures node 10 to Harbor.
+
 ## Media control dependency
 
 The native Settings media previews use LibSharedMediaControls-1.0. The BigWigs

@@ -60,7 +60,7 @@ function module:LocalStarted()
     RememberPlayerName()
     if not addonCore.playerName then return end
     playerRecord = current
-    playerFlight = FlightInfo(current.sourceID, current.destinationID, current.startedAt,
+    playerFlight = FlightInfo(current.sourceNodeID or current.sourceID, current.destinationID, current.startedAt,
         addonCore:GetFlightDuration(current.sourceID, current.destinationID))
     addonCore:TriggerEvent("FlightStarted", addonCore.playerName, playerFlight)
 end

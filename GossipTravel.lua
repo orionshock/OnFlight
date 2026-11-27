@@ -12,9 +12,10 @@ function addonCore.MakeGossipEndpointKey(optionID, label)
 end
 
 -- Custom gossip endpoints never resolve by name to a taxi node.
-function addonCore:GetGossipEndpoint(optionID, value)
+function addonCore:GetGossipEndpoint(optionID, value, isSource)
     if type(value) == "number" then
-        return value, self:GetTaxiNodeName(value)
+        local key = isSource and self.MakeGossipEndpointKey(optionID, tostring(value)) or value
+        return key, self:GetTaxiNodeName(value)
     end
     if type(value) ~= "string" then
         return
@@ -33,14 +34,20 @@ function addonCore:StartGossipFlight(optionID)
     if not endpoints then
         return
     end
-    local source, sourceName = self:GetGossipEndpoint(optionID, endpoints[1])
+    local source, sourceName = self:GetGossipEndpoint(optionID, endpoints[1], true)
     local destination, destinationName = self:GetGossipEndpoint(optionID, endpoints[2])
     if not sourceName or not destinationName then
         print(self.OnFlightPrefixText, L["Configure both gossip-flight endpoints in settings: %s"]:format(optionID))
         return
     end
-    self:StartAFlight(source, destination)
-    self:GetCurrentFlight().gossip = true
+    local flight = self:StartAFlight(source, destination)
+    if flight then
+        flight.gossip = true
+        if type(endpoints[1]) == "number" then
+            flight.sourceName = sourceName
+            flight.sourceNodeID = endpoints[1]
+        end
+    end
 end
 
 do

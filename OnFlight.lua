@@ -335,6 +335,7 @@ function addonCore:StartAFlight(source, destination, route)
         onTaxi = false
     }
     flightMonitor:SetScript("OnUpdate", UpdateFlight)
+    return flight
 end
 
 -- function hooks to detect if we left a flight early

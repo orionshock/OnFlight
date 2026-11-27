@@ -1,4 +1,4 @@
--- Copy and merge learned flight durations using Forever's native encoding.
+-- Copy and merge learned durations and gossip routes using Forever's native encoding.
 -- luacheck: globals LibStub C_EncodingUtil StaticPopupDialogs StaticPopup_Show CLOSE CANCEL
 local addonName, addonCore = ...
 local L = LibStub("AceLocale-3.0"):GetLocale(addonName)
@@ -23,6 +23,26 @@ local function FormatEndpoint(key)
     if IsGossipKey(key) then return key end
 end
 
+local function IsScopedTitle(optionID, key)
+    local scope, label = key:match("^(%d+):([^:|]+)$")
+    return label ~= nil and scope == tostring(optionID)
+end
+
+local function FormatGossipEndpoint(optionID, value)
+    if IsPositiveInteger(value) then return ("N:%.0f"):format(value) end
+    if type(value) == "string" and IsScopedTitle(optionID, value) then return "T:" .. value end
+end
+
+local function ParseGossipEndpoint(optionID, field)
+    local kind, value = field:match("^([NT]):(.+)$")
+    if kind == "N" and value:match("^%d+$") then
+        local nodeID = tonumber(value)
+        if IsPositiveInteger(nodeID) then return nodeID end
+    elseif kind == "T" and IsScopedTitle(optionID, value) then
+        return value
+    end
+end
+
 local function DecodeDurations(text)
     local decoded = C_EncodingUtil.DecodeBase64((text:gsub("%s+", "")))
     local inflated = decoded and C_EncodingUtil.DecompressString(decoded)
@@ -42,12 +62,14 @@ local function ImportDurations(dialog)
     local ok, records = pcall(DecodeDurations, dialog:GetEditBox():GetText())
     local prefix = addonCore.OnFlightPrefixText
     if not ok or not records then
-        print(prefix, L["Invalid flight duration data."])
+        print(prefix, L["Invalid flight data."])
         return true -- Keep the popup open for another paste.
     end
 
-    local times = addonCore.db.global.flightTimes
+    local data = addonCore.db.global
+    local times = data.flightTimes
     local added, unchanged, differing = 0, 0, 0
+    local gossipAdded, gossipUnchanged, gossipDiffering = 0, 0, 0
     for _, record in ipairs(records) do
         if type(record) == "string" then
             local code, source, destination, duration = record:match("^([AH])|([^|]+)|([^|]+)|(%d+)$")
@@ -67,14 +89,37 @@ local function ImportDurations(dialog)
                     print(prefix, L["%s %s to %s: kept %s s, imported %.0f s."]:format(
                         faction, FormatEndpoint(source), FormatEndpoint(destination), tostring(current), duration))
                 end
+            elseif record:sub(1, 2) == "G|" then
+                local option, sourceField, destinationField = record:match("^G|(%d+)|([^|]+)|([^|]+)$")
+                local optionID = tonumber(option)
+                if IsPositiveInteger(optionID) then
+                    local gossipSource = ParseGossipEndpoint(optionID, sourceField)
+                    local gossipDestination = ParseGossipEndpoint(optionID, destinationField)
+                    if gossipSource and gossipDestination then
+                        local current = data.gossipTriggered[optionID]
+                        if current == nil then
+                            data.gossipTriggered[optionID] = {gossipSource, gossipDestination}
+                            gossipAdded = gossipAdded + 1
+                        elseif current[1] == gossipSource and current[2] == gossipDestination then
+                            gossipUnchanged = gossipUnchanged + 1
+                        else
+                            gossipDiffering = gossipDiffering + 1
+                            print(prefix, L["Gossip option %.0f differs. Kept the local configuration."]:format(optionID))
+                        end
+                    end
+                end
             end
         end
     end
     print(prefix, L["Flight durations: %d added, %d unchanged, %d differing."]:format(added, unchanged, differing))
+    if gossipAdded + gossipUnchanged + gossipDiffering > 0 then
+        print(prefix, L["Gossip configurations: %d added, %d unchanged, %d differing."]:format(
+            gossipAdded, gossipUnchanged, gossipDiffering))
+    end
 end
 
 StaticPopupDialogs.ONFLIGHT_EXPORT_DURATIONS = {
-    text = L["Copy flight duration data."],
+    text = L["Copy flight durations and gossip configurations."],
     button1 = CLOSE,
     hasEditBox = true,
     maxLetters = 0,
@@ -82,7 +127,7 @@ StaticPopupDialogs.ONFLIGHT_EXPORT_DURATIONS = {
 }
 
 StaticPopupDialogs.ONFLIGHT_IMPORT_DURATIONS = {
-    text = L["Paste flight duration data."],
+    text = L["Paste flight durations and gossip configurations."],
     button1 = L["Import"],
     button2 = CANCEL,
     hasEditBox = true,
@@ -122,13 +167,22 @@ function addonCore:ExportDurations()
             end
         end
     end
+    for optionID, endpoints in pairs(self.db.global.gossipTriggered) do
+        local source = type(endpoints) == "table" and FormatGossipEndpoint(optionID, endpoints[1])
+        local destination = type(endpoints) == "table" and FormatGossipEndpoint(optionID, endpoints[2])
+        if IsPositiveInteger(optionID) and source and destination then
+            records[#records + 1] = ("G|%.0f|%s|%s"):format(optionID, source, destination)
+        else
+            print(self.OnFlightPrefixText, L["Could not export gossip option %s."]:format(tostring(optionID)))
+        end
+    end
     local serialized = C_EncodingUtil.SerializeCBOR(records)
     local compressed = C_EncodingUtil.CompressString(serialized)
     local encoded = compressed and C_EncodingUtil.EncodeBase64(compressed)
     if encoded then
         ShowDurationPopup("ONFLIGHT_EXPORT_DURATIONS", encoded)
     else
-        print(self.OnFlightPrefixText, L["Could not export flight durations."])
+        print(self.OnFlightPrefixText, L["Could not export flight data."])
     end
 end
 

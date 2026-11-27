@@ -124,7 +124,7 @@ function addonCore:RefreshGossipEditor(optionID)
                     local removedID = row.optionID
                     local data = self.db.global
                     local endpoints = data.gossipTriggered[removedID]
-                    local source = self:GetGossipEndpoint(removedID, endpoints[1])
+                    local source = self:GetGossipEndpoint(removedID, endpoints[1], true)
                     local destination = self:GetGossipEndpoint(removedID, endpoints[2])
                     if source and destination then
                         for _, faction in ipairs({"Alliance", "Horde"}) do
