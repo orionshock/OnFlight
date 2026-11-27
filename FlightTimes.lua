@@ -1,5 +1,6 @@
 -- Public flight state; transport and flight detection remain with their existing owners.
--- luacheck: globals GetTime GetServerTime NameUtil UnitIsUnit IsInRaid GetNumGroupMembers
+-- luacheck: globals GetTime GetServerTime NameUtil UnitExists UnitIsUnit IsInRaid GetNumGroupMembers
+-- luacheck: globals C_Secrets canaccessvalue
 local _, addonCore = ...
 local module = addonCore:NewModule("FlightTimes", "AceEvent-3.0")
 
@@ -19,7 +20,36 @@ function API:UnregisterCallback(event, owner)
 end
 
 function API:GetTaxiNodeName(nodeID)
-    return addonCore:GetTaxiNodeName(nodeID)
+    if canaccessvalue(nodeID) then
+        return addonCore:GetTaxiNodeName(nodeID)
+    end
+end
+
+local function GetReadableUnitName(unit)
+    -- NameUtil can concatenate the name and realm before returning.
+    if not C_Secrets.ShouldUnitIdentityBeSecret(unit) then
+        local name = NameUtil.GetUnmodifiedUnitFullName(unit)
+        if canaccessvalue(name) then return name end
+    end
+end
+
+local function IsPlayerUnit(unit)
+    if C_Secrets.CanCompareUnitTokens(unit, "player") then
+        local result = UnitIsUnit(unit, "player")
+        if canaccessvalue(result) then return not not result end
+    end
+end
+
+function module.CanResolveGroupMembers()
+    if C_Secrets.ShouldUnitIdentityBeSecret("player") then return false end
+    local prefix = IsInRaid() and "raid" or "party"
+    for i = 1, GetNumGroupMembers() do
+        local unit = prefix .. i
+        if UnitExists(unit) and (C_Secrets.ShouldUnitIdentityBeSecret(unit) or IsPlayerUnit(unit) == nil) then
+            return false
+        end
+    end
+    return true
 end
 
 local function SenderUnit(sender)
@@ -27,22 +57,25 @@ local function SenderUnit(sender)
     local prefix = IsInRaid() and "raid" or "party"
     for i = 1, GetNumGroupMembers() do
         local unit = prefix .. i
-        if not UnitIsUnit(unit, "player") and NameUtil.GetUnmodifiedUnitFullName(unit) == sender then
+        if IsPlayerUnit(unit) == false and GetReadableUnitName(unit) == sender then
             return unit
         end
     end
 end
 
 function API:GetFlightInfo(unit)
-    if type(unit) ~= "string" or (unit ~= "player" and not unit:match("^party%d+$") and
+    if not canaccessvalue(unit) or type(unit) ~= "string" or (unit ~= "player" and not unit:match("^party%d+$") and
         not unit:match("^raid%d+$")) then
         return
     end
-    if unit == "player" or UnitIsUnit(unit, "player") then
+    local sender = GetReadableUnitName(unit)
+    if not sender then return end
+    local isPlayer = unit == "player" or IsPlayerUnit(unit)
+    if isPlayer == nil then return end
+    if isPlayer then
         return playerFlight
     end
-    local sender = NameUtil.GetUnmodifiedUnitFullName(unit)
-    local entry = sender and remote[sender]
+    local entry = remote[sender]
     if entry and SenderUnit(sender) then
         return entry.flight
     end
@@ -93,6 +126,7 @@ function module:RemoteStarted(sender, record)
 end
 
 function module:GROUP_ROSTER_UPDATE()
+    if not self.CanResolveGroupMembers() then return end
     -- Resolve current tokens instead of maintaining a second roster.
     for sender, entry in pairs(remote) do
         local unit = SenderUnit(sender)
