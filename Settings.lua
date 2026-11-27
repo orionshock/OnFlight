@@ -105,7 +105,7 @@ function addonCore:ToggleSettings()
         (category == self.settingsCategory or category:GetParentCategory() == self.settingsCategory) then
         HideUIPanel(SettingsPanel)
         local browser = self:GetModule("NativeFlightListWindow")
-        if browser:IsEnabled() and self:GetTaxiSession() then
+        if self:GetTaxiSession() then
             browser:Open()
         end
     else

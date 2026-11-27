@@ -155,7 +155,7 @@ local svDefaults = {
             minimapPos = 225
         },
         moduleState = {
-            ["*"] = true
+            TimerBar = true
         }
     },
     global = {
@@ -566,14 +566,6 @@ end
 
 function addonCore:OnProfileUpdated()
     self:ApplyFlightDisplay()
-    for name, module in self:IterateModules() do
-        local enabled = db.profile.moduleState[name]
-        if enabled and not module:IsEnabled() then
-            self:EnableModule(name)
-        elseif not enabled and module:IsEnabled() then
-            self:DisableModule(name)
-        end
-    end
     self:RefreshSettings()
     self:RefreshFlightNotificationCheckbox()
     self:RefreshDiagnostics()

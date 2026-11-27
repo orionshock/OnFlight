@@ -108,16 +108,11 @@ timer:SetScript("OnUpdate", function(_, elapsed)
     UpdateTimer()
 end)
 
-function module:RefreshMinimapIcon()
-    if self:IsEnabled() then
-        DBIcon:Refresh("OnFlight", addonCore.db.profile.minimap)
-    else
-        DBIcon:Hide("OnFlight")
-    end
+function module.RefreshMinimapIcon()
+    DBIcon:Refresh("OnFlight", addonCore.db.profile.minimap)
 end
 
 function module:OnInitialize()
-    self:SetEnabledState(addonCore.db.profile.moduleState.LDBLauncher)
     broker = LDB:NewDataObject("OnFlight", {
         type = "launcher",
         label = L["OnFlight"],
@@ -146,17 +141,4 @@ function module:OnEnable()
     UpdateText()
     self:RefreshMinimapIcon()
     UpdateTimer()
-end
-
-function module:OnDisable()
-    self:UnregisterAllEvents()
-    FlightTimes:UnregisterCallback("FlightStarted", self)
-    FlightTimes:UnregisterCallback("FlightStopped", self)
-    broker.text = L["OnFlight"]
-    if tooltip then
-        tooltip:Hide()
-    end
-    tooltip, tooltipOwner = nil, nil
-    timer:Hide()
-    DBIcon:Hide("OnFlight")
 end

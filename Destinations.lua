@@ -44,7 +44,7 @@ end
 
 local function UpdateUnknownButtons()
     local session = addonCore:GetTaxiSession()
-    local show = module:IsEnabled() and window and window:IsShown() and session and
+    local show = window and window:IsShown() and session and
         addonCore.db.profile.showUnknownFlightPoints
     local count = NumTaxiNodes()
     for slot = 1, NUM_TAXI_BUTTONS do
@@ -133,11 +133,9 @@ local function HighlightZone(zone)
 end
 
 -- Blizzard hides DISTANT buttons during route updates. Restore only the requested points.
-hooksecurefunc("DrawOneHopLines", function()
-    if module:IsEnabled() then UpdateUnknownButtons() end
-end)
+hooksecurefunc("DrawOneHopLines", UpdateUnknownButtons)
 hooksecurefunc("TaxiNodeOnButtonEnter", function(button)
-    if module:IsEnabled() and addonCore:GetTaxiSession() then
+    if addonCore:GetTaxiSession() then
         UpdateUnknownButtons()
         if TaxiNodeGetType(button:GetID()) == "DISTANT" then
             if button.OnFlightUnknownClick then
@@ -151,7 +149,7 @@ end)
 
 -- Both native taxi buttons and browser rows use this leave handler.
 hooksecurefunc("TaxiNodeOnButtonLeave", function(button)
-    if module:IsEnabled() and TaxiFrame:IsShown() and addonCore:GetTaxiSession() then
+    if TaxiFrame:IsShown() and addonCore:GetTaxiSession() then
         button:UnlockHighlight()
         DrawOneHopLines()
         if window and window:IsShown() then
@@ -485,17 +483,6 @@ function module:OnEnable()
         end
     end, self)
     self:RegisterEvent("TAXIMAP_CLOSED")
-    if addonCore:GetTaxiSession() then
-        self:Open()
-    end
-end
-
-function module:OnDisable()
-    addonCore:UnregisterCallback("OnFlight_TaxiMapReady", self)
-    addonCore:UnregisterCallback("OnFlight_DiagnosticsChanged", self)
-    self:UnregisterAllEvents()
-    self:TAXIMAP_CLOSED()
-    addonCore.RestoreTaxiFrame()
 end
 
 local toggle = addonCore:CreateTaxiFrameToggle()
@@ -508,9 +495,6 @@ end)
 toggle:SetScript("OnLeave", GameTooltip_Hide)
 toggle:SetScript("OnClick", function(_, button)
     if button == "LeftButton" then
-        if not module:IsEnabled() then
-            return
-        end
         if window and window:IsShown() then
             window:Hide()
         else

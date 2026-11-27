@@ -146,18 +146,4 @@ function module:OnEnable()
     addonCore:RegisterCallback("OnFlight_RemoteFlightUpdated", self.RemoteStarted, self)
     addonCore:RegisterCallback("OnFlight_RemoteFlightRemoved", self.RemoteRemoved, self)
     self:RegisterEvent("GROUP_ROSTER_UPDATE")
-    self:LocalStarted()
-    for sender, record in pairs(addonCore:GetModule("Communication"):GetRemoteFlights()) do
-        self:RemoteStarted(sender, record)
-    end
-end
-
-function module:OnDisable()
-    addonCore:UnregisterCallback("OnFlight_Taxi_Start", self)
-    addonCore:UnregisterCallback("OnFlight_Taxi_RESUME", self)
-    addonCore:UnregisterCallback("OnFlight_Taxi_Stop", self)
-    addonCore:UnregisterCallback("OnFlight_Taxi_EarlyExit", self)
-    addonCore:UnregisterCallback("OnFlight_RemoteFlightUpdated", self)
-    addonCore:UnregisterCallback("OnFlight_RemoteFlightRemoved", self)
-    self:UnregisterAllEvents()
 end

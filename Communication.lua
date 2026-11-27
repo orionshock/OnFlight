@@ -1,13 +1,12 @@
 -- Forever group flight status. See docs/PROTOCOL.md for the independent wire protocol.
 -- luacheck: no max line length
--- luacheck: globals LibStub C_ChatInfo C_AddOns C_Timer IsInGuild CreateFrame GetTime GetServerTime IsInRaid IsInGroup NameUtil wipe
+-- luacheck: globals LibStub C_ChatInfo C_AddOns C_Timer IsInGuild CreateFrame GetTime GetServerTime IsInRaid IsInGroup NameUtil
 -- luacheck: globals LE_PARTY_CATEGORY_INSTANCE LE_PARTY_CATEGORY_HOME
 -- luacheck: globals C_RestrictedActions Enum canaccessvalue issecretvalue tinsert tremove unpack
 local addonName, addonCore = ...
 local module = addonCore:NewModule("Communication", "AceEvent-3.0")
 local PREFIX, STALE_SECONDS = "OnFlight", 180
 local VERSION_PREFIX = "OnFlightVersion"
-local versionScheduled = false
 local thresholds = {0.3, 0.5, 0.7}
 local remoteFlights, ended = {}, {}
 local pending, replay = {}, {}
@@ -48,11 +47,6 @@ local function RemoveRemote(sender, reason, now)
         expiresAt = now + STALE_SECONDS
     }
     addonCore:TriggerEvent("OnFlight_RemoteFlightRemoved", sender, flight, reason)
-end
-
--- Consumers may read these records; only this module changes them.
-function module:GetRemoteFlights()
-    return remoteFlights
 end
 
 local function CanProcessMessages()
@@ -136,10 +130,7 @@ function module:ADDON_RESTRICTION_STATE_CHANGED(_, _, state)
     if state ~= restrictionState.Inactive or not CanProcessMessages() then
         return
     end
-    local flightTimes = addonCore:GetModule("FlightTimes")
-    if flightTimes:IsEnabled() then
-        flightTimes:GROUP_ROSTER_UPDATE()
-    end
+    addonCore:GetModule("FlightTimes"):GROUP_ROSTER_UPDATE()
     pending, replay = replay, pending
     while #replay > 0 do
         local args = tremove(replay, 1)
@@ -237,46 +228,19 @@ timer:SetScript("OnUpdate", function(_, elapsed)
     Update()
 end)
 
-function module:OnInitialize()
-    self:SetEnabledState(addonCore.db.profile.moduleState.Communication)
-end
-
 function module:OnEnable()
-    if outgoing and outgoing.flight ~= addonCore:GetCurrentFlight() then
-        outgoing = nil
-    end
     C_ChatInfo.RegisterAddonMessagePrefix(PREFIX)
     C_ChatInfo.RegisterAddonMessagePrefix(VERSION_PREFIX)
-    if not versionScheduled then
-        versionScheduled = true
-        C_Timer.After(5, function()
-            if self:IsEnabled() and IsInGuild() then
-                C_ChatInfo.SendAddonMessage(VERSION_PREFIX, C_AddOns.GetAddOnMetadata(addonName, "Version"), "GUILD")
-            end
-        end)
-    end
+    C_Timer.After(5, function()
+        if IsInGuild() then
+            C_ChatInfo.SendAddonMessage(VERSION_PREFIX, C_AddOns.GetAddOnMetadata(addonName, "Version"), "GUILD")
+        end
+    end)
     self:RegisterEvent("CHAT_MSG_ADDON")
     self:RegisterEvent("ADDON_RESTRICTION_STATE_CHANGED")
     addonCore:RegisterCallback("OnFlight_Taxi_Start", self.FlightStarted, self)
     addonCore:RegisterCallback("OnFlight_Taxi_RESUME", self.FlightStarted, self)
     addonCore:RegisterCallback("OnFlight_Taxi_Stop", self.FlightEnded, self)
     addonCore:RegisterCallback("OnFlight_Taxi_EarlyExit", self.FlightEnded, self)
-    elapsedSinceUpdate = 0
     timer:Show()
-end
-
-function module:OnDisable()
-    timer:Hide()
-    self:UnregisterAllEvents()
-    addonCore:UnregisterCallback("OnFlight_Taxi_Start", self)
-    addonCore:UnregisterCallback("OnFlight_Taxi_RESUME", self)
-    addonCore:UnregisterCallback("OnFlight_Taxi_Stop", self)
-    addonCore:UnregisterCallback("OnFlight_Taxi_EarlyExit", self)
-    -- Keep the frozen announcement if re-enabled on this flight; never send a false E.
-    for sender in pairs(remoteFlights) do
-        RemoveRemote(sender, "disabled", GetServerTime())
-    end
-    wipe(ended)
-    wipe(pending)
-    wipe(replay)
 end

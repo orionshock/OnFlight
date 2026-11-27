@@ -60,17 +60,6 @@ function addonCore.ExpandTaxiFrame()
     end
 end
 
-function addonCore.RestoreTaxiFrame()
-    TaxiFrame.InsetBg:ClearAllPoints()
-    TaxiFrame.InsetBg:SetPoint("TOPLEFT", TaxiFrame, "TOPLEFT", 4, -24)
-    TaxiFrame.InsetBg:SetPoint("BOTTOMRIGHT", TaxiFrame, "BOTTOMRIGHT", -6, 4)
-    TaxiFrame:SetWidth(taxiWidth)
-    SetUIPanelAttribute(TaxiFrame, "width", taxiPanelWidth)
-    if TaxiFrame:IsShown() then
-        UpdateUIPanelPositions(TaxiFrame)
-    end
-end
-
 function addonCore:CreateTaxiFrameToggle()
     if self.taxiFrameToggle then return self.taxiFrameToggle end
     local toggle = CreateFrame("Button", "OnFlight_TaxiFrameToggleButton", TaxiFrame)
