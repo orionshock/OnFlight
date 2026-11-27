@@ -4,7 +4,7 @@
 local addonName, addonCore = ...
 local L = LibStub("AceLocale-3.0"):GetLocale(addonName)
 local frame = CreateFrame("Frame")
-local trackingEvents = {"OnFlight_Taxi_Start", "OnFlight_Taxi_RESUME", "OnFlight_Taxi_Suspend",
+local trackingEvents = {"OnFlight_Taxi_Start",
                         "OnFlight_Taxi_Stop", "OnFlight_Taxi_EarlyExit", "OnFlight_Taxi_FAILED_ENTRY"}
 local enabled, lastMapID = false, nil
 local hooks = {}

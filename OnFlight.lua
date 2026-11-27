@@ -15,7 +15,7 @@ callbacks:OnLoad()
 callbacks:GenerateCallbackEvents({
     "FlightStarted", "FlightStopped",
     "OnFlight_Taxi_Start", "OnFlight_Taxi_Stop", "OnFlight_Taxi_EarlyExit",
-    "OnFlight_Taxi_FAILED_ENTRY", "OnFlight_Taxi_RESUME", "OnFlight_Taxi_Suspend",
+    "OnFlight_Taxi_FAILED_ENTRY",
     "OnFlight_RemoteFlightUpdated", "OnFlight_RemoteFlightRemoved",
     "OnFlight_TaxiMapReady", "OnFlight_DiagnosticsChanged"
 })
@@ -202,7 +202,6 @@ function addonCore:OnEnable()
     self:RegisterEvent("TAXIMAP_CLOSED")
     self:RegisterEvent("PLAYER_ENTERING_WORLD")
     self:RegisterEvent("PLAYER_LEAVING_WORLD")
-    self:RegisterEvent("LFG_PROPOSAL_DONE")
 end
 
 function addonCore:ChatMessage(...)
@@ -274,20 +273,9 @@ local function UpdateFlight(_, elapsed)
             flight.startServerTime = flight.startServerTime or GetServerTime()
             local duration = addonCore:GetFlightDuration(flight.sourceID, flight.destinationID)
             if duration then
-                if flight.resumeRemaining then
-                    addonCore:TriggerEvent("OnFlight_Taxi_RESUME", flight.sourceName, flight.destinationName, duration,
-                        flight.resumeRemaining)
-                    addonCore:ChatMessage(L["Resume On Taxi: %s --> %s"]:format(flight.sourceName,
-                        flight.destinationName))
-                else
-                    addonCore:TriggerEvent("OnFlight_Taxi_Start", flight.sourceName, flight.destinationName, duration,
-                        false)
-                    addonCore:ChatMessage(L["On Taxi: %s --> %s -- %s"]:format(flight.sourceName,
-                        flight.destinationName, SecondsToTime(duration)))
-                end
-            elseif flight.resumeRemaining then
-                addonCore:TriggerEvent("OnFlight_Taxi_RESUME", flight.sourceName, flight.destinationName, nil, nil, true)
-                addonCore:ChatMessage(L["Resume On Taxi: %s --> %s"]:format(flight.sourceName, flight.destinationName))
+                addonCore:TriggerEvent("OnFlight_Taxi_Start", flight.sourceName, flight.destinationName, duration, false)
+                addonCore:ChatMessage(L["On Taxi: %s --> %s -- %s"]:format(flight.sourceName,
+                    flight.destinationName, SecondsToTime(duration)))
             else
                 addonCore:TriggerEvent("OnFlight_Taxi_Start", flight.sourceName, flight.destinationName, 0, true)
                 addonCore:ChatMessage(L["On Taxi: %s --> %s"]:format(flight.sourceName, flight.destinationName))
@@ -332,7 +320,7 @@ local function UpdateFlight(_, elapsed)
     end
 end
 
-function addonCore:StartAFlight(source, destination, timeRemaining, forceEarlyExitState, route)
+function addonCore:StartAFlight(source, destination, route)
     local sourceName = self:GetFlightEndpointName(source)
     local destinationName = self:GetFlightEndpointName(destination)
     if not sourceName or not destinationName then
@@ -344,9 +332,7 @@ function addonCore:StartAFlight(source, destination, timeRemaining, forceEarlyEx
         route = route or {},
         sourceName = sourceName,
         destinationName = destinationName,
-        onTaxi = false,
-        resumeRemaining = timeRemaining,
-        earlyExit = forceEarlyExitState
+        onTaxi = false
     }
     flightMonitor:SetScript("OnUpdate", UpdateFlight)
 end
@@ -358,8 +344,8 @@ hooksecurefunc("TaxiRequestEarlyLanding", function()
     end
 end)
 
-hooksecurefunc("AcceptBattlefieldPort", function()
-    if flight and not flight.suspended then
+hooksecurefunc("AcceptBattlefieldPort", function(_, accept)
+    if accept and flight and not flight.suspended then
         flight.earlyExit = L["Battlefield Port"]
     end
 end)
@@ -369,12 +355,6 @@ hooksecurefunc(C_SummonInfo, "ConfirmSummon", function()
         flight.earlyExit = L["Accepted Summon"]
     end
 end)
-
-function addonCore:LFG_PROPOSAL_DONE(event, ...)
-    if flight and not flight.suspended then
-        flight.earlyExit = L["LFG Port"]
-    end
-end
 
 ---Estimated Flight Times - Transposed from origional code
 ---@param destinationID number
@@ -487,28 +467,20 @@ hooksecurefunc("SetTaxiMap", function()
     end
 end)
 
-function addonCore:PLAYER_ENTERING_WORLD(event, isInitialLogin, isReloadingUi)
+function addonCore.PLAYER_ENTERING_WORLD()
     if flight then
         flight.suspended = nil
         flightMonitor:SetScript("OnUpdate", UpdateFlight)
-        if flight.startedAt then
-            -- World-entry resume uses the measured duration and full elapsed time.
-            flight.resumeRemaining = nil
-            local elapsed, remaining, duration = self:GetCurrentFlightProgress()
-            self:TriggerEvent("OnFlight_Taxi_RESUME", flight.sourceName, flight.destinationName, duration, remaining,
-                not duration, elapsed)
-        end
     end
 end
 
-function addonCore:PLAYER_LEAVING_WORLD(event)
-    if not self:IsOnFlight() then
+function addonCore.PLAYER_LEAVING_WORLD()
+    if not flight or flight.suspended then
         return
     end
-    -- UnitOnTaxi may briefly be false during a transfer. Keep the timing origin.
+    -- Avoid sampling taxi state while out of world.
     flight.suspended = true
     flightMonitor:SetScript("OnUpdate", nil)
-    self:TriggerEvent("OnFlight_Taxi_Suspend")
 end
 
 ---External / Internal APIs
@@ -523,12 +495,8 @@ function addonCore:GetCurrentFlight()
     return flight
 end
 
-function addonCore:IsOnFlight()
-    return flight ~= nil and not flight.suspended
-end
-
 function addonCore:GetCurrentFlightProgress()
-    if not self:IsOnFlight() or not flight.startedAt then
+    if not flight or not flight.startedAt then
         return
     end
     local elapsed = GetTime() - flight.startedAt
@@ -548,7 +516,7 @@ do -- Direct Hoook Funcs
         if session and destinationID then
             local route = addonCore:GetTaxiRoute(destinationID)
             if route then
-                addonCore:StartAFlight(session.sourceID, destinationID, nil, nil, route)
+                addonCore:StartAFlight(session.sourceID, destinationID, route)
             end
         end
         oldTakeTaxiNode(slot, ...)

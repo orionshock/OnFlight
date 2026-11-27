@@ -140,7 +140,6 @@ end
 
 function module:OnEnable()
     addonCore:RegisterCallback("OnFlight_Taxi_Start", self.LocalStarted, self)
-    addonCore:RegisterCallback("OnFlight_Taxi_RESUME", self.LocalStarted, self)
     addonCore:RegisterCallback("OnFlight_Taxi_Stop", self.LocalStopped, self)
     addonCore:RegisterCallback("OnFlight_Taxi_EarlyExit", self.LocalStopped, self)
     addonCore:RegisterCallback("OnFlight_RemoteFlightUpdated", self.RemoteStarted, self)

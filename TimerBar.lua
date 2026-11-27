@@ -119,9 +119,6 @@ local function timerBarOnUpdate(self, elapsed)
         timeOnFlight, remaining, duration = addonCore:GetCurrentFlightProgress()
         if timeOnFlight == nil then return end
         self.timeRemaining, self.duration = remaining, duration
-        if self.timeRemaining and self.displayedFlight.resumeRemaining then
-            self.timeRemaining = self.displayedFlight.resumeRemaining - timeOnFlight
-        end
     end
     local profile = db.profile
     local displayedTime

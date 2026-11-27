@@ -11,4 +11,4 @@ The OnFlight core continues tracking the active flight, learning its duration, s
 
 ## Implementation status
 
-TimerBar and Quartz start a presentation on a flight-start event. Enabling mid-flight leaves the new display idle until the next flight. Existing bars persist through world transitions. TimerBar waits for progress from the core, and Quartz continues using its Player bar. Disabling a display clears its presentation.
+TimerBar and Quartz start a presentation on a flight-start event. Enabling mid-flight leaves the new display idle until the next flight. Existing bars persist through world transitions. TimerBar continues reading progress from the core, and Quartz continues using its Player bar. Disabling a display clears its presentation.

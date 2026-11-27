@@ -91,7 +91,6 @@ L["Known Flight Color"] = true
 L["Layout and Position"] = true
 L["LEFT"] = true
 L["Left Click to Toggle Flight Destinations View"] = true
-L["LFG Port"] = true
 L["Look and Feel"] = true
 L["Main Options"] = true
 L["Map %d: GetAllTaxiNodes=%s; GetTaxiNodesForMap=%s"] = true
@@ -134,7 +133,6 @@ L["Remove"] = true
 L["Request Early Landing"] = true
 L["Reset All Bar Options to Defaults"] = true
 L["Reset Bar Settings"] = true
-L["Resume On Taxi: %s --> %s"] = true
 L["RIGHT"] = true
 L["Right Click to Toggle OnFlight Settings"] = true
 L["Route to ID %s (continued): %s"] = true
