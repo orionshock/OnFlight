@@ -406,6 +406,16 @@ function OnFlight_GetEstimatedTime(destinationID)
     return etimes[#taxiNodes]
 end
 
+function addonCore:GetTaxiDurationText(sourceID, destinationID)
+    local duration = self:GetFlightDuration(sourceID, destinationID)
+    if duration then
+        return SecondsToTime(duration)
+    end
+    local session = self:GetTaxiSession()
+    local estimate = session and session.sourceID == sourceID and OnFlight_GetEstimatedTime(destinationID)
+    return estimate and "~" .. SecondsToTime(estimate) or L["Unknown"]
+end
+
 -- This is the DefaultUI's Taxi Button, the ID needs to make sense.
 -- Default UI just directly assumes the GameTooltip because there is no "OnTaxiNodeSet" type handler.
 function OnFlight_TaxiFrame_TooltipHook(button)
@@ -418,20 +428,8 @@ function OnFlight_TaxiFrame_TooltipHook(button)
         if not session then
             return
         end
-        local duration = addonCore:GetFlightDuration(session.sourceID, session.slotToID[id])
-        if duration then
-            GameTooltip:AddDoubleLine(L["Duration:"], SecondsToTime(duration))
-            GameTooltip:Show()
-        else
-            local eta = OnFlight_GetEstimatedTime(session.slotToID[id])
-            if eta then
-                GameTooltip:AddDoubleLine(L["Duration:"], "~" .. SecondsToTime(eta))
-                GameTooltip:Show()
-            else
-                GameTooltip:AddDoubleLine(L["Duration:"], L["Unknown"])
-                GameTooltip:Show()
-            end
-        end
+        GameTooltip:AddDoubleLine(L["Duration:"], addonCore:GetTaxiDurationText(session.sourceID, session.slotToID[id]))
+        GameTooltip:Show()
     end
 end
 

@@ -1,7 +1,8 @@
+-- luacheck: globals GameTooltip
 local addonName, addonCore = ...
 local module = addonCore:NewModule("NativeFlightListWindow", "AceEvent-3.0")
 local L = LibStub("AceLocale-3.0"):GetLocale(addonName)
-local window, hoveredButton, hoveredRow
+local window, hoveredButton
 local rows = {}
 local selectedTab, selectedZone = "favorites", nil
 local ROW_HEIGHT = 40
@@ -27,11 +28,7 @@ local function ClearHover()
     if hoveredButton and addonCore:GetTaxiSession() then
         TaxiNodeOnButtonLeave(hoveredButton)
     end
-    if hoveredRow then
-        hoveredRow:SetID(0)
-    end
     hoveredButton = nil
-    hoveredRow = nil
     GameTooltip:Hide()
     for slot = 1, NUM_TAXI_BUTTONS do
         local button = _G["TaxiButton" .. slot]
@@ -81,21 +78,12 @@ local function UpdateUnknownButtons()
     end
 end
 
-local function GetDurationText(sourceID, destinationID)
-    local duration = addonCore:GetFlightDuration(sourceID, destinationID)
-    if duration then
-        return SecondsToTime(duration)
-    end
-    local estimate = OnFlight_GetEstimatedTime(destinationID)
-    return estimate and "~" .. SecondsToTime(estimate) or L["Unknown"]
-end
-
 local function AddUnknownFlightInfo(slot)
     local session = addonCore:GetTaxiSession()
     if not session then return end
     local id = session.slotToID[slot]
     GameTooltip:AddLine(L["Unavailable"], 1, 1, 1, true)
-    GameTooltip:AddDoubleLine(L["Duration:"], GetDurationText(session.sourceID, id))
+    GameTooltip:AddDoubleLine(L["Duration:"], addonCore:GetTaxiDurationText(session.sourceID, id))
     if addonCore.db.profile.showGossipConfig then
         GameTooltip:AddLine(tostring(id), 0.6, 0.6, 0.6)
     end
@@ -179,19 +167,17 @@ local function RowOnEnter(self)
     -- Let Blizzard draw the map route, then own the tooltip on the visible row.
     TaxiNodeOnButtonEnter(button)
     button:LockHighlight()
-    hoveredRow = self
-    self:SetID(slot) -- Temporary handle for the existing duration-tooltip hook only.
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
     GameTooltip:ClearLines()
     GameTooltip:AddLine(session.nodes[self.nodeID].name, 1, 1, 1, true)
     if nodeType == "REACHABLE" then
         GameTooltip_AddMoneyLine(GameTooltip, TaxiNodeCost(slot))
+        GameTooltip:AddDoubleLine(L["Duration:"], addonCore:GetTaxiDurationText(session.sourceID, self.nodeID))
     elseif nodeType == "CURRENT" then
         GameTooltip:AddLine(TAXINODEYOUAREHERE, 1, 1, 1, true)
     elseif nodeType == "DISTANT" then
         AddUnknownFlightInfo(slot)
     end
-    OnFlight_TaxiFrame_TooltipHook(self)
     GameTooltip:Show()
 end
 
@@ -322,7 +308,7 @@ local function SetDestinationRow(row, node, session, profile)
     row.label:SetText(node.name)
     row.label:SetTextColor(tint, tint, tint)
     if node.type == "REACHABLE" then
-        local durationText = GetDurationText(session.sourceID, node.id)
+        local durationText = addonCore:GetTaxiDurationText(session.sourceID, node.id)
         local slot = session.idToSlot[node.id]
         local cost = slot and TaxiNodeCost(slot)
         row.detail:SetText(cost and durationText .. " · " .. C_CurrencyInfo.GetCoinTextureString(cost) or durationText)
