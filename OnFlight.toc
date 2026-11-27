@@ -20,6 +20,7 @@ FlightTimes.lua
 TimerBar.lua
 Defaults.lua
 GossipEditor.lua
+ImportExport.lua
 Commands.lua
 Settings.xml
 Broker.lua

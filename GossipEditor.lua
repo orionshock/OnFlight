@@ -55,9 +55,9 @@ local function CommitEndpoint(input)
     if row.optionID then
         addonCore.db.global.gossipTriggered[row.optionID][input.endpoint] = key
     end
-    -- New-row values remain in the form until Add supplies the real gossip ID.
+    -- Keep the original label in the input so Add cannot mistake a sanitized label for a taxi ID.
     input:SetText(type(key) == "number" and tostring(key) or message)
-    input.feedback:SetText(message)
+    input.feedback:SetText(type(key) == "string" and key:match("^%d+:(.*)$") or message)
     input.feedback:SetTextColor(1, 0.82, 0)
 end
 
@@ -121,8 +121,25 @@ function addonCore:RefreshGossipEditor(optionID)
             row.title:SetFormattedText(L["Gossip ID: %d"], id)
             if not row.remove then
                 row.remove = MakeButton(row, L["Remove"], 80, function()
-                    self.db.global.gossipTriggered[row.optionID] = nil
-                    self:RefreshGossipEditor(row.optionID)
+                    local removedID = row.optionID
+                    local data = self.db.global
+                    local endpoints = data.gossipTriggered[removedID]
+                    local source = self:GetGossipEndpoint(removedID, endpoints[1])
+                    local destination = self:GetGossipEndpoint(removedID, endpoints[2])
+                    if source and destination then
+                        for _, faction in ipairs({"Alliance", "Horde"}) do
+                            local routes = data.flightTimes[faction]
+                            local durations = routes[source]
+                            if durations then
+                                durations[destination] = nil
+                                if not next(durations) then
+                                    routes[source] = nil
+                                end
+                            end
+                        end
+                    end
+                    data.gossipTriggered[removedID] = nil
+                    self:RefreshGossipEditor(removedID)
                 end)
                 row.remove:SetPoint("TOPRIGHT", -8, 0)
             end
@@ -167,7 +184,7 @@ function addonCore:CreateGossipSettings(parentCategory, register)
     end)
     checkbox:SetScript("OnEnter", function(control)
         GameTooltip:SetOwner(control, "ANCHOR_RIGHT")
-        GameTooltip:SetText(L["Show Diagnostic IDs"])
+        GameTooltip:SetText(L["Show Diagnostic IDs"], 1, 1, 1)
         GameTooltip:AddLine(help, 1, 1, 1, true)
         GameTooltip:Show()
     end)
@@ -294,5 +311,9 @@ function addonCore:ParseGossipEndpoint(optionID, text)
         end
         return nil, L["Unknown taxi-node ID. Check the ID or use a name. Saved value unchanged."]
     end
-    return tostring(optionID) .. ":" .. value, value
+    local key = self.MakeGossipEndpointKey(optionID, value)
+    if not key then
+        return nil, L["Enter a taxi-node ID or a custom location name."]
+    end
+    return key, value
 end

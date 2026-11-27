@@ -4,6 +4,13 @@
 local addonName, addonCore = ...
 local L = LibStub("AceLocale-3.0"):GetLocale(addonName)
 
+function addonCore.MakeGossipEndpointKey(optionID, label)
+    label = label:gsub("[:|]", "")
+    if label ~= "" then
+        return tostring(optionID) .. ":" .. label
+    end
+end
+
 -- Custom gossip endpoints never resolve by name to a taxi node.
 function addonCore:GetGossipEndpoint(optionID, value)
     if type(value) == "number" then
@@ -13,10 +20,11 @@ function addonCore:GetGossipEndpoint(optionID, value)
         return
     end
     local prefix = tostring(optionID) .. ":"
-    local label = value:sub(1, #prefix) == prefix and value:sub(#prefix + 1) or value
-    label = label:match("^%s*(.-)%s*$")
-    if label ~= "" then
-        return prefix .. label, label
+    -- The editor already trims stored labels. Preserve spaces exposed by sanitization.
+    local label = value:sub(1, #prefix) == prefix and value:sub(#prefix + 1) or value:match("^%s*(.-)%s*$")
+    local key = self.MakeGossipEndpointKey(optionID, label)
+    if key then
+        return key, label
     end
 end
 

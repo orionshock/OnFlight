@@ -22,6 +22,10 @@ SlashCmdList.ONFLIGHT = function(input)
         else
             addonCore:OpenSettings()
         end
+    elseif command == "export" then
+        addonCore:ExportDurations()
+    elseif command == "import" then
+        addonCore.OpenDurationImport()
     elseif command == "test known" then
         addonCore:GetModule("TimerBar"):TogglePreview(false)
     elseif command == "test unknown" then
@@ -43,6 +47,6 @@ SlashCmdList.ONFLIGHT = function(input)
         print(addonCore.OnFlightPrefixText, L["Chat messages %s."]:format(profile.showChat and L["ON"] or L["OFF"]))
     else
         print(addonCore.OnFlightPrefixText,
-            L["Usage: /onflight | /onflight test known | /onflight test unknown | /onflight test stop | /onflight debug | /onflight debug clear | /onflight chat"])
+            L["Usage: /onflight | /onflight export | /onflight import | /onflight test known | /onflight test unknown | /onflight test stop | /onflight debug | /onflight debug clear | /onflight chat"])
     end
 end
