@@ -1,0 +1,37 @@
+name: "Submit Flight Times"
+description: "Contribute your learned taxi flight durations to OnFlight"
+title: "[Flight Times] "
+labels: ["flight-data"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for contributing flight times!
+
+        In World of Warcraft:
+        1. Type `/onflight export`.
+        2. Copy the exported data.
+        3. Paste it into the field below.
+
+        Your export includes learned durations and any configured
+        gossip travel routes. No personal settings are included.
+
+  - type: textarea
+    id: data
+    attributes:
+      label: Exported Flight Data
+      description: "Paste the complete output of /onflight export."
+      placeholder: "Paste your encoded export here..."
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes (optional)
+      description: "Any details about your flight data?"
+      placeholder: "For example: Mostly Eastern Kingdoms routes."
+    validations:
+      required: false
