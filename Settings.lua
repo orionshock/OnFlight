@@ -35,19 +35,12 @@ function addonCore:RefreshSettings(...)
         for index = 1, select("#", ...) do
             local key = select(index, ...)
             Notify(settings[key])
-            -- Short Names listens to Compact Mode as well as module enablement.
-            if key == "TimerBar" then
-                Notify(settings.flightDisplay)
-                Notify(settings.bar_compactMode)
-            end
         end
     end
 end
 
 function addonCore:GetFlightDisplay()
-    local profile = self.db.profile
-    -- Keep the existing bar preference until a display is explicitly selected.
-    local display = profile.flightDisplay or (profile.moduleState.TimerBar and "builtin" or "none")
+    local display = self.db.profile.flightDisplay
     return display == "quartz" and not Quartz3 and "builtin" or display
 end
 
@@ -55,7 +48,6 @@ function addonCore:ApplyFlightDisplay()
     local display = self:GetFlightDisplay()
     local bar = self:GetModule("TimerBar")
     local enabled = display == "builtin"
-    self.db.profile.moduleState.TimerBar = enabled
     if enabled and not bar:IsEnabled() then
         bar:Enable()
     elseif not enabled and bar:IsEnabled() then
@@ -67,7 +59,8 @@ function addonCore:ApplyFlightDisplay()
         end
         Quartz3:SetModuleEnabled("OnFlight", display == "quartz")
     end
-    self:RefreshSettings("TimerBar")
+    -- Short Names listens to Compact Mode as well as module enablement.
+    self:RefreshSettings("flightDisplay", "bar_compactMode")
 end
 
 function addonCore:SetFlightDisplay(display)
@@ -84,7 +77,7 @@ end
 
 function addonCore:RefreshDiagnostics()
     local owner = GameTooltip:GetOwner()
-    if owner and owner.OnFlightGossipID and not (self.db.profile.showGossipConfig or self.db.profile.gossipdebug) then
+    if owner and owner.OnFlightGossipID and not self.db.profile.showGossipConfig then
         GameTooltip:Hide()
     end
     self:TriggerEvent("OnFlight_DiagnosticsChanged")
@@ -269,7 +262,8 @@ function addonCore:InitializeSettings()
     Settings.CreateCheckbox(category, minimap,
         L["Left-click to resend your flight. Right-click for settings. Drag to move."])
     local bar = self:GetModule("TimerBar")
-    local display = Register(category, "flightDisplay", "string", L["Flight Timer Display"], "builtin", function()
+    local display = Register(category, "flightDisplay", "string", L["Flight Timer Display"],
+        self.svDefaults.profile.flightDisplay, function()
         return self:GetFlightDisplay()
     end, function(value)
         self:SetFlightDisplay(value)
@@ -324,7 +318,7 @@ function addonCore:InitializeSettings()
             if color then
                 return ColorString(profile[key])
             end
-            return key == "fontSize" and tonumber(profile[key]) or profile[key]
+            return profile[key]
         end, function(value)
             local profile = location and bar.db.profile.barLocation or bar.db.profile
             if color then

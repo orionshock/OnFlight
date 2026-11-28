@@ -71,7 +71,6 @@ timerBar.svDefaults = svDefaults
 function timerBar:OnInitialize()
     self.db = addonCore.db:RegisterNamespace(moduleName, svDefaults)
     db = self.db
-    self:SetEnabledState(addonCore.db.profile.moduleState[moduleName])
 
     db.RegisterCallback(self, "OnProfileReset", "OnProfileUpdated")
     db.RegisterCallback(self, "OnProfileChanged", "OnProfileUpdated")
@@ -198,7 +197,7 @@ local function ApplyLookAndFeel(self)
     local color = self.unknownFlight and profile.unknownFlightColor or profile.barColor
     self.statusBar:SetStatusBarColor(color.r, color.g, color.b, color.a)
     self.spark:SetHeight(profile.barHeight)
-    self.textObj:SetFont(LSM:Fetch("font", profile.fontName), tonumber(profile.fontSize) or svDefaults.profile.fontSize,
+    self.textObj:SetFont(LSM:Fetch("font", profile.fontName), profile.fontSize,
         profile.fontOutline)
     local font = profile.fontColor
     self.textObj:SetTextColor(font.r, font.g, font.b, font.a)

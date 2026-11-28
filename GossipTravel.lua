@@ -21,11 +21,8 @@ function addonCore:GetGossipEndpoint(optionID, value, isSource)
         return
     end
     local prefix = tostring(optionID) .. ":"
-    -- The editor already trims stored labels. Preserve spaces exposed by sanitization.
-    local label = value:sub(1, #prefix) == prefix and value:sub(#prefix + 1) or value:match("^%s*(.-)%s*$")
-    local key = self.MakeGossipEndpointKey(optionID, label)
-    if key then
-        return key, label
+    if #value > #prefix and value:sub(1, #prefix) == prefix then
+        return value, value:sub(#prefix + 1)
     end
 end
 
@@ -77,7 +74,7 @@ do
         end
         self.OnFlightTooltipHooked = true
         self:HookScript("OnEnter", function(frame)
-            if addonCore.db and (addonCore.db.profile.showGossipConfig or addonCore.db.profile.gossipdebug) then
+            if addonCore.db and addonCore.db.profile.showGossipConfig then
                 if GameTooltip:GetOwner() ~= frame then
                     GameTooltip:SetOwner(frame, "ANCHOR_RIGHT")
                 end

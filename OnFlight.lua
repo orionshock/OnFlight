@@ -140,7 +140,6 @@ local svDefaults = {
         showUnknownFlightPoints = false,
         useWorldMapFlightMaps = true,
         showGossipConfig = false,
-        gossipdebug = false,
         favorites = {
             [2] = true, -- Stormwind
             [6] = true, -- Ironforge
@@ -153,9 +152,7 @@ local svDefaults = {
             hide = false,
             minimapPos = 225
         },
-        moduleState = {
-            TimerBar = true
-        }
+        flightDisplay = "builtin"
     },
     global = {}
 }
@@ -165,21 +162,6 @@ function addonCore:OnInitialize()
     playerFaction = UnitFactionGroup("player")
     self.db = LibStub("AceDB-3.0"):New("OnFlightSV", svDefaults, true)
     db = self.db
-    -- Preserve all profiles when renaming the timer module and its AceDB namespace.
-    local namespaces = db.sv.namespaces
-    if namespaces and namespaces.StatusBarModule then
-        namespaces.TimerBar = namespaces.TimerBar or namespaces.StatusBarModule
-        namespaces.StatusBarModule = nil
-    end
-    for _, profile in pairs(db.profiles) do
-        local state = profile.moduleState
-        if state and rawget(state, "StatusBarModule") ~= nil then
-            if rawget(state, "TimerBar") == nil then
-                state.TimerBar = state.StatusBarModule
-            end
-            state.StatusBarModule = nil
-        end
-    end
     db.global.flightTimes[playerFaction] = db.global.flightTimes[playerFaction] or {}
     db.RegisterCallback(self, "OnProfileChanged", "OnProfileUpdated")
     db.RegisterCallback(self, "OnProfileCopied", "OnProfileUpdated")
