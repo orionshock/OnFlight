@@ -1,0 +1,42 @@
+name: "Bug Report"
+description: "Report a problem with OnFlight"
+title: "[Bug] "
+
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: "Describe the problem you saw."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: Steps to reproduce
+      description: "List the steps in order, starting just before the problem occurs."
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: input
+    id: onflight-version
+    attributes:
+      label: OnFlight version
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional-information
+    attributes:
+      label: Additional information
+      description: "Add any relevant Lua errors, screenshots, or context."
+    validations:
+      required: false
