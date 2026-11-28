@@ -61,6 +61,14 @@ Documentation and reports should serve their intended audience, not chronicle th
 - Don't create stage reports, planning documents, implementation summaries, or other permanent artifacts unless requested.
 - Report changes and verification results briefly. Distinguish static checks from actual client observations.
 
+## Architectural Decision Records
+
+For substantial changes, review existing records in `docs/adr/` and consider whether the work establishes or changes a decision they do not already cover.
+
+If an ADR would be useful, suggest it in the final report with a proposed title and a brief explanation of why the decision deserves documentation. Create an ADR only when explicitly requested.
+
+Focus ADRs on why the decision was made, its tradeoffs, and its intended behavior. Skip ADR suggestions for routine bug fixes, refactoring, code cleanup, and changes already covered by an existing record.
+
 ---
 
 Guiding principle: Understand what the WoW client already owns before deciding what the addon must implement. Respect established boundaries, exercise judgment within scope, and introduce only complexity that serves a demonstrated purpose.
